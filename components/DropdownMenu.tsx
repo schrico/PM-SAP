@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, LogOut, Menu } from "lucide-react";
+import { Settings, LogOut, Menu, CircleUserRound } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 
@@ -31,6 +31,13 @@ export default function DropdownMenu() {
           className="absolute right-0 mt-2 w-36 sm:w-40 md:w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
           onMouseLeave={() => setIsDropdownOpen(false)}
         >
+          <a
+            href="/profile"
+            className="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2 text-gray-700 hover:bg-gray-50 hover:shadow-sm transition-all duration-300"
+          >
+            <CircleUserRound className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base md:text-base lg:text-lg">Profile</span>
+          </a>
           <a
             href="/settings"
             className="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2 text-gray-700 hover:bg-gray-50 hover:shadow-sm transition-all duration-300"
