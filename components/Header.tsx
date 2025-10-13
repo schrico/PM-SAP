@@ -20,7 +20,7 @@ export default function Header() {
           {/* Left: Back Button */}
           <button
             onClick={handleBack}
-            className="p-2 sm:p-3 md:p-4 rounded-lg hover:bg-gray-100 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:shadow-lg"
+            className="p-2 sm:p-3 md:p-4 rounded-lg hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:shadow-lg"
             aria-label="Go back"
           >
             <ArrowLeft className="w-6 h-6 sm:w-10 sm:h-10 md:w-16 md:h-16 lg:w-20 lg:h-16 text-gray-700 transition-all duration-300" />

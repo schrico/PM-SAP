@@ -21,7 +21,14 @@ export default function AuthenticatedLayout({
         {/* Header */}
         <Header />
 
-        {children}
+        <div
+          className="
+            flex-1 flex flex-col
+          "
+        >
+          {children}
+        </div>
+
         <Toaster richColors position="top-center" />
       </body>
     </html>
