@@ -6,9 +6,11 @@ import { Loader2 } from "lucide-react";
 import { ProjectCard } from "@/components/ProjectCard";
 import { OldProjectsButton } from "@/components/OldProjectsButton";
 import { FilterButton } from "@/components/FilterButton";
-import { LegendTooltip } from "@/components/LegendTooltip";
+import { LegendTooltip } from "@/components/dashboard/LegendTooltip";
 import type { Project } from "@/types/project";
 import type { User } from "@/types/user";
+import { ProjectAtribuitionButton } from "@/components/dashboard/ProjectAtribuitionButton";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -72,6 +74,7 @@ export default function DashboardPage() {
 
           {/* Botões à direita */}
           <div className="flex items-center gap-3">
+            <ProjectAtribuitionButton user={user} />
             {user && (user.role === "admin" || user.role === "pm") && (
               <OldProjectsButton
                 user={user}
@@ -95,7 +98,9 @@ export default function DashboardPage() {
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {visibleProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <Link key={project.id} href={`/project/${project.id}`} className="w-full">
+                <ProjectCard project={project} />
+                </Link>
               ))}
             </div>
           )}

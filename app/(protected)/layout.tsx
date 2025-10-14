@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { Toaster } from "@/components/ui/sonner";
 
 // Dynamically import Header to avoid SSR hydration issues
-const Header = dynamic(() => import("@/components/Header"), { ssr: false });
+const Header = dynamic(() => import("@/components/layout/Header"), { ssr: false });
 
 interface AuthenticatedLayoutProps {
   children: ReactNode;

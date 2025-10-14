@@ -23,66 +23,62 @@ export function ProjectCard({ project }: { project: Project }) {
         "bg-white";
 
   return (
-    <Link href={`/project/${project.id}`} className="w-full">
-      <Card
-        className={`group relative border ${bg.split(" ")[0]} transition-all duration-300 ease-out cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:border-primary/40`}
-      >
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span
-              className={`${fontColor} transition-colors duration-300`}
-            >
-              {project.name}
-            </span>
-            <Badge className="transition-all duration-300 group-hover:scale-105">
-              {project.sistema}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
+    <Card
+      className={`group relative border ${bg.split(" ")[0]} transition-all duration-300 ease-out cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:border-primary/40`}
+    >
+      <CardHeader>
+        <CardTitle className="flex justify-between items-center">
+          <span className={`${fontColor} transition-colors duration-300`}>
+            {project.name}
+          </span>
+          <Badge className="transition-all duration-300 group-hover:scale-105">
+            {project.sistema}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
 
-        <CardContent
-          className={`space-y-2 text-sm ${
-            isCompleted ? "text-gray-300" : "text-muted-foreground"
-          } transition-colors duration-300`}
-        >
-          <p>
-            <span
-              className={
-                isCompleted
-                  ? "font-medium text-black"
-                  : "font-medium text-foreground"
-              }
-            >
-              Deadline:
-            </span>{" "}
-            {format(new Date(project.deadline), "dd MMM yyyy, HH:mm")}
-          </p>
-          <p>
-            <span
-              className={
-                isCompleted
-                  ? "font-medium text-black"
-                  : "font-medium text-foreground"
-              }
-            >
-              Words:
-            </span>{" "}
-            {project.words ?? "—"}
-          </p>
-          <p>
-            <span
-              className={
-                isCompleted
-                  ? "font-medium text-black"
-                  : "font-medium text-foreground"
-              }
-            >
-              Lines:
-            </span>{" "}
-            {project.lines ?? "—"}
-          </p>
-        </CardContent>
-      </Card>
-    </Link>
+      <CardContent
+        className={`space-y-2 text-sm ${
+          isCompleted ? "text-gray-300" : "text-muted-foreground"
+        } transition-colors duration-300`}
+      >
+        <p>
+          <span
+            className={
+              isCompleted
+                ? "font-medium text-black"
+                : "font-medium text-foreground"
+            }
+          >
+            Deadline:
+          </span>{" "}
+          {format(new Date(project.deadline), "dd MMM yyyy, HH:mm")}
+        </p>
+        <p>
+          <span
+            className={
+              isCompleted
+                ? "font-medium text-black"
+                : "font-medium text-foreground"
+            }
+          >
+            Words:
+          </span>{" "}
+          {project.words ?? "—"}
+        </p>
+        <p>
+          <span
+            className={
+              isCompleted
+                ? "font-medium text-black"
+                : "font-medium text-foreground"
+            }
+          >
+            Lines:
+          </span>{" "}
+          {project.lines ?? "—"}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
