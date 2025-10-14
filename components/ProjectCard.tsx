@@ -14,7 +14,7 @@ export function ProjectCard({ project }: { project: Project }) {
 
   const isCompleted = project.status === "complete";
   const isShort = project.short === true;
-  
+
   const bg = isCompleted
     ? completedColor
     : isShort
@@ -25,16 +25,25 @@ export function ProjectCard({ project }: { project: Project }) {
   return (
     <Link href={`/project/${project.id}`} className="w-full">
       <Card
-        className={`hover:shadow-lg transition-shadow cursor-pointer border ${bg.split(" ")[0]}`}
+        className={`group relative border ${bg.split(" ")[0]} transition-all duration-300 ease-out cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:border-primary/40`}
       >
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
-            <span className={fontColor}>{project.name}</span>
-            <Badge>{project.sistema}</Badge>
+            <span
+              className={`${fontColor} transition-colors duration-300`}
+            >
+              {project.name}
+            </span>
+            <Badge className="transition-all duration-300 group-hover:scale-105">
+              {project.sistema}
+            </Badge>
           </CardTitle>
         </CardHeader>
+
         <CardContent
-          className={`space-y-2 text-sm ${isCompleted ? "text-gray-300" : "text-muted-foreground"}`}
+          className={`space-y-2 text-sm ${
+            isCompleted ? "text-gray-300" : "text-muted-foreground"
+          } transition-colors duration-300`}
         >
           <p>
             <span

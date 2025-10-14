@@ -11,8 +11,9 @@ import { toast } from "sonner";
 import { Pencil, Loader2 } from "lucide-react";
 
 const profileSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(3, "Name is required"),
   email: z.string().email("Invalid email address"),
+  role: z.string().optional(), // adicionamos role para leitura
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -20,9 +21,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 export function ProfileForm() {
   const supabase = createClientComponentClient();
   const [loading, setLoading] = useState(false);
-  const [editingField, setEditingField] = useState<"name" | "email" | null>(
-    null
-  );
+  const [editingField, setEditingField] = useState<"name" | "email" | null>(null);
   const [isOAuthUser, setIsOAuthUser] = useState(false);
 
   const {
@@ -35,7 +34,7 @@ export function ProfileForm() {
     resolver: zodResolver(profileSchema),
   });
 
-  // Load user data
+  // 🔹 Load user data
   useEffect(() => {
     async function loadProfile() {
       const {
@@ -47,13 +46,14 @@ export function ProfileForm() {
 
       const { data: profile } = await supabase
         .from("users")
-        .select("name, email")
+        .select("name, email, role")
         .eq("id", user.id)
         .single();
 
       if (profile) {
         setValue("name", profile.name || "");
         setValue("email", user.email || "");
+        setValue("role", profile.role || "—");
       }
     }
 
@@ -68,7 +68,7 @@ export function ProfileForm() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Update name in your users table
+      // Update only the name
       const { error: updateError } = await supabase
         .from("users")
         .update({ name: data.name })
@@ -84,9 +84,9 @@ export function ProfileForm() {
 
         if (emailError) throw emailError;
 
-        // 👇 Add this toast to guide the user
-        toast.info(`A confirmation email has been sent to ${data.email}. 
-Please check your inbox to confirm the change.`);
+        toast.info(
+          `A confirmation email has been sent to ${data.email}. Please check your inbox to confirm the change.`
+        );
       } else {
         toast.success("Profile updated successfully!");
       }
@@ -168,6 +168,18 @@ Please check your inbox to confirm the change.`);
         {errors.email && (
           <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
         )}
+      </div>
+
+      {/* 🔹 Role Field (read-only) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Role
+        </label>
+        <Input
+          {...register("role")}
+          readOnly
+          className="border-gray-300 bg-gray-100 cursor-default text-gray-800 font-medium"
+        />
       </div>
 
       {/* Submit Button — only show if editing */}
