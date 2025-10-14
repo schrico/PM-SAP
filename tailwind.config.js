@@ -5,6 +5,18 @@ module.exports = {
 		"./app/**/*.{js,ts,jsx,tsx}",
 		"./components/**/*.{js,ts,jsx,tsx}",
 	],
+	safelist: [
+  'bg-green-400',
+  'bg-yellow-400',
+  'bg-orange-400',
+  'bg-purple-400',
+  'bg-gray-500',
+  'text-green-600',
+  'text-blue-600',
+  'text-red-600',
+  'text-black',
+  'bg-white',
+],
   theme: {
   	extend: {
   		borderRadius: {

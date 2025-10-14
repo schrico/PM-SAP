@@ -13,36 +13,34 @@ export function ProjectCard({ project }: { project: Project }) {
     languageColors[langKey as keyof typeof languageColors] || "text-foreground";
 
   const isCompleted = project.status === "complete";
+  const isShort = project.short === true;
+  
   const bg = isCompleted
     ? completedColor
-    : sistemaColors[project.sistema as keyof typeof sistemaColors] ||
-      "bg-white";
+    : isShort
+      ? "bg-white"
+      : sistemaColors[project.sistema as keyof typeof sistemaColors] ||
+        "bg-white";
 
   return (
     <Link href={`/project/${project.id}`} className="w-full">
       <Card
-        className={`hover:shadow-lg transition-shadow cursor-pointer ${bg}`}
+        className={`hover:shadow-lg transition-shadow cursor-pointer border ${bg.split(" ")[0]}`}
       >
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
-            <span
-              className={`truncate ${isCompleted ? "text-white" : fontColor} ""`}
-            >
-              {project.name}
-            </span>
-            <Badge className={isCompleted ? "bg-gray-700 text-white" : ""}>
-              {project.sistema}
-            </Badge>
+            <span className={fontColor}>{project.name}</span>
+            <Badge>{project.sistema}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent
-          className={`space-y-2 text-sm ${isCompleted ? "text-gray-200" : "text-muted-foreground"}`}
+          className={`space-y-2 text-sm ${isCompleted ? "text-gray-300" : "text-muted-foreground"}`}
         >
           <p>
             <span
               className={
                 isCompleted
-                  ? "font-medium text-white"
+                  ? "font-medium text-black"
                   : "font-medium text-foreground"
               }
             >
@@ -54,7 +52,7 @@ export function ProjectCard({ project }: { project: Project }) {
             <span
               className={
                 isCompleted
-                  ? "font-medium text-white"
+                  ? "font-medium text-black"
                   : "font-medium text-foreground"
               }
             >
@@ -66,7 +64,7 @@ export function ProjectCard({ project }: { project: Project }) {
             <span
               className={
                 isCompleted
-                  ? "font-medium text-white"
+                  ? "font-medium text-black"
                   : "font-medium text-foreground"
               }
             >

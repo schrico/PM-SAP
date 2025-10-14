@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Loader2 } from "lucide-react";
 import { ProjectCard } from "@/components/ProjectCard";
-import { OldProjectsButton as AdminControls } from "@/components/OldProjectsButton";
+import { OldProjectsButton } from "@/components/OldProjectsButton";
 import { FilterButton } from "@/components/FilterButton";
 import { LegendTooltip } from "@/components/LegendTooltip";
 import type { Project } from "@/types/project";
@@ -63,7 +63,7 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {showPast ? "Projetos Antigos" : "Projetos Futuros"}
+              {showPast ? "Projetos Passados" : "Projetos Futuros"}
             </h1>
             <p className="text-sm text-muted-foreground">
               Gerir e acompanhar projetos de tradução SAP
@@ -73,7 +73,7 @@ export default function DashboardPage() {
           {/* Botões à direita */}
           <div className="flex items-center gap-3">
             {user && (user.role === "admin" || user.role === "pm") && (
-              <AdminControls
+              <OldProjectsButton
                 user={user}
                 showPast={showPast}
                 onToggle={() => setShowPast(!showPast)}

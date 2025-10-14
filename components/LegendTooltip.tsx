@@ -36,18 +36,22 @@ export function LegendTooltip() {
         <hr className="my-1" />
         <p className="font-semibold">📦 Sistema:</p>
         <ul className="list-disc pl-4">
-          {Object.entries(legendaSistemas).map(([sistema]) => (
-            <li
-              key={sistema}
-              className={sistemaColors[sistema as keyof typeof sistemaColors]}
-            >
-              {sistema} →{" "}
-              {legendaSistemas[sistema as keyof typeof legendaSistemas]}
-            </li>
-          ))}
+          {Object.entries(legendaSistemas).map(([sistema]) => {
+            const bgClass =
+              sistema === "TRADOS"
+                ? "bg-purple-400"
+                : sistemaColors[sistema as keyof typeof sistemaColors] ||
+                  "bg-white";
+            return (
+              <li key={sistema} className={`${bgClass} px-1 rounded-sm`}>
+                {sistema} →{" "}
+                {legendaSistemas[sistema as keyof typeof legendaSistemas]}
+              </li>
+            );
+          })}
         </ul>
         <hr className="my-1" />
-        <p className="font-semibold text-gray-500">
+        <p className="font-semibold bg-gray-400">
           ✅ Completos → {legendaStatus.complete}
         </p>
       </PopoverContent>

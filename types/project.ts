@@ -18,4 +18,5 @@ export interface Project {
   faturado?: boolean | null;
   created_at?: string;
   updated_at?: string;
+  short?: boolean;
 }
