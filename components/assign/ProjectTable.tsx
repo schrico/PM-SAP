@@ -43,11 +43,11 @@ export function ProjectTable({
       const { data, error } = await supabase
         .from("projects")
         .select(
-          "id, name, sistema, words, lines, deadline, short, status, language_in, language_out"
+          "*"
         )
-        .gt("deadline", now)
+        .gt("final_deadline", now)
         .not("id", "in", `(${assignedIds.join(",") || 0})`) // 👈 exclui já atribuídos
-        .order("deadline", { ascending: true });
+        .order("final_deadline", { ascending: true });
 
       if (error) console.error("Erro ao buscar projetos:", error);
 
@@ -60,7 +60,7 @@ export function ProjectTable({
         top: document.body.scrollHeight,
         behavior: "smooth",
       });
-    }, 300);
+    }, 500);
 
     fetchProjects();
   }, [supabase, onProjectsLoaded, selectedUser]);
@@ -74,7 +74,7 @@ export function ProjectTable({
         top: document.body.scrollHeight,
         behavior: "smooth",
       });
-    }, 150);
+    }, 50);
   };
 
   return (
@@ -115,7 +115,7 @@ export function ProjectTable({
                 return (
                   <tr
                     key={p.id}
-                    onClick={() => onToggleProject(p.id)}
+                    onClick={() => handleProjectClick(p.id)}
                     className={`cursor-pointer transition-all ${bgColor} ${
                       checked ? "ring-2 ring-primary/50" : "hover:bg-gray-200"
                     }`}
@@ -135,7 +135,7 @@ export function ProjectTable({
                     <td className="px-4 py-2">{p.words ?? "—"}</td>
                     <td className="px-4 py-2">{p.lines ?? "—"}</td>
                     <td className="px-4 py-2">
-                      {format(new Date(p.deadline), "dd MMM yyyy HH:mm")}
+                      {format(new Date(p.final_deadline), "dd MMM yyyy HH:mm")}
                     </td>
                   </tr>
                 );

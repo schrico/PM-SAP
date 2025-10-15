@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Loader2 } from "lucide-react";
-import { ProjectCard } from "@/components/ProjectCard";
 import { OldProjectsButton } from "@/components/OldProjectsButton";
 import { FilterButton } from "@/components/FilterButton";
 import { LegendTooltip } from "@/components/dashboard/LegendTooltip";
 import type { Project } from "@/types/project";
 import type { User } from "@/types/user";
 import { ProjectAtribuitionButton } from "@/components/dashboard/ProjectAtribuitionButton";
-import Link from "next/link";
+import { ProjectTable } from "@/components/dashboard/ProjectTable";
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -31,10 +30,7 @@ export default function DashboardPage() {
 
       setUser(userProfile || null);
 
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .order("deadline", { ascending: true });
+      const { data, error } = await supabase.from("projects").select("*");
 
       if (error) console.error("Error loading projects:", error);
       else setProjects(data || []);
@@ -46,9 +42,26 @@ export default function DashboardPage() {
   }, []);
 
   const now = new Date();
-  const visibleProjects = projects.filter((p) => {
-    const projectDate = new Date(p.deadline);
-    return showPast ? projectDate < now : projectDate >= now;
+
+  const getClosestDeadline = (p: Project) => {
+    const validDates = [p.interim_deadline, p.final_deadline]
+      .filter(Boolean)
+      .map((d) => new Date(d!));
+    if (validDates.length === 0) return null;
+    return new Date(Math.min(...validDates.map((d) => d.getTime())));
+  };
+
+  const filteredProjects = projects.filter((p) => {
+    const closest = getClosestDeadline(p);
+    if (!closest) return false;
+    return showPast ? closest < now : closest >= now;
+  });
+
+  const visibleProjects = filteredProjects.sort((a, b) => {
+    const da = getClosestDeadline(a);
+    const db = getClosestDeadline(b);
+    if (!da || !db) return 0;
+    return da.getTime() - db.getTime();
   });
 
   if (loading)
@@ -59,9 +72,9 @@ export default function DashboardPage() {
     );
 
   return (
-    <main className="flex flex-col min-h-screen bg-background">
-      {/* Header fixo dentro da página */}
-      <div className="sticky top-20 sm:top-24 md:top-28 lg:top-32 z-10 bg-background border-b shadow-sm">
+    <main className="flex flex-col flex-1 overflow-hidden bg-background">
+      {/* Cabeçalho interno (Projetos Futuros / Passados) - agora sticky top-0 */}
+      <div className="sticky top-0 z-30 bg-background border-b shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
@@ -72,7 +85,6 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* Botões à direita */}
           <div className="flex items-center gap-3">
             <ProjectAtribuitionButton user={user} />
             {user && (user.role === "admin" || user.role === "pm") && (
@@ -83,28 +95,20 @@ export default function DashboardPage() {
               />
             )}
             <FilterButton />
-            <LegendTooltip />
+            {/* <LegendTooltip /> */}
           </div>
         </div>
       </div>
 
-      {/* Área scrollável (somente os cards) */}
-      <div className="flex-1 overflow-y-auto px-6 py-8">
-        <div className="max-w-6xl mx-auto">
-          {visibleProjects.length === 0 ? (
-            <div className="text-center text-muted-foreground mt-20">
-              Nenhum projeto encontrado.
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {visibleProjects.map((project) => (
-                <Link key={project.id} href={`/project/${project.id}`} className="w-full">
-                <ProjectCard project={project} />
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Área scrollável */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 py-6">
+        {visibleProjects.length === 0 ? (
+          <div className="text-center text-muted-foreground mt-20">
+            Nenhum projeto encontrado.
+          </div>
+        ) : (
+          <ProjectTable projects={visibleProjects} />
+        )}
       </div>
     </main>
   );

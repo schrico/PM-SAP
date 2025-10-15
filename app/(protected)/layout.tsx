@@ -5,29 +5,23 @@ import { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Toaster } from "@/components/ui/sonner";
 
-// Dynamically import Header to avoid SSR hydration issues
-const Header = dynamic(() => import("@/components/layout/Header"), { ssr: false });
+const Header = dynamic(() => import("@/components/layout/Header"), {
+  ssr: false,
+});
 
 interface AuthenticatedLayoutProps {
   children: ReactNode;
 }
 
-export default function AuthenticatedLayout({
-  children,
-}: AuthenticatedLayoutProps) {
+export default function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50">
-        {/* Header */}
+      <body className="flex flex-col min-h-screen bg-gray-50">
         <Header />
-
-        <div
-          className="
-            flex-1 flex flex-col
-          "
-        >
+        {/* main agora sem padding-top, colado ao header */}
+        <main className="flex-1 flex flex-col overflow-y-auto">
           {children}
-        </div>
+        </main>
 
         <Toaster richColors position="top-center" />
       </body>

@@ -79,7 +79,7 @@ export default function ProjectDetailsPage() {
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h2 className="text-sm font-medium text-gray-500">Sistema</h2>
-              <p className="text-lg font-semibold">{project.sistema}</p>
+              <p className="text-lg font-semibold">{project.system}</p>
             </div>
 
             <div>
