@@ -1,96 +1,63 @@
-// hooks/useColorSettings.ts
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-interface ColorSettings {
-  system: Record<string, string>;
-  language: Record<string, string>;
-  status: Record<string, string>;
-}
-
 export function useColorSettings() {
-  const [colors, setColors] = useState<ColorSettings>({
-    system: {},
-    language: {},
-    status: {},
-  });
-  const [loading, setLoading] = useState(true);
   const supabase = createClientComponentClient();
+  const [settings, setSettings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchColors();
-
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel("color_settings_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "color_settings",
-        },
-        () => {
-          fetchColors();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    fetchSettings();
   }, []);
 
-  const fetchColors = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("color_settings")
-        .select("setting_key, color_value, category");
+  async function fetchSettings() {
+    setLoading(true);
+    const { data } = await supabase.from("color_settings").select("*");
+    setSettings(data || []);
+    setLoading(false);
+  }
 
-      if (error) throw error;
+  function getSystemColor(system: string) {
+    return settings.find(s => s.category === "system" && s.system_name === system)?.color_value || "#ffffff";
+  }
 
-      const grouped: ColorSettings = {
-        system: {},
-        language: {},
-        status: {},
-      };
+  function getStatusColor(status: string) {
+    return settings.find(s => s.category === "status" && s.status_key === status)?.color_value || "#ffffff";
+  }
 
-      data?.forEach((item) => {
-        if (item.category in grouped) {
-          grouped[item.category as keyof ColorSettings][item.setting_key] =
-            item.color_value;
-        }
-      });
+  function getLanguageColor(langIn: string, langOut: string) {
+    return settings.find(s => s.category === "language" && s.language_in === langIn && s.language_out === langOut)?.color_value || "#000000";
+  }
 
-      setColors(grouped);
-    } catch (error) {
-      console.error("Error fetching colors:", error);
-    } finally {
-      setLoading(false);
+  // Determine final row colors
+  function getRowColors({
+    status,
+    system,
+    langIn,
+    langOut,
+  }: {
+    status?: string;
+    system?: string;
+    langIn?: string;
+    langOut?: string;
+  }) {
+    const bgColor = status === "complete" ? getStatusColor("complete") : getSystemColor(system || "");
+    let textColor = getLanguageColor(langIn || "", langOut || "");
+
+    // Ensure contrast: if text and bg are too similar, fallback
+    if (textColor.toLowerCase() === bgColor.toLowerCase()) {
+      textColor = "#000000"; // fallback black text
     }
-  };
 
-  // Helper functions to get colors by key
-  const getSystemColor = (system: string): string => {
-    const key = `system_${system.toLowerCase()}`;
-    return colors.system[key] || "#ffffff";
-  };
-
-  const getLanguageColor = (langIn: string, langOut: string): string => {
-    const key = `language_${langIn}_${langOut}`.toLowerCase();
-    return colors.language[key] || "#000000";
-  };
-
-  const getStatusColor = (status: string): string => {
-    const key = `status_${status}`;
-    return colors.status[key] || "transparent";
-  };
+    return { bgColor, textColor };
+  }
 
   return {
-    colors,
+    settings,
     loading,
     getSystemColor,
-    getLanguageColor,
     getStatusColor,
+    getLanguageColor,
+    getRowColors,
   };
 }
