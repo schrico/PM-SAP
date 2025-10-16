@@ -1,5 +1,5 @@
 // /types/project.ts
-export type Status = "complete" | "active" | "cancelled" | "pending";
+export type Status = "complete" | "active" | "cancelled" /* | "pending" */;
 
 export interface Project {
   id: number;

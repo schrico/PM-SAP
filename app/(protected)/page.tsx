@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Loader2 } from "lucide-react";
-import { OldProjectsButton } from "@/components/OldProjectsButton";
+import { OldProjectsButton } from "@/components/dashboard/OldProjectsButton";
 import { FilterButton } from "@/components/FilterButton";
 import { LegendTooltip } from "@/components/dashboard/LegendTooltip";
 import type { Project } from "@/types/project";
@@ -24,7 +24,7 @@ export default function DashboardPage() {
       const { data: userData } = await supabase.auth.getUser();
       const { data: userProfile } = await supabase
         .from("users")
-        .select("id, name, email, role")
+        .select("*")
         .eq("id", userData.user?.id)
         .single();
 
@@ -75,7 +75,7 @@ export default function DashboardPage() {
     <main className="flex flex-col flex-1 overflow-hidden bg-background">
       {/* Cabeçalho interno (Projetos Futuros / Passados) - agora sticky top-0 */}
       <div className="sticky top-0 z-30 bg-background border-b shadow-sm">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+        <div className="max-w-8xl mx-auto flex items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               {showPast ? "Projetos Passados" : "Projetos Futuros"}

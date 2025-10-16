@@ -6,4 +6,6 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  C_user: string;
+  TE_user: string;
 }
