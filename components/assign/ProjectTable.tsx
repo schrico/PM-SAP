@@ -1,16 +1,18 @@
+// components/assignment/ProjectTable.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { sistemaColors, languageColors, completedColor } from "@/types/colors";
 import { format } from "date-fns";
+import { useColorSettings } from "@/hooks/useColorSettings";
+import { Loader2 } from "lucide-react";
 
 interface ProjectTableProps {
   selectedProjects: number[];
   onToggleProject: (projectId: number) => void;
   onProjectsLoaded?: (projects: any[]) => void;
-  selectedUser?: any; // 👈 adicionamos esta prop
+  selectedUser?: any;
 }
 
 export function ProjectTable({
@@ -21,14 +23,15 @@ export function ProjectTable({
 }: ProjectTableProps) {
   const [projects, setProjects] = useState<any[]>([]);
   const supabase = createClientComponentClient();
+  const { getSystemColor, getLanguageColor, getStatusColor, loading: colorsLoading } =
+    useColorSettings();
 
   useEffect(() => {
-    if (!selectedUser) return; // ⛔ espera por um utilizador
+    if (!selectedUser) return;
 
     const fetchProjects = async () => {
       const now = new Date().toISOString();
 
-      // 1️⃣ Buscar projetos já atribuídos ao user selecionado
       const { data: assignedData, error: assignedError } = await supabase
         .from("projects_assignment")
         .select("project_id")
@@ -39,14 +42,11 @@ export function ProjectTable({
 
       const assignedIds = assignedData?.map((a) => a.project_id) || [];
 
-      // 2️⃣ Buscar todos os projetos, exceto os atribuídos
       const { data, error } = await supabase
         .from("projects")
-        .select(
-          "*"
-        )
+        .select("*")
         .gt("final_deadline", now)
-        .not("id", "in", `(${assignedIds.join(",") || 0})`) // 👈 exclui já atribuídos
+        .not("id", "in", `(${assignedIds.join(",") || 0})`)
         .order("final_deadline", { ascending: true });
 
       if (error) console.error("Erro ao buscar projetos:", error);
@@ -68,7 +68,6 @@ export function ProjectTable({
   const handleProjectClick = (projectId: number) => {
     onToggleProject(projectId);
 
-    // Scroll suave para o final (ou até à tabela)
     setTimeout(() => {
       window.scrollTo({
         top: document.body.scrollHeight,
@@ -76,6 +75,14 @@ export function ProjectTable({
       });
     }, 50);
   };
+
+  if (colorsLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -98,27 +105,28 @@ export function ProjectTable({
             <tbody>
               {projects.map((p) => {
                 const checked = selectedProjects.includes(p.id);
-                const isCompleted = p.status === "complete";
-                const isShort = p.short === true;
 
-                const bgColor = isCompleted
-                  ? completedColor
-                  : isShort
-                    ? "bg-white"
-                    : sistemaColors[p.sistema as keyof typeof sistemaColors] ||
-                      "bg-white";
+                // Get dynamic colors
+                const bgColor =
+                  p.status === "complete"
+                    ? getStatusColor("complete")
+                    : p.short === true
+                      ? "#ffffff"
+                      : getSystemColor(p.system || "");
 
-                const langKey =
-                  `${p.language_in}→${p.language_out}` as keyof typeof languageColors;
-                const textColor = languageColors[langKey] || "text-gray-800";
+                const textColor = getLanguageColor(
+                  p.language_in || "",
+                  p.language_out || ""
+                );
 
                 return (
                   <tr
                     key={p.id}
                     onClick={() => handleProjectClick(p.id)}
-                    className={`cursor-pointer transition-all ${bgColor} ${
-                      checked ? "ring-2 ring-primary/50" : "hover:bg-gray-200"
+                    className={`cursor-pointer transition-all ${
+                      checked ? "ring-2 ring-primary/50" : "hover:opacity-80"
                     }`}
+                    style={{ backgroundColor: bgColor }}
                   >
                     <td className="px-4 py-2">
                       <Checkbox
@@ -128,10 +136,10 @@ export function ProjectTable({
                       />
                     </td>
 
-                    <td className={`px-4 py-2 font-medium ${textColor}`}>
+                    <td className="px-4 py-2 font-medium" style={{ color: textColor }}>
                       {p.name}
                     </td>
-                    <td className="px-4 py-2">{p.sistema}</td>
+                    <td className="px-4 py-2">{p.system}</td>
                     <td className="px-4 py-2">{p.words ?? "—"}</td>
                     <td className="px-4 py-2">{p.lines ?? "—"}</td>
                     <td className="px-4 py-2">

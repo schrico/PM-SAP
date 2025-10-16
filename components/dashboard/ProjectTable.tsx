@@ -1,9 +1,12 @@
+// components/dashboard/ProjectTable.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
 import { format, differenceInHours } from "date-fns";
 import { pt } from "date-fns/locale";
 import type { Project } from "@/types/project";
+import { useColorSettings } from "@/hooks/useColorSettings";
+import { Loader2 } from "lucide-react";
 
 interface ProjectTableProps {
   projects: Project[];
@@ -43,6 +46,16 @@ function getDeadlineBadge(deadline: string | null) {
 
 export function ProjectTable({ projects }: ProjectTableProps) {
   const router = useRouter();
+  const { getSystemColor, getLanguageColor, getStatusColor, loading } =
+    useColorSettings();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative border rounded-lg shadow-sm flex-1 overflow-y-auto max-h-[calc(100vh-18rem)]">
@@ -61,25 +74,32 @@ export function ProjectTable({ projects }: ProjectTableProps) {
 
         <tbody>
           {projects.map((project) => {
-            const deadlines = [
-              project.interim_deadline &&
-                formatDeadline(project.interim_deadline),
-              project.initial_deadline &&
-                formatDeadline(project.initial_deadline),
-              project.final_deadline && formatDeadline(project.final_deadline),
-            ].filter(Boolean);
-
             const nearest =
               project.interim_deadline || project.final_deadline || null;
+
+            // Get dynamic colors
+            const bgColor =
+              project.status === "complete"
+                ? getStatusColor("complete")
+                : project.short
+                  ? "#ffffff"
+                  : getSystemColor(project.system || "");
+
+            const textColor = getLanguageColor(
+              project.language_in || "",
+              project.language_out || ""
+            );
 
             return (
               <tr
                 key={project.id}
-                className="border-t hover:bg-muted/30 transition-colors"
+                className="border-t hover:opacity-80 transition-all cursor-pointer"
+                style={{ backgroundColor: bgColor }}
               >
                 {/* nome */}
                 <td
-                  className="px-5 py-3 font-medium cursor-pointer"
+                  className="px-5 py-3 font-medium"
+                  style={{ color: textColor }}
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {project.name}
@@ -87,7 +107,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
 
                 {/* system */}
                 <td
-                  className="px-5 py-3 cursor-pointer"
+                  className="px-5 py-3"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {project.system || "-"}
@@ -95,7 +115,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
 
                 {/* words */}
                 <td
-                  className="px-5 py-3 cursor-pointer"
+                  className="px-5 py-3"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {project.words ?? "-"}
@@ -103,7 +123,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
 
                 {/* lines */}
                 <td
-                  className="px-5 py-3 cursor-pointer"
+                  className="px-5 py-3"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {project.lines ?? "-"}
@@ -111,33 +131,32 @@ export function ProjectTable({ projects }: ProjectTableProps) {
 
                 {/* deadlines + badge */}
                 <td
-                  className="px-5 py-3 align-top cursor-pointer whitespace-pre-line"
+                  className="px-5 py-3 align-top whitespace-pre-line"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {[
                     project.initial_deadline &&
-                      `initial – ${formatDeadline(project.initial_deadline)}`,
+                      `initial — ${formatDeadline(project.initial_deadline)}`,
                     project.interim_deadline &&
-                      `interim – ${formatDeadline(project.interim_deadline)}`,
+                      `interim — ${formatDeadline(project.interim_deadline)}`,
                     project.final_deadline &&
-                      `final – ${formatDeadline(project.final_deadline)}`,
+                      `final — ${formatDeadline(project.final_deadline)}`,
                   ]
                     .filter(Boolean)
                     .join("\n") || "-"}
 
-                  {/* badge do prazo mais próximo */}
                   {nearest && getDeadlineBadge(nearest)}
                 </td>
 
                 {/* translator */}
                 <td
-                  className="px-5 py-3 cursor-pointer"
+                  className="px-5 py-3"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {project.translator || "-"}
                 </td>
 
-                {/* instructions (não clica) */}
+                {/* instructions */}
                 <td className="px-5 py-3 break-words max-w-[600px]">
                   {project.instructions || "-"}
                 </td>
