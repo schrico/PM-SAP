@@ -15,7 +15,7 @@ export function OldProjectsButton({ user, showPast, onToggle }: OldProjectsButto
   return (
     <div className="flex justify-center mt-4">
       <Button variant="outline" onClick={onToggle}>
-        {showPast ? "Ver Projetos Futuros" : "Ver Projetos Passados"}
+        {showPast ? "See Future Projects" : "See Past Projects"}
       </Button>
     </div>
   );

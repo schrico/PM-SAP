@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Heading1, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ColorSettings } from "@/components/settings/ColorSettings";
 import { useUser } from "@/hooks/useUser";
@@ -25,8 +25,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container max-w-6xl py-10 space-y-8">
-      <Card className="p-6">
+    <div className="container px-5 py-10 space-y-8 text-center">
+      <h1 className="text-4xl font-bold">
+        Settings
+      </h1>
+      <Card className="p-6 ">
         <ColorSettings userRole={user.role} />
       </Card>
     </div>

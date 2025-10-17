@@ -17,7 +17,7 @@ export function UserSelector({ onSelectUser, selectedUser }: any) {
 
   return (
     <div>
-      <h2 className="text-lg font-medium mb-3">Selecionar Utilizador</h2>
+      <h2 className="text-lg font-medium mb-3">Select User</h2>
       <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {users.map((user) => (
           <Card

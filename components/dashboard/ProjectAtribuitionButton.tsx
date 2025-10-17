@@ -17,10 +17,10 @@ export function ProjectAtribuitionButton({
   return (
     <div className="flex justify-center mt-4">
       <Button asChild variant="outline" className="flex items-center gap-2 bg-primary text-white hover:bg-primary/90">
-        <Link href="/atribuir-projetos">
+        <Link href="/assign-projects">
           <BookPlus className="w-8 h-8 sm:w-5 sm:h-5" />
           <span className="text-sm sm:text-base md:text-base lg:text-lg">
-            Atribuir Projetos
+            Assign Projects
           </span>
         </Link>
       </Button>

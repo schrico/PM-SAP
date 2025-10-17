@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Loader2 } from "lucide-react";
 import { OldProjectsButton } from "@/components/dashboard/OldProjectsButton";
-import { FilterButton } from "@/components/FilterButton";
-import { LegendTooltip } from "@/components/dashboard/LegendTooltip";
-import type { Project } from "@/types/project";
+import { FilterButton } from "@/components/dashboard/FilterButton";
+/* import { LegendTooltip } from "@/components/dashboard/LegendTooltip";
+ */import type { Project } from "@/types/project";
 import type { User } from "@/types/user";
 import { ProjectAtribuitionButton } from "@/components/dashboard/ProjectAtribuitionButton";
 import { ProjectTable } from "@/components/dashboard/ProjectTable";
@@ -78,10 +78,10 @@ export default function DashboardPage() {
         <div className="max-w-8xl mx-auto flex items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {showPast ? "Projetos Passados" : "Projetos Futuros"}
+              {showPast ? "Past Projects" : "Future Projects"}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Gerir e acompanhar projetos de tradução SAP
+              Manage and track SAP translation projects
             </p>
           </div>
 
@@ -104,7 +104,7 @@ export default function DashboardPage() {
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 py-6">
         {visibleProjects.length === 0 ? (
           <div className="text-center text-muted-foreground mt-20">
-            Nenhum projeto encontrado.
+            No project found.
           </div>
         ) : (
           <ProjectTable projects={visibleProjects} />

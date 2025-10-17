@@ -6,7 +6,7 @@ export function RoleSelector({ onSelectRole, selectedRole }: any) {
 
   return (
     <div>
-      <h2 className="text-lg font-medium mb-3">Selecionar Função</h2>
+      <h2 className="text-lg font-medium mb-3">Select Role</h2>
       <div className="flex gap-4">
         {roles.map((role) => (
           <Button
@@ -14,7 +14,7 @@ export function RoleSelector({ onSelectRole, selectedRole }: any) {
             variant={selectedRole === role ? "default" : "outline"}
             onClick={() => onSelectRole(role)}
           >
-            {role === "translator" ? "Tradutor" : "Revisor"}
+            {role === "translator" ? "Translator" : "Reviewer"}
           </Button>
         ))}
       </div>
