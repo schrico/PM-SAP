@@ -4,7 +4,7 @@ export type Status = "complete" | "active" | "cancelled" /* | "pending" */;
 export interface Project {
   id: number;
   name: string;
-  pm: string | null;
+  pm_id: string | null;
   interim_deadline: string | null;
   initial_deadline: string | null;
   final_deadline: string | null;

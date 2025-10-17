@@ -14,6 +14,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -25,7 +26,9 @@ export default function AssignProjectsPage() {
   const { user, loading } = useUser();
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [selectedRole, setSelectedRole] = useState<"translator" | "reviewer" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<
+    "translator" | "reviewer" | null
+  >(null);
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
   const [allProjects, setAllProjects] = useState<any[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -56,7 +59,7 @@ export default function AssignProjectsPage() {
         // Update the project's PM to the current logged-in PM/admin
         const { error: updateError } = await supabase
           .from("projects")
-          .update({ pm: user.id })
+          .update({ pm_id: user.id })
           .eq("id", projectId);
 
         if (updateError) throw updateError;
@@ -68,7 +71,9 @@ export default function AssignProjectsPage() {
 
       setSelectedProjects([]);
       setConfirmOpen(false);
+      setTimeout(() => {
       window.location.reload();
+      }, 1500);
     } catch (error: any) {
       toast.error(error.message || "Error assigning projects.");
     }
@@ -89,7 +94,9 @@ export default function AssignProjectsPage() {
       <div className="w-full max-w-5xl">
         {/* Header */}
         <div className="flex justify-center items-center mb-4">
-          <h1 className="text-2xl font-semibold text-center">Assign Projects</h1>
+          <h1 className="text-2xl font-semibold text-center">
+            Assign Projects
+          </h1>
         </div>
 
         {/* Step 1: Select User */}
@@ -121,17 +128,21 @@ export default function AssignProjectsPage() {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirm Assignment</AlertDialogTitle>
-                  <div className="text-sm text-muted-foreground">
+                </AlertDialogHeader>
+
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <AlertDialogDescription>
                     Are you sure you want to assign the following projects to{" "}
                     <strong>{selectedUser?.name}</strong> as{" "}
                     <strong>{selectedRole}</strong>?
-                    <ul className="mt-3 list-disc list-inside text-sm text-gray-700">
-                      {selectedProjectNames.map((name) => (
-                        <li key={name}>{name}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </AlertDialogHeader>
+                  </AlertDialogDescription>
+                  <ul className="list-disc list-inside text-sm text-gray-700">
+                    {selectedProjectNames.map((name) => (
+                      <li key={name}>{name}</li>
+                    ))}
+                  </ul>
+                </div>
+
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={handleAssign}>
