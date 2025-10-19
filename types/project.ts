@@ -9,12 +9,12 @@ export interface Project {
   initial_deadline: string | null;
   final_deadline: string | null;
   translator: string | null;
-  system: string | null;
+  system: string;
   words: number | null;
   lines: number | null;
   status: Status;
-  language_in: string | null;
-  language_out: string | null;
+  language_in: string;
+  language_out: string;
   instructions?: string | null;
   pago?: boolean | null;
   faturado?: boolean | null;

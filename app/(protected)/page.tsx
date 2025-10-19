@@ -9,7 +9,7 @@ import { FilterButton } from "@/components/dashboard/FilterButton";
  */import type { Project } from "@/types/project";
 import type { User } from "@/types/user";
 import { ProjectAtribuitionButton } from "@/components/dashboard/ProjectAtribuitionButton";
-import { ProjectTable } from "@/components/dashboard/ProjectTable";
+import { ProjectTable } from "@/components/ProjectTable";
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
