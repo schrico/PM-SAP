@@ -1,19 +1,26 @@
 "use client";
-import { useEffect, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Card } from "@/components/ui/card";
+import { useUsers } from "@/hooks/useUsers";
+import { Loader2 } from "lucide-react";
 
 export function UserSelector({ onSelectUser, selectedUser }: any) {
-  const [users, setUsers] = useState<any[]>([]);
-  const supabase = createClientComponentClient();
+  const { data: users = [], isLoading, error } = useUsers();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const { data } = await supabase.from("users").select("id, name, role");
-      setUsers(data || []);
-    };
-    fetchUsers();
-  }, [supabase]);
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 py-8">
+        Error loading users. Please try again.
+      </div>
+    );
+  }
 
   return (
     <div>

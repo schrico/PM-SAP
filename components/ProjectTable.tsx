@@ -4,16 +4,21 @@ import { useRouter } from "next/navigation";
 import { format, differenceInHours } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
-import type { Project } from "@/types/project";
+import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
 import { useColorSettings } from "@/hooks/useColorSettings";
 
 interface ProjectTableProps {
-  projects: Project[];
+  showPast?: boolean;
 }
 
-export function ProjectTable({ projects }: ProjectTableProps) {
+export function ProjectTable({ showPast = false }: ProjectTableProps) {
   const router = useRouter();
-  const { getRowColors, loading } = useColorSettings();
+  const { getRowColors, loading: colorLoading } = useColorSettings();
+  const {
+    data: projects = [],
+    isLoading: projectsLoading,
+    error,
+  } = useProjectsWithTranslators(showPast);
 
   function formatDeadline(date: string | null) {
     if (!date) return null;
@@ -45,10 +50,19 @@ export function ProjectTable({ projects }: ProjectTableProps) {
     );
   }
 
-  if (loading)
+  if (colorLoading || projectsLoading)
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="flex justify-center items-center py-12">
+        <p className="text-red-500">
+          Error loading projects. Please try again.
+        </p>
       </div>
     );
 
@@ -62,7 +76,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
             <th className="px-5 py-3 whitespace-nowrap">Words</th>
             <th className="px-5 py-3 whitespace-nowrap">Lines</th>
             <th className="px-5 py-3 whitespace-nowrap">Deadlines</th>
-            <th className="px-5 py-3 whitespace-nowrap">Translator</th>
+            <th className="px-5 py-3 whitespace-nowrap">Translators</th>
             <th className="px-5 py-3 whitespace-nowrap">Instructions</th>
           </tr>
         </thead>
@@ -129,7 +143,26 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                   className="px-5 py-3"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
-                  {project.translator || "-"}
+                  {project.translators && project.translators.length > 0 ? (
+                    <div className="space-y-1">
+                      {project.translators.map((translator, index) => (
+                        <div key={translator.id} className="text-xs">
+                          <span className="font-medium">{translator.name}</span>
+                          <span className="text-muted-foreground ml-1">
+                            ({translator.role})
+                          </span>
+                          {translator.assignment_status === "claimed" && (
+                            <span className="ml-1 text-green-600">✓</span>
+                          )}
+                          {translator.assignment_status === "done" && (
+                            <span className="ml-1 text-blue-600">✓✓</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    "-"
+                  )}
                 </td>
                 <td className="px-5 py-3 break-words max-w-[600px]">
                   {project.instructions || "-"}

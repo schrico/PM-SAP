@@ -7,6 +7,7 @@ import { RoleSelector } from "@/components/assign/RoleSelector";
 import { ProjectTable } from "@/components/assign/ProjectTable";
 import { AssignButton } from "@/components/assign/AssignButton";
 import { useUser } from "@/hooks/useUser";
+import { useProjects } from "@/hooks/useProjects";
 import { toast } from "sonner";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import {
@@ -23,15 +24,17 @@ import {
 
 export default function AssignProjectsPage() {
   const supabase = createClientComponentClient();
-  const { user, loading } = useUser();
+  const { user, loading: userLoading } = useUser();
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState<
     "translator" | "reviewer" | null
   >(null);
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
-  const [allProjects, setAllProjects] = useState<any[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const loading = userLoading || projectsLoading;
 
   if (loading) return <p className="p-6 text-gray-500">Loading...</p>;
 
@@ -59,7 +62,7 @@ export default function AssignProjectsPage() {
         // Update the project's PM to the current logged-in PM/admin
         const { error: updateError } = await supabase
           .from("projects")
-          .update({ pm_id: user.id })
+          .update({ pm_id: user?.id })
           .eq("id", projectId);
 
         if (updateError) throw updateError;
@@ -72,7 +75,7 @@ export default function AssignProjectsPage() {
       setSelectedProjects([]);
       setConfirmOpen(false);
       setTimeout(() => {
-      window.location.reload();
+        window.location.reload();
       }, 1500);
     } catch (error: any) {
       toast.error(error.message || "Error assigning projects.");
@@ -85,7 +88,7 @@ export default function AssignProjectsPage() {
   // const filteredProjects = allProjects.filter(p => p.role_needed === selectedRole);
 
   // Get the names of selected projects (for confirmation modal)
-  const selectedProjectNames = allProjects
+  const selectedProjectNames = projects
     .filter((p) => selectedProjects.includes(p.id))
     .map((p) => p.name);
 
@@ -165,7 +168,7 @@ export default function AssignProjectsPage() {
                   : [...prev, projectId]
               )
             }
-            onProjectsLoaded={setAllProjects}
+            projects={projects}
             selectedUser={selectedUser}
           />
         )}

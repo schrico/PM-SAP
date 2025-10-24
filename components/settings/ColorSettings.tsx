@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Loader2, Palette, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useColorSettings } from "@/hooks/useColorSettings";
+import { useQueryClient } from "@tanstack/react-query";
 import { ColorDialog } from "./color/ColorDialog";
 import { ColorList } from "./color/ColorList";
 
@@ -27,42 +29,34 @@ interface ColorSettingsProps {
 export function ColorSettings({ userRole }: ColorSettingsProps) {
   const supabase = createClientComponentClient();
   const { toast } = useToast();
-  const [settings, setSettings] = useState<ColorSetting[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { settings, loading, error } = useColorSettings();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ColorSetting | null>(null);
 
   const isAdmin = userRole === "admin";
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  async function fetchSettings() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("color_settings")
-      .select("*")
-      .order("category", { ascending: true })
-      .order("setting_key", { ascending: true });
-
-    if (error) {
-      toast({ title: "Error", description: "Failed to load color settings.", variant: "destructive" });
-    } else {
-      setSettings(data || []);
-    }
-    setLoading(false);
-  }
+  // Refresh function for React Query
+  const refreshSettings = () => {
+    queryClient.invalidateQueries({ queryKey: ["color-settings"] });
+  };
 
   async function handleDelete(id: number) {
     const ok = confirm("Are you sure you want to delete this color?");
     if (!ok) return;
-    const { error } = await supabase.from("color_settings").delete().eq("id", id);
+    const { error } = await supabase
+      .from("color_settings")
+      .delete()
+      .eq("id", id);
     if (error) {
-      toast({ title: "Error", description: "Failed to delete color.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to delete color.",
+        variant: "destructive",
+      });
     } else {
       toast({ title: "Deleted", description: "Color deleted successfully." });
-      fetchSettings();
+      refreshSettings();
     }
   }
 
@@ -96,14 +90,23 @@ export function ColorSettings({ userRole }: ColorSettingsProps) {
           </p>
         </div>
 
-        <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditing(null);
+            setDialogOpen(true);
+          }}
+        >
           <PlusCircle className="w-4 h-4 mr-2" /> New Color
         </Button>
       </div>
 
       <ColorList
         settings={settings}
-        onEdit={(s:any) => { setEditing(s); setDialogOpen(true); }}
+        onEdit={(s: any) => {
+          setEditing(s);
+          setDialogOpen(true);
+        }}
         onDelete={handleDelete}
       />
 
@@ -111,7 +114,7 @@ export function ColorSettings({ userRole }: ColorSettingsProps) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         editing={editing}
-        refresh={fetchSettings}
+        refresh={refreshSettings}
       />
     </div>
   );

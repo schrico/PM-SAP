@@ -1,21 +1,25 @@
-import { useEffect, useState } from "react";
+import { useQuery } from '@tanstack/react-query';
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export function useColorSettings() {
   const supabase = createClientComponentClient();
-  const [settings, setSettings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  const { data: settings = [], isLoading: loading, error } = useQuery({
+    queryKey: ['color-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("color_settings")
+        .select("*")
+        .order('created_at', { ascending: true });
 
-  async function fetchSettings() {
-    setLoading(true);
-    const { data } = await supabase.from("color_settings").select("*");
-    setSettings(data || []);
-    setLoading(false);
-  }
+      if (error) {
+        throw new Error(`Failed to fetch color settings: ${error.message}`);
+      }
+
+      return data || [];
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes - color settings don't change often
+  });
 
   function getSystemColor(system: string) {
     return settings.find(s => s.category === "system" && s.system_name === system)?.color_value || "#ffffff";
@@ -55,6 +59,7 @@ export function useColorSettings() {
   return {
     settings,
     loading,
+    error,
     getSystemColor,
     getStatusColor,
     getLanguageColor,

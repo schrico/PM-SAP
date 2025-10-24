@@ -7,28 +7,32 @@ import { format, differenceInHours } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import type { Project } from "@/types/project";
 
 interface ProjectTableProps {
   selectedProjects: number[];
   onToggleProject: (projectId: number) => void;
-  onProjectsLoaded?: (projects: any[]) => void;
+  projects: Project[];
   selectedUser?: any;
 }
 
 export function ProjectTable({
   selectedProjects,
   onToggleProject,
-  onProjectsLoaded,
+  projects,
   selectedUser,
 }: ProjectTableProps) {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const supabase = createClientComponentClient();
   const { getRowColors, loading } = useColorSettings();
 
   useEffect(() => {
-    if (!selectedUser) return;
+    if (!selectedUser || !projects.length) {
+      setFilteredProjects([]);
+      return;
+    }
 
-    const fetchProjects = async () => {
+    const filterProjects = async () => {
       const now = new Date().toISOString();
 
       // buscar projetos ainda não atribuídos ao user
@@ -39,19 +43,30 @@ export function ProjectTable({
 
       const assignedIds = assignedData?.map((a) => a.project_id) || [];
 
-      const { data } = await supabase
-        .from("projects")
-        .select("*")
-        .gt("final_deadline", now)
-        .not("id", "in", `(${assignedIds.join(",") || 0})`)
-        .order("final_deadline", { ascending: true });
+      // Filter projects that are not assigned to the user and have future deadlines
+      const filtered = projects
+        .filter((project) => {
+          const hasFutureDeadline =
+            project.final_deadline &&
+            new Date(project.final_deadline) > new Date(now);
+          const isNotAssigned = !assignedIds.includes(project.id);
+          return hasFutureDeadline && isNotAssigned;
+        })
+        .sort((a, b) => {
+          const deadlineA = a.final_deadline
+            ? new Date(a.final_deadline).getTime()
+            : 0;
+          const deadlineB = b.final_deadline
+            ? new Date(b.final_deadline).getTime()
+            : 0;
+          return deadlineA - deadlineB;
+        });
 
-      setProjects(data || []);
-      onProjectsLoaded?.(data || []);
+      setFilteredProjects(filtered);
     };
 
-    fetchProjects();
-  }, [selectedUser, supabase, onProjectsLoaded]);
+    filterProjects();
+  }, [selectedUser, projects, supabase]);
 
   function formatDeadline(date: string | null) {
     if (!date) return null;
@@ -105,7 +120,7 @@ export function ProjectTable({
         </thead>
 
         <tbody>
-          {projects.map((project) => {
+          {filteredProjects.map((project) => {
             const checked = selectedProjects.includes(project.id);
             const nearest =
               project.interim_deadline || project.final_deadline || null;

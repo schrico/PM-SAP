@@ -1,37 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from '@tanstack/react-query';
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export function useUser() {
   const supabase = createClientComponentClient();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUser = async () => {
+  const { data: user, isLoading: loading, error } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
 
       if (!authUser) {
-        setUser(null);
-        setLoading(false);
-        return;
+        return null;
       }
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("users")
         .select("id, name, email, role")
         .eq("id", authUser.id)
         .single();
 
-      setUser(profile);
-      setLoading(false);
-    };
+      if (error) {
+        throw new Error(`Failed to fetch user profile: ${error.message}`);
+      }
 
-    fetchUser();
-  }, [supabase]);
+      return profile;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry if user is not authenticated
+  });
 
   return { user, loading };
 }

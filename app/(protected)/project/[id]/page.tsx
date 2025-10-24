@@ -1,22 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { Project } from "@/types/project";
 
 export default function ProjectDetailsPage() {
   const router = useRouter();
   const { id } = useParams();
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
+  const supabase = createClientComponentClient();
 
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchProject = async () => {
-      const supabase = createClientComponentClient();
+  const {
+    data: project,
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ["project", id],
+    queryFn: async (): Promise<Project> => {
+      if (!id) throw new Error("Project ID is required");
 
       const { data, error } = await supabase
         .from("projects")
@@ -24,13 +26,14 @@ export default function ProjectDetailsPage() {
         .eq("id", id)
         .single();
 
-      if (error) console.error("Erro ao carregar projeto:", error);
-      setProject(data);
-      setLoading(false);
-    };
+      if (error) {
+        throw new Error(`Failed to fetch project: ${error.message}`);
+      }
 
-    fetchProject();
-  }, [id]);
+      return data;
+    },
+    enabled: !!id,
+  });
 
   if (loading)
     return (
@@ -39,11 +42,11 @@ export default function ProjectDetailsPage() {
       </div>
     );
 
-  if (!project)
+  if (error || !project)
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center">
         <p className="text-lg text-muted-foreground mb-4">
-          Projeto não encontrado.
+          {error ? "Erro ao carregar projeto." : "Projeto não encontrado."}
         </p>
         <button
           onClick={() => router.back()}
@@ -94,12 +97,16 @@ export default function ProjectDetailsPage() {
             </div>
 
             <div>
-              <h2 className="text-sm font-medium text-gray-500">Língua de origem</h2>
+              <h2 className="text-sm font-medium text-gray-500">
+                Língua de origem
+              </h2>
               <p className="text-lg font-semibold">{project.language_in}</p>
             </div>
 
             <div>
-              <h2 className="text-sm font-medium text-gray-500">Língua de destino</h2>
+              <h2 className="text-sm font-medium text-gray-500">
+                Língua de destino
+              </h2>
               <p className="text-lg font-semibold">{project.language_out}</p>
             </div>
 
@@ -133,9 +140,7 @@ export default function ProjectDetailsPage() {
             <div>
               <h2 className="text-sm font-medium text-gray-500">Financeiro</h2>
               <p className="text-lg font-semibold">
-                {project.pago
-                  ? "Pago"
-                  : "Pendente"}
+                {project.pago ? "Pago" : "Pendente"}
                 {" / "}
                 {project.faturado ? "Faturado" : "Não faturado"}
               </p>
@@ -143,7 +148,9 @@ export default function ProjectDetailsPage() {
           </div>
 
           <div className="mt-8">
-            <h2 className="text-sm font-medium text-gray-500 mb-2">Instruções</h2>
+            <h2 className="text-sm font-medium text-gray-500 mb-2">
+              Instruções
+            </h2>
             <p className="text-gray-700 whitespace-pre-line leading-relaxed">
               {project.instructions || "Sem descrição fornecida."}
             </p>

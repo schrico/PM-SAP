@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useToast } from "@/hooks/use-toast";
 import type { ProjectAssignment } from "@/types/project-assignment";
@@ -8,22 +8,19 @@ import type { ProjectAssignment } from "@/types/project-assignment";
 export function useMyProjects(userId: string | null) {
   const supabase = createClientComponentClient();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const [unclaimedProjects, setUnclaimedProjects] = useState<ProjectAssignment[]>([]);
-  const [claimedProjects, setClaimedProjects] = useState<ProjectAssignment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: projectsData,
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ['my-projects', userId],
+    queryFn: async (): Promise<{ unclaimed: ProjectAssignment[]; claimed: ProjectAssignment[] }> => {
+      if (!userId) {
+        return { unclaimed: [], claimed: [] };
+      }
 
-  useEffect(() => {
-    if (userId) {
-      fetchProjects();
-    }
-  }, [userId]);
-
-  async function fetchProjects() {
-    if (!userId) return;
-
-    setLoading(true);
-    try {
       const { data, error } = await supabase
         .from("projects_assignment")
         .select(`
@@ -55,75 +52,99 @@ export function useMyProjects(userId: string | null) {
       const unclaimed = typedData?.filter((p) => p.assignment_status === "unclaimed") || [];
       const claimed = typedData?.filter((p) => p.assignment_status === "claimed") || [];
 
-      setUnclaimedProjects(unclaimed);
-      setClaimedProjects(claimed);
-    } catch (error) {
-      console.error("Error fetching projects:", error);
+      return { unclaimed, claimed };
+    },
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+
+  const unclaimedProjects = projectsData?.unclaimed || [];
+  const claimedProjects = projectsData?.claimed || [];
+
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      userId,
+      status,
+      projectName,
+    }: {
+      projectId: number;
+      userId: string;
+      status: "claimed" | "rejected" | "done";
+      projectName: string;
+    }) => {
+      const { error } = await supabase
+        .from("projects_assignment")
+        .update({ assignment_status: status })
+        .eq("project_id", projectId)
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      return { projectId, status, projectName };
+    },
+    onSuccess: ({ status, projectName }) => {
+      const messages = {
+        claimed: `Project "${projectName}" claimed successfully`,
+        rejected: `Project "${projectName}" has been rejected`,
+        done: `Project "${projectName}" marked as done`,
+      };
+
+      toast({
+        title: status === "rejected" ? "Project Rejected" : "Success",
+        description: messages[status],
+      });
+
+      // Invalidate and refetch the projects query
+      queryClient.invalidateQueries({ queryKey: ['my-projects', userId] });
+    },
+    onError: (error: any, { status }) => {
+      console.error(`Error updating project status to ${status}:`, error?.message || error);
       toast({
         title: "Error",
-        description: "Failed to load projects",
+        description: `Failed to ${status === "claimed"
+          ? "claim"
+          : status === "rejected"
+          ? "reject"
+          : "mark as done"} project`,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+  });
 
-  async function updateAssignmentStatus(
-  projectId: number,
-  userId: string,
-  status: "claimed" | "rejected" | "done",
-  projectName: string
-) {
-  try {
-    const { error } = await supabase
-      .from("projects_assignment")
-      .update({ assignment_status: status })
-      .eq("project_id", projectId)
-      .eq("user_id", userId);
-
-    if (error) throw error;
-
-    const messages = {
-      claimed: `Project "${projectName}" claimed successfully`,
-      rejected: `Project "${projectName}" has been rejected`,
-      done: `Project "${projectName}" marked as done`,
-    };
-
-    toast({
-      title: status === "rejected" ? "Project Rejected" : "Success",
-      description: messages[status],
-    });
-
-    fetchProjects();
-  } catch (error: any) {
-    console.error(`Error updating project status to ${status}:`, error?.message || error);
-    toast({
-      title: "Error",
-      description: `Failed to ${status === "claimed"
-        ? "claim"
-        : status === "rejected"
-        ? "reject"
-        : "mark as done"} project`,
-    });
-  }
-}
-
-
-  async function claimProject(projectId: number, projectName: string) {
-  if (!userId) return;
-  await updateAssignmentStatus(projectId, userId, "claimed", projectName);
-}
-
-  async function rejectProject(projectId: number, projectName: string) {
+  const claimProject = (projectId: number, projectName: string) => {
     if (!userId) return;
-    await updateAssignmentStatus(projectId, userId, "rejected", projectName);
-  }
+    updateAssignmentMutation.mutate({
+      projectId,
+      userId,
+      status: "claimed",
+      projectName,
+    });
+  };
 
-  async function markAsDone(projectId: number, projectName: string) {
+  const rejectProject = (projectId: number, projectName: string) => {
     if (!userId) return;
-    await updateAssignmentStatus(projectId, userId, "done", projectName);
-  }
+    updateAssignmentMutation.mutate({
+      projectId,
+      userId,
+      status: "rejected",
+      projectName,
+    });
+  };
+
+  const markAsDone = (projectId: number, projectName: string) => {
+    if (!userId) return;
+    updateAssignmentMutation.mutate({
+      projectId,
+      userId,
+      status: "done",
+      projectName,
+    });
+  };
+
+  const refreshProjects = () => {
+    queryClient.invalidateQueries({ queryKey: ['my-projects', userId] });
+  };
 
   return {
     unclaimedProjects,
@@ -132,6 +153,7 @@ export function useMyProjects(userId: string | null) {
     claimProject,
     rejectProject,
     markAsDone,
-    refreshProjects: fetchProjects,
+    refreshProjects,
+    isUpdating: updateAssignmentMutation.isPending,
   };
 }
