@@ -33,7 +33,7 @@ export function ColorDynamicFields({ category, form }: Props) {
         name="system_name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>System Name</FormLabel>
+            <FormLabel>System Name *</FormLabel>
             <FormControl>
               <Input
                 placeholder="e.g. XTM"
@@ -55,9 +55,12 @@ export function ColorDynamicFields({ category, form }: Props) {
         name="status_key"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Status</FormLabel>
+            <FormLabel>Status *</FormLabel>
             <FormControl>
-              <Select onValueChange={(v) => field.onChange(v)} value={field.value ?? ""}>
+              <Select
+                onValueChange={(v) => field.onChange(v)}
+                value={field.value ?? ""}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a status" />
                 </SelectTrigger>
@@ -82,7 +85,7 @@ export function ColorDynamicFields({ category, form }: Props) {
           name="language_in"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>From (language)</FormLabel>
+              <FormLabel>From (language) *</FormLabel>
               <FormControl>
                 <Input
                   placeholder="e.g. Eng"
@@ -100,7 +103,7 @@ export function ColorDynamicFields({ category, form }: Props) {
           name="language_out"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>To (language)</FormLabel>
+              <FormLabel>To (language) *</FormLabel>
               <FormControl>
                 <Input
                   placeholder="e.g. Pt"

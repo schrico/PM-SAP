@@ -76,7 +76,7 @@ export default function AssignProjectsPage() {
       setConfirmOpen(false);
       setTimeout(() => {
         window.location.reload();
-      }, 1500);
+      }, 700);
     } catch (error: any) {
       toast.error(error.message || "Error assigning projects.");
     }

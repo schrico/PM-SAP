@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,27 +27,52 @@ import { ColorDynamicFields } from "./ColorDynamicFields";
 
 export type Category = "system" | "language" | "status";
 
-export const colorSchema = z.object({
-  color_value: z.string().regex(/^#([A-Fa-f0-9]{6})$/, "Invalid hex"),
-  category: z.enum(["system", "language", "status"]),
-  system_name: z.string().optional().nullable(),
-  status_key: z.string().optional().nullable(),
-  language_in: z.string().optional().nullable(),
-  language_out: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
-});
+export const colorSchema = z
+  .object({
+    color_value: z.string().regex(/^#([A-Fa-f0-9]{6})$/, "Invalid hex"),
+    category: z.enum(["system", "language", "status"]),
+    system_name: z.string().optional().nullable(),
+    status_key: z.string().optional().nullable(),
+    language_in: z.string().optional().nullable(),
+    language_out: z.string().optional().nullable(),
+    description: z.string().optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      if (data.category === "system") {
+        return data.system_name && data.system_name.trim().length > 0;
+      }
+      if (data.category === "status") {
+        return data.status_key && data.status_key.trim().length > 0;
+      }
+      if (data.category === "language") {
+        return (
+          data.language_in &&
+          data.language_in.trim().length > 0 &&
+          data.language_out &&
+          data.language_out.trim().length > 0
+        );
+      }
+      return true;
+    },
+    {
+      message: "Please fill in all required fields for the selected category",
+      path: ["category"],
+    }
+  );
 
 export type ColorFormValues = z.infer<typeof colorSchema>;
 
 interface Props {
-  editing: Partial<ColorFormValues> & { id?: number; setting_key?: string } | null;
+  editing:
+    | (Partial<ColorFormValues> & { id?: number; setting_key?: string })
+    | null;
   onDone: () => void;
   closeDialog: () => void;
 }
 
 export function ColorForm({ editing, onDone, closeDialog }: Props) {
   const supabase = createClientComponentClient();
-  const { toast } = useToast();
 
   const form = useForm<ColorFormValues>({
     resolver: zodResolver(colorSchema),
@@ -82,8 +107,10 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
   function genKeyFromFields(values: Partial<ColorFormValues>) {
     if (!values.category) return "";
     let key = "";
-    if (values.category === "system") key = `system_${(values.system_name || "").trim()}`;
-    else if (values.category === "status") key = `status_${(values.status_key || "").trim()}`;
+    if (values.category === "system")
+      key = `system_${(values.system_name || "").trim()}`;
+    else if (values.category === "status")
+      key = `status_${(values.status_key || "").trim()}`;
     else if (values.category === "language")
       key = `lang_${(values.language_in || "").trim()}_${(values.language_out || "").trim()}`;
 
@@ -104,34 +131,41 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
     if (!isEdit) {
       payload.setting_key = genKeyFromFields(values);
       // null out fields not in category
-      payload.system_name = values.category === "system" ? values.system_name : null;
-      payload.status_key = values.category === "status" ? values.status_key : null;
-      payload.language_in = values.category === "language" ? values.language_in : null;
-      payload.language_out = values.category === "language" ? values.language_out : null;
+      payload.system_name =
+        values.category === "system" ? values.system_name : null;
+      payload.status_key =
+        values.category === "status" ? values.status_key : null;
+      payload.language_in =
+        values.category === "language" ? values.language_in : null;
+      payload.language_out =
+        values.category === "language" ? values.language_out : null;
     }
 
     try {
       if (isEdit && editing?.id) {
-        const { error } = await supabase.from("color_settings").update(payload).eq("id", editing.id);
+        const { error } = await supabase
+          .from("color_settings")
+          .update(payload)
+          .eq("id", editing.id);
         if (error) throw error;
-        toast({ title: "Updated", description: "Color updated successfully." });
+        toast.success("Color updated successfully.");
       } else {
         const { error } = await supabase.from("color_settings").insert(payload);
         if (error) {
           if ((error as any).code === "23505") {
-            toast({ title: "Already exists", description: "This color setting already exists.", variant: "destructive" });
+            toast.error("This color setting already exists.");
             return;
           }
           throw error;
         }
-        toast({ title: "Added", description: "New color added." });
+        toast.success("New color added.");
       }
 
       onDone();
       closeDialog();
     } catch (err) {
       console.error("save error", err);
-      toast({ title: "Error", description: "Failed to save color setting.", variant: "destructive" });
+      toast.error("Failed to save color setting.");
     }
   };
 
@@ -149,7 +183,10 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
               <FormItem>
                 <FormLabel>Category</FormLabel>
                 <FormControl>
-                  <Select onValueChange={field.onChange} value={field.value ?? "system"}>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value ?? "system"}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -166,7 +203,9 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
           />
         )}
 
-        {!isEdit && <ColorDynamicFields category={selectedCategory} form={form} />}
+        {!isEdit && (
+          <ColorDynamicFields category={selectedCategory} form={form} />
+        )}
 
         <FormField
           control={form.control}
@@ -208,7 +247,11 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
             <FormItem>
               <FormLabel>Description (optional)</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value)} />
+                <Input
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
