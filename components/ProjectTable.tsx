@@ -148,14 +148,14 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
                       {project.translators.map((translator, index) => (
                         <div key={translator.id} className="text-xs">
                           <span className="font-medium">{translator.name}</span>
-                          <span className="text-muted-foreground ml-1">
+                          <span className="text-gray-800 ml-1">
                             ({translator.role})
                           </span>
                           {translator.assignment_status === "claimed" && (
-                            <span className="ml-1 text-green-600">✓</span>
+                            <span className="ml-1 text-green-800 font-bold">✓</span>
                           )}
                           {translator.assignment_status === "done" && (
-                            <span className="ml-1 text-blue-600">✓✓</span>
+                            <span className="ml-1 text-blue-800 font-bold">✓✓</span>
                           )}
                         </div>
                       ))}
