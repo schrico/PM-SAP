@@ -97,7 +97,7 @@ export default function ProjectDetailsPage() {
             <div>
               <h2 className="text-sm font-medium text-gray-500">Prazo</h2>
               <p className="text-lg font-semibold">
-                {new Date(project.deadline).toLocaleDateString("pt-PT", {
+                {new Date(project.final_deadline ?? "").toLocaleDateString("pt-PT", {
                   day: "2-digit",
                   month: "short",
                   year: "numeric",

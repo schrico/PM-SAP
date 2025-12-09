@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -30,10 +30,10 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.545.0",
-    "next": "15.5.4",
+    "next": "16.0.8",
     "next-themes": "^0.4.6",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
     "react-hook-form": "^7.65.0",
     "shadcn-ui": "^0.9.5",
     "sonner": "^2.0.7",
@@ -47,11 +47,11 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.37.0",
-    "eslint-config-next": "15.5.4",
+    "eslint-config-next": "16.0.8",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^6.1.1",
     "husky": "^9.1.7",
@@ -61,5 +61,9 @@
     "tailwindcss": "^3.4.18",
     "typescript": "^5",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3"
   }
 }
