@@ -21,7 +21,16 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export function ProfileForm() {
-  const supabase = createClientComponentClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Missing Supabase environment variables.");
+  }
+
+  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
   const [loading, setLoading] = useState(false);
   const [editingField, setEditingField] = useState<"name" | "email" | "C_user" | "TE_user" | null>(null);
   const [isOAuthUser, setIsOAuthUser] = useState(false);

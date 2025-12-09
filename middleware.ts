@@ -6,8 +6,21 @@ import type { NextRequest } from "next/server";
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Supabase env vars missing for middleware.");
+    return res;
+  }
+
   // Create a Supabase client bound to the request/response
-  const supabase = createMiddlewareClient({ req, res });
+  const supabase = createMiddlewareClient(
+    { req, res },
+    { supabaseUrl, supabaseKey }
+  );
 
   // Get current session
   const {
