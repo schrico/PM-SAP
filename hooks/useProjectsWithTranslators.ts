@@ -13,7 +13,7 @@ interface ProjectWithTranslators extends Project {
   }>;
 }
 
-export function useProjectsWithTranslators(showPast: boolean = false) {
+export function useProjectsWithTranslators(showPast: boolean = false, showAll: boolean = false) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
@@ -26,7 +26,7 @@ export function useProjectsWithTranslators(showPast: boolean = false) {
   const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
 
   return useQuery({
-    queryKey: ['projects-with-translators', showPast],
+    queryKey: ['projects-with-translators', showPast, showAll],
     queryFn: async (): Promise<ProjectWithTranslators[]> => {
       // First, get all projects
       const { data: projects, error: projectsError } = await supabase
@@ -48,7 +48,6 @@ export function useProjectsWithTranslators(showPast: boolean = false) {
         .select(`
           project_id,
           assignment_status,
-          role_assignment,
           users (
             id,
             name,
@@ -70,7 +69,7 @@ export function useProjectsWithTranslators(showPast: boolean = false) {
           acc[projectId].push({
             id: assignment.users.id,
             name: assignment.users.name,
-            role: assignment.role_assignment,
+            role: assignment.users.role,
             assignment_status: assignment.assignment_status,
           });
         }
@@ -100,16 +99,18 @@ export function useProjectsWithTranslators(showPast: boolean = false) {
       };
 
       // Filter projects based on their closest deadline
-      const filteredProjects = projectsWithTranslators.filter((p) => {
-        const closest = getClosestDeadline(p);
-        if (!closest) return false; // Exclude projects without valid deadlines
-        
-        const isPast = closest.getTime() < now.getTime();
-        const shouldInclude = showPast ? isPast : !isPast;
-        
-        
-        return shouldInclude;
-      });
+      // If showAll is true, return all projects without filtering
+      const filteredProjects = showAll
+        ? projectsWithTranslators // Show all projects
+        : projectsWithTranslators.filter((p) => {
+            const closest = getClosestDeadline(p);
+            if (!closest) return false; // Exclude projects without valid deadlines
+            
+            const isPast = closest.getTime() < now.getTime();
+            const shouldInclude = showPast ? isPast : !isPast;
+            
+            return shouldInclude;
+          });
 
       // Sort projects
       const sortedProjects = filteredProjects.sort((a, b) => {

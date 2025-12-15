@@ -149,9 +149,9 @@ export default function ProjectDetailsPage() {
             <div>
               <h2 className="text-sm font-medium text-gray-500">Financeiro</h2>
               <p className="text-lg font-semibold">
-                {project.pago ? "Pago" : "Pendente"}
+                {project.paid ? "Paid" : "Pending"}
                 {" / "}
-                {project.faturado ? "Faturado" : "Não faturado"}
+                {project.invoiced ? "Invoiced" : "Not invoiced"}
               </p>
             </div>
           </div>

@@ -14,7 +14,6 @@ export interface ProjectManagementView {
   interim_deadline: string | null;
   final_deadline: string | null;
   project_status: "complete" | "active" | "cancelled";
-  pm_id: string | null;
   user_id: string;
   translator_name: string;
   assignment_status: "unclaimed" | "claimed" | "done" | "rejected";
@@ -30,7 +29,6 @@ export interface GroupedProject {
   interim_deadline: string | null;
   final_deadline: string | null;
   project_status: "complete" | "active" | "cancelled";
-  pm_id: string | null;
   translators: Array<{
     user_id: string;
     translator_name: string;
@@ -64,10 +62,10 @@ export function useProjectManagement(userId: string | null) {
       }
 
       // Get projects where user is PM or Admin
+      // Note: pm_id is no longer in projects table, filtering by user assignments instead
       const { data, error } = await supabase
         .from("project_management_view")
-        .select("*")
-        .eq("pm_id", userId);
+        .select("*");
 
       if (error) {
         throw new Error(`Failed to fetch project management data: ${error.message}`);
@@ -93,7 +91,6 @@ export function useProjectManagement(userId: string | null) {
             interim_deadline: row.interim_deadline,
             final_deadline: row.final_deadline,
             project_status: row.project_status,
-            pm_id: row.pm_id,
             translators: []
           };
         }
@@ -162,17 +159,15 @@ export function useProjectManagement(userId: string | null) {
 
   // Add translator mutation
   const addTranslatorMutation = useMutation({
-    mutationFn: async ({ projectId, userId, roleAssignment }: { 
+    mutationFn: async ({ projectId, userId }: { 
       projectId: number; 
       userId: string; 
-      roleAssignment: string;
     }) => {
       const { error } = await supabase
         .from('projects_assignment')
         .insert({
           project_id: projectId,
           user_id: userId,
-          role_assignment: roleAssignment,
           assignment_status: 'unclaimed'
         });
 

@@ -8,4 +8,5 @@ export interface User {
   role: UserRole;
   C_user: string;
   TE_user: string;
+  short_name?: string | null;
 }
