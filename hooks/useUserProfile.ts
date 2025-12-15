@@ -18,7 +18,7 @@ export function useUserProfile() {
 
   return useQuery({
     queryKey: ['user-profile'],
-    queryFn: async (): Promise<User | null> => {
+    queryFn: async (): Promise<(User & { email: string }) | null> => {
       const { data: userData } = await supabase.auth.getUser();
       
       if (!userData.user) {
@@ -35,7 +35,11 @@ export function useUserProfile() {
         throw new Error(`Failed to fetch user profile: ${error.message}`);
       }
 
-      return userProfile;
+      // Get email from auth user (it's the source of truth)
+      return {
+        ...userProfile,
+        email: userData.user.email || userProfile.email || '',
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false, // Don't retry if user is not authenticated
