@@ -1,31 +1,21 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
+import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 
 interface AppShellProps {
   children: ReactNode;
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const [darkMode, setDarkMode] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useLayoutStore((state) => state.collapsed);
 
   return (
-    <div
-      className={`min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 ${
-        darkMode ? "dark" : ""
-      }`}
-      data-sidebar-collapsed={collapsed}
-    >
-      <Sidebar
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        collapsed={collapsed}
-        setCollapsed={setCollapsed}
-      />
+    <div className="min-h-screen">
+      <Sidebar />
       <main
-        className={`min-h-screen transition-all duration-150 ${
+        className={`min-h-screen transition-all duration-300 ${
           collapsed ? "ml-20" : "ml-52"
         }`}
       >
