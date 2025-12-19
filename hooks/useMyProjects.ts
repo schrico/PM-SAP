@@ -30,12 +30,20 @@ export function useMyProjects(userId: string | null) {
         return { unclaimed: [], claimed: [] };
       }
 
+      // Verify Supabase connection
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error("Missing Supabase environment variables. Please check your .env.local file.");
+      }
+
       const { data, error } = await supabase
         .from("projects_assignment")
         .select(`
           project_id,
           user_id,
           assignment_status,
+          initial_message,
+          refusal_message,
+          done_message,
           projects (
             id,
             name,
@@ -54,7 +62,10 @@ export function useMyProjects(userId: string | null) {
         .eq("user_id", userId)
         .in("assignment_status", ["unclaimed", "claimed"]);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase query error:", error);
+        throw new Error(`Failed to fetch projects: ${error.message}`);
+      }
 
       const typedData = data as unknown as ProjectAssignment[];
 
@@ -76,15 +87,30 @@ export function useMyProjects(userId: string | null) {
       userId,
       status,
       projectName,
+      message,
     }: {
       projectId: number;
       userId: string;
       status: "claimed" | "rejected" | "done";
       projectName: string;
+      message?: string | null;
     }) => {
+      const updateData: {
+        assignment_status: string;
+        refusal_message?: string | null;
+        done_message?: string | null;
+      } = { assignment_status: status };
+
+      if (status === "rejected" && message) {
+        updateData.refusal_message = message;
+      }
+      if (status === "done" && message) {
+        updateData.done_message = message;
+      }
+
       const { error } = await supabase
         .from("projects_assignment")
-        .update({ assignment_status: status })
+        .update(updateData)
         .eq("project_id", projectId)
         .eq("user_id", userId);
 
@@ -131,23 +157,33 @@ export function useMyProjects(userId: string | null) {
     });
   };
 
-  const rejectProject = (projectId: number, projectName: string) => {
+  const rejectProject = (
+    projectId: number,
+    projectName: string,
+    refusalMessage: string
+  ) => {
     if (!userId) return;
     updateAssignmentMutation.mutate({
       projectId,
       userId,
       status: "rejected",
       projectName,
+      message: refusalMessage,
     });
   };
 
-  const markAsDone = (projectId: number, projectName: string) => {
+  const markAsDone = (
+    projectId: number,
+    projectName: string,
+    doneMessage?: string | null
+  ) => {
     if (!userId) return;
     updateAssignmentMutation.mutate({
       projectId,
       userId,
       status: "done",
       projectName,
+      message: doneMessage,
     });
   };
 

@@ -34,19 +34,19 @@ export default function HomePage() {
       count: myProjectsCount,
     },
     {
-      title: "Assign Projects",
-      icon: UserPlus,
-      path: "/assign-projects",
-      color: "bg-purple-500",
-      description: "Distribute work to translators",
-    },
-    {
       title: "Manage Projects",
       icon: FolderKanban,
       path: "/management",
       color: "bg-green-500",
       description: "Oversee all active projects",
       count: manageProjectsCount,
+    },
+    {
+      title: "Assign Projects",
+      icon: UserPlus,
+      path: "/assign-projects",
+      color: "bg-purple-500",
+      description: "Distribute work to translators",
     },
     {
       title: "My Profile",

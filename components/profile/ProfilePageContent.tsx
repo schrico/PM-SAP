@@ -82,9 +82,9 @@ export function ProfilePageContent() {
     try {
       await updateProfile.mutateAsync({
         name: formData.name,
-        short_name: formData.short_name || null,
-        C_user: formData.C_user || null,
-        TE_user: formData.TE_user || null,
+        short_name: formData.short_name || "",
+        C_user: formData.C_user || "",
+        TE_user: formData.TE_user || "",
         email: formData.email,
       });
       setLastSavedAt(new Date());

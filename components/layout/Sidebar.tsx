@@ -14,12 +14,15 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
+  Receipt,
 } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
+import { TypewriterText } from "@/components/ui/TypewriterText";
 
 export function Sidebar() {
-  const { darkMode, collapsed, toggleDarkMode, toggleCollapsed } = useLayoutStore();
+  const { darkMode, collapsed, toggleDarkMode, toggleCollapsed } =
+    useLayoutStore();
   const pathname = usePathname();
   const { user } = useUser();
 
@@ -34,29 +37,43 @@ export function Sidebar() {
     { path: "/my-projects", icon: ClipboardList, label: "My Projects" },
     { path: "/assign-projects", icon: UserPlus, label: "Assign Projects" },
     { path: "/management", icon: FolderKanban, label: "Manage Projects" },
-    { path: "/settings", icon: Settings, label: "Settings" },
+    { path: "/invoicing", icon: Receipt, label: "Invoicing" },
   ];
 
   // Controls when text labels are visible (for smooth transition)
   const [showLabels, setShowLabels] = useState(!collapsed);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  const [darkModeJustChanged, setDarkModeJustChanged] = useState(false);
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
 
     if (!collapsed) {
-      // expanding → wait before showing labels
+      // expanding → wait before showing labels and starting animation
       timeout = setTimeout(() => {
         setShowLabels(true);
+        setShouldAnimate(true);
       }, 115);
     } else {
-      // collapsing → hide labels immediately
+      // collapsing → hide labels immediately and reset animation
       setShowLabels(false);
+      setShouldAnimate(false);
     }
 
     return () => {
       if (timeout) clearTimeout(timeout);
     };
   }, [collapsed]);
+
+  // Track darkMode changes to show text immediately when toggled
+  useEffect(() => {
+    setDarkModeJustChanged(true);
+    // Reset the flag after a short delay to allow normal animation on next expand
+    const resetTimeout = setTimeout(() => {
+      setDarkModeJustChanged(false);
+    }, 1000);
+    return () => clearTimeout(resetTimeout);
+  }, [darkMode]);
   return (
     <aside
       className={`fixed left-0 top-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ${
@@ -69,7 +86,9 @@ export function Sidebar() {
           <div className="flex items-center gap-2">
             {showLabels && (
               <span className="text-gray-900 dark:text-white font-medium">
-                TETRAEPIK
+                {shouldAnimate ?
+                  <TypewriterText text="TETRAEPIK" speed={30} delay={0} />
+                : "TETRAEPIK"}
               </span>
             )}
           </div>
@@ -86,7 +105,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-6 space-y-1">
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const isActive = pathname === item.path;
             const Icon = item.icon;
 
@@ -102,7 +121,17 @@ export function Sidebar() {
                 title={collapsed ? item.label : undefined}
               >
                 <Icon className="w-5 h-5 shrink-0" />
-                {showLabels && <span>{item.label}</span>}
+                {showLabels && (
+                  <span>
+                    {shouldAnimate ?
+                      <TypewriterText
+                        text={item.label}
+                        speed={30}
+                        delay={50 + index * 40}
+                      />
+                    : item.label}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -123,10 +152,18 @@ export function Sidebar() {
             {showLabels && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm truncate">
-                  {user?.name || "Profile"}
+                  {shouldAnimate ?
+                    <TypewriterText
+                      text={user?.name || "Profile"}
+                      speed={30}
+                      delay={250}
+                    />
+                  : user?.name || "Profile"}
                 </p>
                 <p className="text-xs opacity-70 truncate">
-                  {roleLabel}
+                  {shouldAnimate ?
+                    <TypewriterText text={roleLabel} speed={30} delay={300} />
+                  : roleLabel}
                 </p>
               </div>
             )}
@@ -145,22 +182,43 @@ export function Sidebar() {
             title={collapsed ? "Settings" : undefined}
           >
             <Settings className="w-5 h-5 shrink-0" />
-            {showLabels && <span>Settings</span>}
+            {showLabels && (
+              <span>
+                {shouldAnimate ?
+                  <TypewriterText text="Settings" speed={30} delay={350} />
+                : "Settings"}
+              </span>
+            )}
           </Link>
           <button
             type="button"
             onClick={toggleDarkMode}
             className="flex cursor-pointer items-center gap-3 w-full px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             title={
-              collapsed ? (darkMode ? "Light Mode" : "Dark Mode") : undefined
+              collapsed ?
+                darkMode ?
+                  "Light Mode"
+                : "Dark Mode"
+              : undefined
             }
           >
-            {darkMode ? (
+            {darkMode ?
               <Sun className="w-5 h-5 shrink-0" />
-            ) : (
-              <Moon className="w-5 h-5 shrink-0" />
+            : <Moon className="w-5 h-5 shrink-0" />}
+            {showLabels && (
+              <span>
+                {shouldAnimate && !darkModeJustChanged ?
+                  <TypewriterText
+                    text={darkMode ? "Light Mode" : "Dark Mode"}
+                    speed={30}
+                    delay={400}
+                    key={darkMode ? "light" : "dark"}
+                  />
+                : darkMode ?
+                  "Light Mode"
+                : "Dark Mode"}
+              </span>
             )}
-            {showLabels && <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>}
           </button>
         </div>
       </div>
