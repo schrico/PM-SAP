@@ -3,27 +3,7 @@
 import { formatDate } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
-
-interface ProjectWithTranslators {
-  id: number;
-  name: string;
-  system: string;
-  words: number | null;
-  translators: Array<{
-    id: string;
-    name: string;
-    role: string;
-    assignment_status: string;
-  }>;
-  final_deadline: string | null;
-  interim_deadline: string | null;
-  initial_deadline: string | null;
-  instructions?: string | null;
-  invoiced: boolean | null;
-  paid: boolean | null;
-  language_in: string | null;
-  language_out: string | null;
-}
+import type { ProjectWithTranslators } from "@/types/project";
 
 interface InvoicingTableProps {
   projects: ProjectWithTranslators[];

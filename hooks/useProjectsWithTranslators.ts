@@ -2,16 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Project } from '@/types/project';
-
-interface ProjectWithTranslators extends Project {
-  translators: Array<{
-    id: string;
-    name: string;
-    role: string;
-    assignment_status: string;
-  }>;
-}
+import type { ProjectWithTranslators, ProjectTranslator } from '@/types/project';
 
 export function useProjectsWithTranslators(showPast: boolean = false, showAll: boolean = false) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -60,7 +51,7 @@ export function useProjectsWithTranslators(showPast: boolean = false, showAll: b
       }
 
       // Group assignments by project_id
-      const assignmentsByProject = (assignments || []).reduce((acc: Record<number, Array<{ id: string; name: string; role: string; assignment_status: string }>>, assignment: any) => {
+      const assignmentsByProject = (assignments || []).reduce((acc: Record<number, ProjectTranslator[]>, assignment: any) => {
         const projectId = assignment.project_id;
         if (!acc[projectId]) {
           acc[projectId] = [];

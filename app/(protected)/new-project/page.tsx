@@ -2,13 +2,13 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Project } from "@/types/project";
 
-export default function NewProjectPage() {
+function NewProjectPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const duplicateFromId = searchParams.get("duplicateFrom");
@@ -396,7 +396,7 @@ export default function NewProjectPage() {
             onClick={handleSave}
             disabled={
               createProjectMutation.isPending ||
-              (duplicateFromId && !hasDataChanged)
+              !!(duplicateFromId && !hasDataChanged)
             }
             className="inline-flex cursor-pointer items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             type="button"
@@ -421,5 +421,19 @@ export default function NewProjectPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function NewProjectPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center h-screen">
+          <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
+        </div>
+      }
+    >
+      <NewProjectPageContent />
+    </Suspense>
   );
 }

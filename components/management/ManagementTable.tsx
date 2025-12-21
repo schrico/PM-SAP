@@ -276,3 +276,4 @@ export function ManagementTable({
     </div>
   );
 }
+

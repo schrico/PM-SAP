@@ -1,14 +1,36 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { useProject } from "@/hooks/useProject";
+import { useColorSettings } from "@/hooks/useColorSettings";
+import { ProjectDetailsCard } from "@/components/project/ProjectDetailsCard";
+import { ProjectInstructionsCard } from "@/components/project/ProjectInstructionsCard";
+import { TranslatorsList } from "@/components/project/TranslatorsList";
+import { AddTranslatorModal } from "@/components/management/AddTranslatorModal";
+import { ReminderModal } from "@/components/project/ReminderModal";
+import { Button } from "@/components/ui/button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import type { Project } from "@/types/project";
+import { toast } from "sonner";
+import { useState } from "react";
 
-export default function ProjectDetailsPage() {
+export default function ProjectPage() {
+  const params = useParams();
   const router = useRouter();
-  const { id } = useParams();
+  const queryClient = useQueryClient();
+  const projectId = params.id ? Number(params.id) : null;
+
+  const { data: project, isLoading, error } = useProject(projectId);
+  const { getSystemColor } = useColorSettings();
+
+  const [showAddTranslatorModal, setShowAddTranslatorModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState<{
+    open: boolean;
+    userId: string;
+    userName: string;
+  }>({ open: false, userId: "", userName: "" });
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
@@ -20,152 +42,267 @@ export default function ProjectDetailsPage() {
 
   const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
 
-  const {
-    data: project,
-    isLoading: loading,
-    error,
-  } = useQuery({
-    queryKey: ["project", id],
-    queryFn: async (): Promise<Project> => {
-      if (!id) throw new Error("Project ID is required");
+  // Add translators mutation
+  const addTranslatorsMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      userIds,
+      messages,
+    }: {
+      projectId: number;
+      userIds: string[];
+      messages: Record<string, string>;
+    }) => {
+      const assignments = userIds.map((userId) => ({
+        project_id: projectId,
+        user_id: userId,
+        assignment_status: "unclaimed",
+        initial_message: messages[userId] || null,
+      }));
 
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { error } = await supabase
+        .from("projects_assignment")
+        .insert(assignments);
 
-      if (error) {
-        throw new Error(`Failed to fetch project: ${error.message}`);
-      }
-
-      return data;
+      if (error) throw new Error(`Failed to add translators: ${error.message}`);
     },
-    enabled: !!id,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Translators added successfully");
+      setShowAddTranslatorModal(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
-  if (loading)
+  // Remove translator mutation
+  const removeTranslatorMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      userId,
+    }: {
+      projectId: number;
+      userId: string;
+    }) => {
+      const { error } = await supabase
+        .from("projects_assignment")
+        .delete()
+        .eq("project_id", projectId)
+        .eq("user_id", userId);
+
+      if (error) {
+        throw new Error(`Failed to remove translator: ${error.message}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Translator removed successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Send reminder mutation
+  const sendReminderMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      userId,
+      message,
+    }: {
+      projectId: number;
+      userId: string;
+      message?: string;
+    }) => {
+      // Update the initial_message in the assignment
+      const { error } = await supabase
+        .from("projects_assignment")
+        .update({
+          initial_message:
+            message || "This is a reminder about your project assignment.",
+        })
+        .eq("project_id", projectId)
+        .eq("user_id", userId);
+
+      if (error) {
+        throw new Error(`Failed to send reminder: ${error.message}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Reminder sent successfully");
+      setShowReminderModal({ open: false, userId: "", userName: "" });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleEdit = () => {
+    router.push(`/project/${projectId}/edit`);
+  };
+
+  const handleAddTranslator = () => {
+    setShowAddTranslatorModal(true);
+  };
+
+  const handleRemoveTranslator = (userId: string) => {
+    if (!projectId) return;
+    removeTranslatorMutation.mutate({ projectId, userId });
+  };
+
+  const handleSendReminder = (userId: string, userName: string) => {
+    setShowReminderModal({ open: true, userId, userName });
+  };
+
+  const handleSendReminderMessage = (message: string) => {
+    if (!projectId) return;
+    sendReminderMutation.mutate({
+      projectId,
+      userId: showReminderModal.userId,
+      message,
+    });
+  };
+
+  const handleSendDefaultReminder = () => {
+    if (!projectId) return;
+    sendReminderMutation.mutate({
+      projectId,
+      userId: showReminderModal.userId,
+    });
+  };
+
+  const handleAddTranslators = (
+    projectId: number,
+    userIds: string[],
+    messages: Record<string, string>
+  ) => {
+    addTranslatorsMutation.mutate({ projectId, userIds, messages });
+  };
+
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
       </div>
     );
+  }
 
-  if (error || !project)
+  if (error || !project) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-center">
-        <p className="text-lg text-muted-foreground mb-4">
-          {error ? "Erro ao carregar projeto." : "Projeto não encontrado."}
-        </p>
-        <button
-          onClick={() => router.back()}
-          className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-700 transition"
-        >
-          Voltar
-        </button>
+      <div className="p-8 max-w-7xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+          <h2 className="text-gray-900 dark:text-white mb-4">
+            Project not found
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            {error ?
+              "Failed to load project. Please try again."
+            : "The project you're looking for doesn't exist or has been removed."
+            }
+          </p>
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </div>
       </div>
     );
+  }
+
+  const systemColor = getSystemColor(project.system);
+  const systemColorStyle =
+    systemColor !== "#ffffff" ? { backgroundColor: systemColor } : undefined;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* Header simplificado */}
-      <header className="sticky top-20 sm:top-24 md:top-28 lg:top-32 bg-white border-b border-gray-200 shadow-sm z-10">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Voltar</span>
-          </button>
-          <h1 className="text-xl font-semibold text-gray-800 truncate">
-            {project.name}
-          </h1>
-          <div className="w-12" /> {/* espaço vazio p/ balancear layout */}
-        </div>
-      </header>
+    <div className="p-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Back
+        </Button>
 
-      {/* Conteúdo */}
-      <section className="max-w-5xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-100">
-          <div className="grid md:grid-cols-2 gap-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-4 h-4 rounded" style={systemColorStyle} />
             <div>
-              <h2 className="text-sm font-medium text-gray-500">Sistema</h2>
-              <p className="text-lg font-semibold">{project.system}</p>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-500">Prazo</h2>
-              <p className="text-lg font-semibold">
-                {new Date(project.final_deadline ?? "").toLocaleDateString("pt-PT", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </p>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-500">
-                Língua de origem
-              </h2>
-              <p className="text-lg font-semibold">{project.language_in}</p>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-500">
-                Língua de destino
-              </h2>
-              <p className="text-lg font-semibold">{project.language_out}</p>
-            </div>
-
-            {project.words && (
-              <div>
-                <h2 className="text-sm font-medium text-gray-500">Palavras</h2>
-                <p className="text-lg font-semibold">{project.words}</p>
+              <h1 className="text-gray-900 dark:text-white mb-2 text-3xl font-bold">
+                {project.name}
+              </h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm">
+                  {project.system}
+                </span>
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-lg text-sm capitalize ${
+                    project.status === "active" ?
+                      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                    : project.status === "complete" ?
+                      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  {project.status}
+                </span>
               </div>
-            )}
-
-            {project.lines && (
-              <div>
-                <h2 className="text-sm font-medium text-gray-500">Linhas</h2>
-                <p className="text-lg font-semibold">{project.lines}</p>
-              </div>
-            )}
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-500">Status</h2>
-              <p
-                className={`inline-flex items-center px-3 py-1 text-sm rounded-full ${
-                  project.status === "active"
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-green-100 text-green-700"
-                }`}
-              >
-                {project.status === "active" ? "Ativo" : "Concluído"}
-              </p>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-500">Financeiro</h2>
-              <p className="text-lg font-semibold">
-                {project.paid ? "Paid" : "Pending"}
-                {" / "}
-                {project.invoiced ? "Invoiced" : "Not invoiced"}
-              </p>
             </div>
           </div>
 
-          <div className="mt-8">
-            <h2 className="text-sm font-medium text-gray-500 mb-2">
-              Instruções
-            </h2>
-            <p className="text-gray-700 whitespace-pre-line leading-relaxed">
-              {project.instructions || "Sem descrição fornecida."}
-            </p>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleEdit}
+              size="lg"
+              className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              <Edit className="w-12 h-12 mr-2" />
+              Edit Project
+            </Button>
           </div>
         </div>
-      </section>
-    </main>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Main Info */}
+        <div className="lg:col-span-2 space-y-6">
+          <ProjectDetailsCard project={project} />
+          <ProjectInstructionsCard instructions={project.instructions} />
+        </div>
+
+        {/* Right Column - Translators */}
+        <div className="space-y-6">
+          <TranslatorsList
+            project={project}
+            onAddTranslator={handleAddTranslator}
+            onRemoveTranslator={handleRemoveTranslator}
+            onSendReminder={handleSendReminder}
+          />
+        </div>
+      </div>
+
+      {/* Add Translator Modal */}
+      {showAddTranslatorModal && project && (
+        <AddTranslatorModal
+          open={showAddTranslatorModal}
+          projectId={project.id}
+          projectName={project.name}
+          assignedTranslatorIds={project.translators.map((t) => t.id)}
+          onClose={() => setShowAddTranslatorModal(false)}
+          onAddTranslators={handleAddTranslators}
+          isAdding={addTranslatorsMutation.isPending}
+        />
+      )}
+
+      {/* Reminder Modal */}
+      <ReminderModal
+        open={showReminderModal.open}
+        translatorName={showReminderModal.userName}
+        onClose={() =>
+          setShowReminderModal({ open: false, userId: "", userName: "" })
+        }
+        onSend={handleSendReminderMessage}
+        onSendDefault={handleSendDefaultReminder}
+        isSending={sendReminderMutation.isPending}
+      />
+    </div>
   );
 }
