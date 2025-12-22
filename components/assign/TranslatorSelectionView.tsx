@@ -6,6 +6,7 @@ import { formatNumber, formatDate } from "@/utils/formatters";
 import { useUsers } from "@/hooks/useUsers";
 import type { Project } from "@/types/project";
 import type { User } from "@/types/user";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 
 interface ProjectWithTranslators extends Project {
   translators: Array<{
@@ -149,14 +150,6 @@ export function TranslatorSelectionView({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {availableUsers.map((user: User) => {
           const isSelected = selectedTranslators.has(user.id);
-          const avatar =
-            user.short_name ||
-            user.name
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2);
 
           return (
             <div
@@ -194,11 +187,22 @@ export function TranslatorSelectionView({
                   className="outline-style w-5 h-5 mt-1 rounded cursor-pointer"
                 />
                 <div className="flex flex-col items-center text-center flex-1">
-                  <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white mb-3">
-                    {avatar}
+                  <div className="mb-3">
+                    <ProfileAvatar
+                      name={user.name}
+                      avatar={user.avatar}
+                      size="md"
+                      showEditButton={false}
+                    />
                   </div>
                   <h3 className="text-gray-900 dark:text-white mb-1">
                     {user.name}
+                    {user.short_name && (
+                      <span className="text-gray-500 dark:text-gray-400 font-normal">
+                        {" "}
+                        ({user.short_name})
+                      </span>
+                    )}
                   </h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">
                     {user.role}

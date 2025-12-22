@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { UserCircle, LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import { formatNumber, formatDate } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import { ProjectActionsMenu } from "./ProjectActionsMenu";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 
 interface ProjectWithTranslators {
   id: number;
@@ -16,8 +17,10 @@ interface ProjectWithTranslators {
   translators: Array<{
     id: string;
     name: string;
+    short_name?: string | null;
     role: string;
     assignment_status: string;
+    avatar?: string | null;
   }>;
   final_deadline: string | null;
   instructions?: string | null;
@@ -212,14 +215,21 @@ export function ManagementTable({
                           {project.translators.map((translator) => (
                             <div
                               key={translator.id}
-                              className="flex items-center gap-1 text-gray-700 dark:text-gray-300 text-xs md:text-sm"
+                              className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 text-xs"
                             >
-                              <UserCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                              <span>{translator.name}</span>
+                              <ProfileAvatar
+                                name={translator.name}
+                                avatar={translator.avatar}
+                                size="xs"
+                                showEditButton={false}
+                              />
+                              <span>
+                                {translator.short_name || translator.name}
+                              </span>
                             </div>
                           ))}
                         </div>
-                      : <span className="text-gray-400 dark:text-gray-500 text-xs md:text-sm italic">
+                      : <span className="text-gray-400 dark:text-gray-500 text-xs italic">
                           Not assigned
                         </span>
                       }
@@ -276,5 +286,3 @@ export function ManagementTable({
     </div>
   );
 }
-
-

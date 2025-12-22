@@ -6,6 +6,9 @@ export { useUser } from './useUser';
 export { useUsers } from './useUsers';
 export { useUserProfile } from './useUserProfile';
 export { useUpdateProfile } from './useUpdateProfile';
+export { useUpdateAvatar, AvatarAlreadyTakenError } from './useUpdateAvatar';
+export { useUploadAvatar } from './useUploadAvatar';
+export { useAvailableAvatars } from './useAvailableAvatars';
 
 // Project hooks
 export { useProject } from './useProject';

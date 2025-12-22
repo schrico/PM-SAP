@@ -2,15 +2,21 @@
 
 import { FolderKanban, UserPlus, ClipboardList, User } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useHomeCounts } from "@/hooks/useHomeCounts";
 import { TypewriterText } from "@/components/ui/TypewriterText";
 import { HomeCard } from "@/components/home/HomeCard";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 
 export default function HomePage() {
   const { user, loading: userLoading } = useUser();
-  const { myProjectsCount, manageProjectsCount, loading: countsLoading } =
-    useHomeCounts();
+  const {
+    myProjectsCount,
+    manageProjectsCount,
+    loading: countsLoading,
+  } = useHomeCounts();
+  const router = useRouter();
 
   const loading = userLoading || countsLoading;
 
@@ -48,13 +54,6 @@ export default function HomePage() {
       color: "bg-purple-500",
       description: "Distribute work to translators",
     },
-    {
-      title: "My Profile",
-      icon: User,
-      path: "/profile",
-      color: "bg-indigo-500",
-      description: "Update your information",
-    },
   ];
 
   return (
@@ -74,7 +73,11 @@ export default function HomePage() {
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               <TypewriterText text={userName} speed={50} delay={700} />
             </span>
-            <TypewriterText text="! 👋" speed={50} delay={900 + userName.length * 50} />
+            <TypewriterText
+              text="! 👋"
+              speed={50}
+              delay={900 + userName.length * 50}
+            />
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-lg">
             You&apos;re doing great! Keep up the excellent work.
@@ -97,6 +100,30 @@ export default function HomePage() {
         {homeCards.map((card) => (
           <HomeCard key={card.title} {...card} />
         ))}
+
+        {/* My Profile Card with Avatar */}
+        <button
+          onClick={() => router.push("/profile")}
+          className="p-6 cursor-pointer bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:scale-105 transition-all duration-200 text-left group"
+          type="button"
+        >
+          <div className="flex items-start justify-between mb-4">
+            <div className="group-hover:scale-110 transition-transform duration-200">
+              <ProfileAvatar
+                name={userName}
+                avatar={user?.avatar}
+                size="md"
+                showEditButton={false}
+              />
+            </div>
+          </div>
+          <h3 className="text-gray-900 dark:text-white mb-1 font-semibold">
+            My Profile
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Update your information
+          </p>
+        </button>
       </div>
     </div>
   );

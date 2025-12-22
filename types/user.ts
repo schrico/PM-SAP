@@ -9,4 +9,6 @@ export interface User {
   C_user: string;
   TE_user: string;
   short_name?: string | null;
+  avatar?: string | null;
+  custom_avatar?: string | null;
 }

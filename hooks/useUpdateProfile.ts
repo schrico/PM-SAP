@@ -10,6 +10,7 @@ interface UpdateProfileData {
   C_user?: string;
   TE_user?: string;
   email?: string;
+  avatar?: string | null;
 }
 
 export function useUpdateProfile() {
@@ -77,6 +78,8 @@ export function useUpdateProfile() {
       // Invalidate queries to refetch updated data
       queryClient.invalidateQueries({ queryKey: ["user-profile"] });
       queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["available-avatars"] });
 
       if (result.requiresEmailConfirmation) {
         toast.info(

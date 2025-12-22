@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Users, UserPlus, MoreVertical, UserMinus, Bell } from "lucide-react";
+import {
+  Users,
+  UserPlus,
+  MoreVertical,
+  UserMinus,
+  Bell,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ProjectWithTranslatorDetails } from "@/types/project";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 
 interface TranslatorsListProps {
   project: ProjectWithTranslatorDetails;
@@ -24,15 +32,24 @@ export function TranslatorsList({
   onRemoveTranslator,
   onSendReminder,
 }: TranslatorsListProps) {
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [translatorToRemove, setTranslatorToRemove] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-  const getUserInitials = (name: string): string => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const handleRemoveClick = (id: string, name: string) => {
+    setTranslatorToRemove({ id, name });
+  };
+
+  const handleConfirmRemove = () => {
+    if (translatorToRemove) {
+      onRemoveTranslator(translatorToRemove.id);
+      setTranslatorToRemove(null);
+    }
+  };
+
+  const handleCancelRemove = () => {
+    setTranslatorToRemove(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -90,12 +107,21 @@ export function TranslatorsList({
               className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
             >
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shrink-0">
-                  {getUserInitials(translator.name)}
-                </div>
+                <ProfileAvatar
+                  name={translator.name}
+                  avatar={translator.avatar}
+                  size="sm"
+                  showEditButton={false}
+                />
                 <div className="flex-1">
                   <p className="text-gray-900 dark:text-white font-medium">
                     {translator.name}
+                    {translator.short_name && (
+                      <span className="text-gray-500 dark:text-gray-400 font-normal">
+                        {" "}
+                        ({translator.short_name})
+                      </span>
+                    )}
                   </p>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">
                     {translator.role}
@@ -109,7 +135,9 @@ export function TranslatorsList({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => onRemoveTranslator(translator.id)}
+                      onClick={() =>
+                        handleRemoveClick(translator.id, translator.name)
+                      }
                       className="text-red-600 dark:text-red-400"
                     >
                       <UserMinus className="w-4 h-4 mr-2" />
@@ -185,6 +213,61 @@ export function TranslatorsList({
           </p>
         </div>
       }
+
+      {/* Remove Confirmation Modal */}
+      {translatorToRemove && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={handleCancelRemove}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-gray-900 dark:text-white font-semibold">
+                Confirm Removal
+              </h2>
+              <button
+                onClick={handleCancelRemove}
+                className="p-1 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors"
+                type="button"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
+              Are you sure you want to remove{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {translatorToRemove.name}
+              </span>{" "}
+              from{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {project.name}
+              </span>
+              ?
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCancelRemove}
+                className="px-4 py-2 cursor-pointer text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRemove}
+                className="px-4 py-2 cursor-pointer bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                type="button"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ViewToggle } from "@/components/general/ViewToggle";
 import { MyProjectsTable } from "@/components/my-projects/MyProjectsTable";
@@ -44,6 +44,17 @@ export default function MyProjectsPage() {
     projectName: string;
     message: string;
   }>({ open: false, projectId: null, projectName: "", message: "" });
+
+  // Auto-switch to "In Progress" tab if there are no unclaimed projects
+  useEffect(() => {
+    if (
+      !projectsLoading &&
+      unclaimedProjects.length === 0 &&
+      claimedProjects.length > 0
+    ) {
+      setActiveTab("inProgress");
+    }
+  }, [projectsLoading, unclaimedProjects.length, claimedProjects.length]);
 
   const handleClaimClick = (assignment: ProjectAssignment) => {
     // Check if there's an initial_message

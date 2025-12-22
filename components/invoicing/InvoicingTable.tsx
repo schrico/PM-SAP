@@ -4,6 +4,7 @@ import { formatDate } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import type { ProjectWithTranslators } from "@/types/project";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 
 interface InvoicingTableProps {
   projects: ProjectWithTranslators[];
@@ -165,10 +166,25 @@ export function InvoicingTable({
                   </td>
                   <td className="px-6 py-4">
                     {project.translators.length > 0 ?
-                      <div className="flex flex-wrap gap-1 text-gray-700 dark:text-gray-300 text-sm">
-                        {project.translators.map((t) => t.name).join(", ")}
+                      <div className="flex flex-wrap gap-2">
+                        {project.translators.map((translator) => (
+                          <div
+                            key={translator.id}
+                            className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 text-xs"
+                          >
+                            <ProfileAvatar
+                              name={translator.name}
+                              avatar={translator.avatar}
+                              size="xs"
+                              showEditButton={false}
+                            />
+                            <span>
+                              {translator.short_name || translator.name}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    : <span className="text-gray-400 dark:text-gray-500 text-sm italic">
+                    : <span className="text-gray-400 dark:text-gray-500 text-xs italic">
                         Not assigned
                       </span>
                     }

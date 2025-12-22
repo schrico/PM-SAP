@@ -48,7 +48,9 @@ export function useProject(projectId: number | string | null) {
           users (
             id,
             name,
-            role
+            short_name,
+            role,
+            avatar
           )
         `)
         .eq('project_id', projectId) as any;
@@ -61,11 +63,13 @@ export function useProject(projectId: number | string | null) {
       const translators = (assignments || []).map((assignment: any) => ({
         id: assignment.users?.id || '',
         name: assignment.users?.name || '',
+        short_name: assignment.users?.short_name || null,
         role: assignment.users?.role || '',
         assignment_status: assignment.assignment_status || 'unclaimed',
         initial_message: assignment.initial_message || null,
         refusal_message: assignment.refusal_message || null,
         done_message: assignment.done_message || null,
+        avatar: assignment.users?.avatar || null,
       })).filter((t: any) => t.id); // Filter out any invalid entries
 
       return {

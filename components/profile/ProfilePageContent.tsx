@@ -8,6 +8,7 @@ import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { ProfileFormField } from "./ProfileFormField";
 import { ProfileStatus } from "./ProfileStatus";
+import { AvatarSelectionModal } from "./AvatarSelectionModal";
 import { Loader2 as LoaderIcon } from "lucide-react";
 
 interface ProfileFormData {
@@ -31,6 +32,7 @@ export function ProfilePageContent() {
     role: "",
   });
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
   // Initialize form data when user loads
   useEffect(() => {
@@ -42,11 +44,9 @@ export function ProfilePageContent() {
         C_user: user.C_user || "",
         TE_user: user.TE_user || "",
         role:
-          user.role === "admin"
-            ? "Administrator"
-            : user.role === "pm"
-            ? "Project Manager"
-            : "Translator",
+          user.role === "admin" ? "Administrator"
+          : user.role === "pm" ? "Project Manager"
+          : "Translator",
       });
     }
   }, [user]);
@@ -60,11 +60,9 @@ export function ProfilePageContent() {
       C_user: user.C_user || "",
       TE_user: user.TE_user || "",
       role:
-        user.role === "admin"
-          ? "Administrator"
-          : user.role === "pm"
-          ? "Project Manager"
-          : "Translator",
+        user.role === "admin" ? "Administrator"
+        : user.role === "pm" ? "Project Manager"
+        : "Translator",
     };
   }, [user]);
 
@@ -104,7 +102,9 @@ export function ProfilePageContent() {
   if (!user) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <p className="text-muted-foreground">Please log in to view your profile</p>
+        <p className="text-muted-foreground">
+          Please log in to view your profile
+        </p>
       </div>
     );
   }
@@ -126,7 +126,11 @@ export function ProfilePageContent() {
         {/* Avatar Section */}
         <div className="p-8 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-6">
-            <ProfileAvatar name={formData.name} />
+            <ProfileAvatar
+              name={formData.name}
+              avatar={user?.avatar}
+              onAvatarClick={() => setAvatarModalOpen(true)}
+            />
             <div>
               <h2 className="text-gray-900 dark:text-white mb-1 text-lg font-semibold">
                 {formData.name}
@@ -241,23 +245,22 @@ export function ProfilePageContent() {
               onClick={handleSave}
               disabled={!hasChanges || updateProfile.isPending}
               className={`px-6 py-3 cursor-pointer rounded-lg transition-colors flex items-center gap-2 shadow-sm text-sm font-medium ${
-                !hasChanges || updateProfile.isPending
-                  ? "bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600 text-white"
+                !hasChanges || updateProfile.isPending ?
+                  "bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
               }`}
               type="button"
             >
-              {updateProfile.isPending ? (
+              {updateProfile.isPending ?
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Saving...
                 </>
-              ) : (
-                <>
+              : <>
                   <Save className="w-4 h-4" />
                   Save Changes
                 </>
-              )}
+              }
             </button>
           </div>
         </div>
@@ -288,7 +291,14 @@ export function ProfilePageContent() {
           Contact your PM if you believe your role needs updating.
         </p>
       </div>
+
+      {/* Avatar Selection Modal */}
+      <AvatarSelectionModal
+        open={avatarModalOpen}
+        onOpenChange={setAvatarModalOpen}
+        currentAvatar={user?.avatar}
+        customAvatar={user?.custom_avatar}
+      />
     </div>
   );
 }
-

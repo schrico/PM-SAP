@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import type { User } from "@/types/user";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 
 interface AddTranslatorModalProps {
   open: boolean;
@@ -75,15 +76,6 @@ export function AddTranslatorModal({
     onClose();
   };
 
-  const getUserInitials = (name: string): string => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
@@ -141,11 +133,22 @@ export function AddTranslatorModal({
                       className="outline-style w-5 h-5 mt-1 rounded"
                     />
                     <div className="flex flex-col items-center text-center flex-1">
-                      <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white mb-2">
-                        {getUserInitials(user.name)}
+                      <div className="mb-2">
+                        <ProfileAvatar
+                          name={user.name}
+                          avatar={user.avatar}
+                          size="sm"
+                          showEditButton={false}
+                        />
                       </div>
                       <h3 className="text-gray-900 dark:text-white text-sm">
                         {user.name}
+                        {user.short_name && (
+                          <span className="text-gray-500 dark:text-gray-400 font-normal">
+                            {" "}
+                            ({user.short_name})
+                          </span>
+                        )}
                       </h3>
                       <p className="text-gray-500 dark:text-gray-400 text-xs">
                         {user.role}
@@ -205,5 +208,3 @@ export function AddTranslatorModal({
     </div>
   );
 }
-
-

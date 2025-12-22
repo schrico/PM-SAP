@@ -28,8 +28,10 @@ export interface Project {
 export interface ProjectTranslator {
   id: string;
   name: string;
+  short_name?: string | null;
   role: string;
   assignment_status: AssignmentStatus;
+  avatar?: string | null;
 }
 
 /** Extended translator info with messages (for detail views) */

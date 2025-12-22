@@ -30,12 +30,14 @@ create table public.users (
   "TE_user" text null,
   "C_user" text null,
   short_name text null,
+  avatar text null,
   constraint users_pkey primary key (id),
   constraint users_C - user_key unique ("C_user"),
   constraint users_TE - user_key unique ("TE_user"),
   constraint users_email_key unique (email),
   constraint users_short_name_key unique (short_name),
-  constraint users_short_name_check check ((length(short_name) < 8))
+  constraint users_short_name_check check ((length(short_name) < 8)),
+  constraint users_avatar_key unique (avatar)
 ) TABLESPACE pg_default;
 
 create trigger set_timestamp BEFORE

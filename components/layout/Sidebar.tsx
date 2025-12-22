@@ -8,7 +8,6 @@ import {
   FolderKanban,
   UserPlus,
   Settings,
-  UserCircle,
   Moon,
   Sun,
   ClipboardList,
@@ -19,6 +18,7 @@ import {
 import { useUser } from "@/hooks/useUser";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import { TypewriterText } from "@/components/ui/TypewriterText";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 
 export function Sidebar() {
   const { darkMode, collapsed, toggleDarkMode, toggleCollapsed } =
@@ -148,7 +148,12 @@ export function Sidebar() {
             }`}
             title={collapsed ? "Profile" : undefined}
           >
-            <UserCircle className="w-8 h-8 shrink-0 rounded-full bg-gray-300 text-gray-500 p-1" />
+            <ProfileAvatar
+              name={user?.name || ""}
+              avatar={user?.avatar}
+              size="sm"
+              showEditButton={false}
+            />
             {showLabels && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm truncate">

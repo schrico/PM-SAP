@@ -42,7 +42,9 @@ export function useProjectsWithTranslators(showPast: boolean = false, showAll: b
           users (
             id,
             name,
-            role
+            short_name,
+            role,
+            avatar
           )
         `) as any;
 
@@ -60,8 +62,10 @@ export function useProjectsWithTranslators(showPast: boolean = false, showAll: b
           acc[projectId].push({
             id: assignment.users.id,
             name: assignment.users.name,
+            short_name: assignment.users.short_name || null,
             role: assignment.users.role,
             assignment_status: assignment.assignment_status,
+            avatar: assignment.users.avatar || null,
           });
         }
         return acc;
