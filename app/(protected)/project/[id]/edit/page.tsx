@@ -137,15 +137,7 @@ export default function EditProjectPage() {
       // Reset with loaded data so fields show current values and form is clean
       form.reset(formValues);
     }
-  }, [form, formValues, project]);
-
-  React.useEffect(() => {
-    if (project) {
-      // Log system to confirm what is rendered in the form
-      console.log("[EditProject] project.system", project.system);
-      console.log("[EditProject] form system value", form.getValues("system"));
-    }
-  }, [project, form]);
+  }, [form, formValues, project?.id]);
 
   const updateProjectMutation = useMutation({
     mutationFn: async (values: ProjectFormValues) => {
@@ -282,9 +274,13 @@ export default function EditProjectPage() {
                     <FormItem>
                       <FormLabel>System</FormLabel>
                       <Select
-                        key={project?.id ?? "new-project"}
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
+                        onValueChange={(val) => {
+                          // Guard: Only update if val is not empty (prevents Radix clearing the value)
+                          if (val) {
+                            field.onChange(val);
+                          }
+                        }}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>

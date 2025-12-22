@@ -45,3 +45,4 @@ export function getSystemColorClass(
   return defaultColors[system] || 'bg-gray-500';
 }
 
+
