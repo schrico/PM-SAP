@@ -1,12 +1,52 @@
 "use client";
 
-import { Heading1, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2, LogOut, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ColorSettings } from "@/components/settings/ColorSettings";
+import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { useUser } from "@/hooks/useUser";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
-  const { user, loading } = useUser(); // ✅ Hook chamado no topo
+  const { user, loading } = useUser();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Missing Supabase environment variables.");
+  }
+
+  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast.error("Failed to logout");
+        setLoggingOut(false);
+        setShowLogoutModal(false);
+      } else {
+        toast.success("Logged out successfully");
+        router.push("/login");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Failed to logout");
+      setLoggingOut(false);
+      setShowLogoutModal(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -26,12 +66,86 @@ export default function SettingsPage() {
 
   return (
     <div className="container px-5 py-10 space-y-8 text-center">
-      <h1 className="text-4xl font-bold">
-        Settings
-      </h1>
-      <Card className="p-6 ">
+      <h1 className="text-4xl font-bold">Settings</h1>
+      <Card className="p-6 text-left">
+        <ThemeSettings />
+      </Card>
+      <Card className="p-6">
         <ColorSettings userRole={user.role} />
       </Card>
+      
+      {/* Logout Section */}
+      <Card className="p-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Sign Out
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Sign out of your account on this device
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            onClick={() => setShowLogoutModal(true)}
+            className="cursor-pointer"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
+      </Card>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => !loggingOut && setShowLogoutModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-gray-900 dark:text-white font-semibold">
+                Confirm Logout
+              </h2>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                disabled={loggingOut}
+                className="p-1 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors disabled:opacity-50"
+                type="button"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
+              Are you sure you want to sign out? You will need to sign in again to access your account.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                disabled={loggingOut}
+                className="px-4 py-2 cursor-pointer text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="px-4 py-2 cursor-pointer bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                type="button"
+              >
+                {loggingOut && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loggingOut ? "Signing out..." : "Logout"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

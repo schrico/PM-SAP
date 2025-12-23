@@ -3,7 +3,6 @@
 import { UserCircle } from "lucide-react";
 import { formatNumber, formatDate } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
-import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import type { Project } from "@/types/project";
 
 interface ProjectWithTranslators extends Project {
@@ -28,8 +27,7 @@ export function ProjectAssignTable({
   onToggleProject,
   onRowClick,
 }: ProjectAssignTableProps) {
-  const { getSystemColor, getLanguageColor } = useColorSettings();
-  const darkMode = useLayoutStore((state) => state.darkMode);
+  const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
 
   const handleRowClick = (projectId: number, e: React.MouseEvent) => {
     // Don't handle clicks on buttons or checkboxes
@@ -48,62 +46,22 @@ export function ProjectAssignTable({
     }
   };
 
-  // Get system color with proper dark mode handling and transparency
+  // Get system color style using preview hex for the color indicator
   const getSystemColorStyle = (system: string) => {
-    const color = getSystemColor(system);
-    // If default white color, make it transparent
-    if (color === "#ffffff" || !color || color === "") {
-      return { backgroundColor: "transparent" };
-    }
-    // Always use inline style for hex colors
-    if (color.startsWith("#")) {
-      // Ensure color is visible in dark mode by lightening if needed
-      const rgb = hexToRgb(color);
-      if (rgb && darkMode) {
-        // Lighten the color for dark mode visibility (blend with white)
-        const lightened = blendColors(rgb, { r: 255, g: 255, b: 255 }, 0.3);
-        return {
-          backgroundColor: `rgb(${lightened.r}, ${lightened.g}, ${lightened.b})`,
-        };
-      }
-      return { backgroundColor: color };
-    }
-    return {};
-  };
-
-  // Get language color for underline
-  const getLanguageColorStyle = (langIn: string, langOut: string) => {
-    const color = getLanguageColor(langIn || "", langOut || "");
-    // If default black color, make it transparent
-    if (color === "#000000" || !color || color === "") {
+    const color = getSystemColorPreview(system);
+    if (color === "transparent" || !color) {
       return { backgroundColor: "transparent" };
     }
     return { backgroundColor: color };
   };
 
-  // Helper function to convert hex to RGB
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ?
-        {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : null;
-  };
-
-  // Helper function to blend two colors
-  const blendColors = (
-    color1: { r: number; g: number; b: number },
-    color2: { r: number; g: number; b: number },
-    ratio: number
-  ) => {
-    return {
-      r: Math.round(color1.r * (1 - ratio) + color2.r * ratio),
-      g: Math.round(color1.g * (1 - ratio) + color2.g * ratio),
-      b: Math.round(color1.b * (1 - ratio) + color2.b * ratio),
-    };
+  // Get language color for underline using preview hex
+  const getLanguageColorStyle = (langIn: string, langOut: string) => {
+    const color = getLanguageColorPreview(langIn || "", langOut || "");
+    if (color === "transparent" || !color) {
+      return { backgroundColor: "transparent" };
+    }
+    return { backgroundColor: color };
   };
 
   return (

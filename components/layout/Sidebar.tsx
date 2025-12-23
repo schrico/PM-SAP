@@ -8,8 +8,6 @@ import {
   FolderKanban,
   UserPlus,
   Settings,
-  Moon,
-  Sun,
   ClipboardList,
   ChevronLeft,
   ChevronRight,
@@ -21,10 +19,9 @@ import { TypewriterText } from "@/components/ui/TypewriterText";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 
 export function Sidebar() {
-  const { darkMode, collapsed, toggleDarkMode, toggleCollapsed } =
-    useLayoutStore();
+  const { collapsed, toggleCollapsed } = useLayoutStore();
   const pathname = usePathname();
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
 
   const roleLabel =
     user?.role === "admin" ? "Administrator"
@@ -43,7 +40,6 @@ export function Sidebar() {
   // Controls when text labels are visible (for smooth transition)
   const [showLabels, setShowLabels] = useState(!collapsed);
   const [shouldAnimate, setShouldAnimate] = useState(false);
-  const [darkModeJustChanged, setDarkModeJustChanged] = useState(false);
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -65,15 +61,6 @@ export function Sidebar() {
     };
   }, [collapsed]);
 
-  // Track darkMode changes to show text immediately when toggled
-  useEffect(() => {
-    setDarkModeJustChanged(true);
-    // Reset the flag after a short delay to allow normal animation on next expand
-    const resetTimeout = setTimeout(() => {
-      setDarkModeJustChanged(false);
-    }, 1000);
-    return () => clearTimeout(resetTimeout);
-  }, [darkMode]);
   return (
     <aside
       className={`fixed left-0 top-0 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ${
@@ -148,35 +135,55 @@ export function Sidebar() {
             }`}
             title={collapsed ? "Profile" : undefined}
           >
-            <ProfileAvatar
-              name={user?.name || ""}
-              avatar={user?.avatar}
-              size="sm"
-              showEditButton={false}
-            />
-            {showLabels && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm truncate">
-                  {shouldAnimate ?
-                    <TypewriterText
-                      text={user?.name || "Profile"}
-                      speed={30}
-                      delay={250}
-                    />
-                  : user?.name || "Profile"}
-                </p>
-                <p className="text-xs opacity-70 truncate">
-                  {shouldAnimate ?
-                    <TypewriterText text={roleLabel} speed={30} delay={300} />
-                  : roleLabel}
-                </p>
-              </div>
-            )}
+            {userLoading ?
+              <>
+                {/* Avatar skeleton */}
+                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0" />
+                {showLabels && (
+                  <div className="flex-1 min-w-0 space-y-2">
+                    {/* Name skeleton */}
+                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    {/* Role skeleton */}
+                    <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  </div>
+                )}
+              </>
+            : <>
+                <ProfileAvatar
+                  name={user?.name || ""}
+                  avatar={user?.avatar}
+                  size="sm"
+                  showEditButton={false}
+                />
+                {showLabels && (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">
+                      {shouldAnimate && user?.name ?
+                        <TypewriterText
+                          text={user.name}
+                          speed={30}
+                          delay={250}
+                        />
+                      : user?.name || "Profile"}
+                    </p>
+                    <p className="text-xs opacity-70 truncate">
+                      {shouldAnimate ?
+                        <TypewriterText
+                          text={roleLabel}
+                          speed={30}
+                          delay={300}
+                        />
+                      : roleLabel}
+                    </p>
+                  </div>
+                )}
+              </>
+            }
           </Link>
         </div>
 
-        {/* Settings & Dark Mode Toggle */}
-        <div className="px-3 pb-4 border-t border-gray-200 dark:border-gray-700 pt-4 space-y-1">
+        {/* Settings */}
+        <div className="px-3 pb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
           <Link
             href="/settings"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
@@ -195,36 +202,6 @@ export function Sidebar() {
               </span>
             )}
           </Link>
-          <button
-            type="button"
-            onClick={toggleDarkMode}
-            className="flex cursor-pointer items-center gap-3 w-full px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-            title={
-              collapsed ?
-                darkMode ?
-                  "Light Mode"
-                : "Dark Mode"
-              : undefined
-            }
-          >
-            {darkMode ?
-              <Sun className="w-5 h-5 shrink-0" />
-            : <Moon className="w-5 h-5 shrink-0" />}
-            {showLabels && (
-              <span>
-                {shouldAnimate && !darkModeJustChanged ?
-                  <TypewriterText
-                    text={darkMode ? "Light Mode" : "Dark Mode"}
-                    speed={30}
-                    delay={400}
-                    key={darkMode ? "light" : "dark"}
-                  />
-                : darkMode ?
-                  "Light Mode"
-                : "Dark Mode"}
-              </span>
-            )}
-          </button>
         </div>
       </div>
     </aside>

@@ -22,7 +22,7 @@ export default function ProjectPage() {
   const projectId = params.id ? Number(params.id) : null;
 
   const { data: project, isLoading, error } = useProject(projectId);
-  const { getSystemColor } = useColorSettings();
+  const { getSystemColorPreview } = useColorSettings();
 
   const [showAddTranslatorModal, setShowAddTranslatorModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState<{
@@ -208,9 +208,10 @@ export default function ProjectPage() {
     );
   }
 
-  const systemColor = getSystemColor(project.system);
+  // Get system color preview for the indicator dot
+  const systemColorPreview = getSystemColorPreview(project.system);
   const systemColorStyle =
-    systemColor !== "#ffffff" ? { backgroundColor: systemColor } : undefined;
+    systemColorPreview !== "transparent" ? { backgroundColor: systemColorPreview } : undefined;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">

@@ -2,7 +2,6 @@
 
 import { formatDate } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
-import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import type { ProjectWithTranslators } from "@/types/project";
 
 interface InvoicingCardProps {
@@ -16,51 +15,15 @@ export function InvoicingCard({
   selectedProjects,
   onSelection,
 }: InvoicingCardProps) {
-  const { getSystemColor } = useColorSettings();
-  const darkMode = useLayoutStore((state) => state.darkMode);
+  const { getSystemColorPreview } = useColorSettings();
 
-  // Get system color with proper dark mode handling
+  // Get system color style using preview hex for the color indicator
   const getSystemColorStyle = (system: string) => {
-    const color = getSystemColor(system);
-    if (color === "#ffffff" || !color || color === "") {
+    const color = getSystemColorPreview(system);
+    if (color === "transparent" || !color) {
       return { backgroundColor: "transparent" };
     }
-    if (color.startsWith("#")) {
-      const rgb = hexToRgb(color);
-      if (rgb && darkMode) {
-        const lightened = blendColors(rgb, { r: 255, g: 255, b: 255 }, 0.3);
-        return {
-          backgroundColor: `rgb(${lightened.r}, ${lightened.g}, ${lightened.b})`,
-        };
-      }
-      return { backgroundColor: color };
-    }
-    return {};
-  };
-
-  // Helper function to convert hex to RGB
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ?
-        {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : null;
-  };
-
-  // Helper function to blend colors
-  const blendColors = (
-    color1: { r: number; g: number; b: number },
-    color2: { r: number; g: number; b: number },
-    ratio: number
-  ) => {
-    return {
-      r: Math.round(color1.r * (1 - ratio) + color2.r * ratio),
-      g: Math.round(color1.g * (1 - ratio) + color2.g * ratio),
-      b: Math.round(color1.b * (1 - ratio) + color2.b * ratio),
-    };
+    return { backgroundColor: color };
   };
 
   // Get closest deadline

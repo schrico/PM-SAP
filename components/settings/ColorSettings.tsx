@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Loader2, Palette, PlusCircle } from "lucide-react";
+import { Loader2, Palette, PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { useQueryClient } from "@tanstack/react-query";
 import { ColorDialog } from "./color/ColorDialog";
 import { ColorList } from "./color/ColorList";
+import { getColorPreview } from "@/utils/tailwindColors";
 
 export interface ColorSetting {
   id: number;
@@ -37,11 +38,12 @@ export function ColorSettings({ userRole }: ColorSettingsProps) {
   }
 
   const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { settings, loading, error } = useColorSettings();
+  const { settings, loading } = useColorSettings();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ColorSetting | null>(null);
+  const [colorToDelete, setColorToDelete] = useState<ColorSetting | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isAdmin = userRole === "admin";
 
@@ -50,23 +52,53 @@ export function ColorSettings({ userRole }: ColorSettingsProps) {
     queryClient.invalidateQueries({ queryKey: ["color-settings"] });
   };
 
-  async function handleDelete(id: number) {
-    const ok = confirm("Are you sure you want to delete this color?");
-    if (!ok) return;
+  // Open delete confirmation modal
+  function handleDeleteClick(id: number) {
+    const colorSetting = settings.find((s) => s.id === id);
+    if (colorSetting) {
+      setColorToDelete(colorSetting);
+    }
+  }
+
+  // Cancel delete
+  function handleCancelDelete() {
+    setColorToDelete(null);
+  }
+
+  // Confirm delete
+  async function handleConfirmDelete() {
+    if (!colorToDelete) return;
+    
+    setIsDeleting(true);
     const { error } = await supabase
       .from("color_settings")
       .delete()
-      .eq("id", id);
+      .eq("id", colorToDelete.id);
+    
+    setIsDeleting(false);
+    
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete color.",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete color.");
     } else {
-      toast({ title: "Deleted", description: "Color deleted successfully." });
+      toast.success("Color deleted successfully.");
       refreshSettings();
     }
+    
+    setColorToDelete(null);
+  }
+
+  // Get display name for a color setting
+  function getColorDisplayName(color: ColorSetting): string {
+    if (color.category === "system" && color.system_name) {
+      return `System: ${color.system_name}`;
+    }
+    if (color.category === "status" && color.status_key) {
+      return `Status: ${color.status_key}`;
+    }
+    if (color.category === "language" && color.language_in && color.language_out) {
+      return `Language: ${color.language_in} → ${color.language_out}`;
+    }
+    return color.setting_key;
   }
 
   if (loading)
@@ -112,11 +144,11 @@ export function ColorSettings({ userRole }: ColorSettingsProps) {
 
       <ColorList
         settings={settings}
-        onEdit={(s: any) => {
+        onEdit={(s: ColorSetting) => {
           setEditing(s);
           setDialogOpen(true);
         }}
-        onDelete={handleDelete}
+        onDelete={handleDeleteClick}
       />
 
       <ColorDialog
@@ -125,6 +157,74 @@ export function ColorSettings({ userRole }: ColorSettingsProps) {
         editing={editing}
         refresh={refreshSettings}
       />
+
+      {/* Delete Confirmation Modal */}
+      {colorToDelete && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={handleCancelDelete}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-gray-900 dark:text-white font-semibold">
+                Delete Color
+              </h2>
+              <button
+                onClick={handleCancelDelete}
+                className="p-1 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors"
+                type="button"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Color Preview */}
+            <div className="mb-4">
+              <div
+                className="w-full h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: getColorPreview(colorToDelete.color_value) }}
+              >
+                <span 
+                  className="text-xs font-mono px-2 py-1 rounded bg-black/20 text-white"
+                >
+                  {colorToDelete.color_value}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {getColorDisplayName(colorToDelete)}
+              </span>
+              ? This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 cursor-pointer text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 cursor-pointer bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                type="button"
+              >
+                {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

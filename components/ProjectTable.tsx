@@ -85,22 +85,26 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
           {projects.map((project) => {
             const nearest =
               project.interim_deadline || project.final_deadline || null;
-            const { bgColor, textColor } = getRowColors({
+            const { bgClass, textClass, bgColorPreview, textColorPreview } = getRowColors({
               status: project.status,
               system: project.system,
               langIn: project.language_in,
               langOut: project.language_out,
             });
 
+            // Use Tailwind classes when available, fallback to inline styles for preview
+            const rowBgStyle = bgClass ? {} : { backgroundColor: bgColorPreview };
+            const textStyle = textClass ? {} : { color: textColorPreview };
+
             return (
               <tr
                 key={project.id}
-                className="border-t hover:opacity-80 transition-all cursor-pointer"
-                style={{ backgroundColor: bgColor }}
+                className={`border-t hover:opacity-80 transition-all cursor-pointer ${bgClass}`}
+                style={rowBgStyle}
               >
                 <td
-                  className="px-5 py-3 font-medium"
-                  style={{ color: textColor }}
+                  className={`px-5 py-3 font-medium ${textClass}`}
+                  style={textStyle}
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
                   {project.name}
@@ -145,7 +149,7 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
                 >
                   {project.translators && project.translators.length > 0 ? (
                     <div className="space-y-1">
-                      {project.translators.map((translator, index) => (
+                      {project.translators.map((translator) => (
                         <div key={translator.id} className="text-xs">
                           <span className="font-medium">{translator.name}</span>
                           <span className="text-gray-800 ml-1">

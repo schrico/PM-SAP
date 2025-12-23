@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
 import { formatNumber, formatDate } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
-import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import type { ProjectAssignment } from "@/types/project-assignment";
 
 interface MyProjectsTableProps {
@@ -23,8 +22,7 @@ export function MyProjectsTable({
   onDone,
 }: MyProjectsTableProps) {
   const router = useRouter();
-  const { getSystemColor, getLanguageColor } = useColorSettings();
-  const darkMode = useLayoutStore((state) => state.darkMode);
+  const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
 
   const handleRowClick = (projectId: number, e: React.MouseEvent) => {
     // Don't navigate if clicking on a button
@@ -34,57 +32,22 @@ export function MyProjectsTable({
     router.push(`/project/${projectId}`);
   };
 
-  // Get system color with proper dark mode handling and transparency
+  // Get system color style using preview hex for the color indicator
   const getSystemColorStyle = (system: string) => {
-    const color = getSystemColor(system);
-    // If default white color, make it transparent
-    if (color === "#ffffff" || !color || color === "") {
-      return { backgroundColor: "transparent" };
-    }
-    if (color.startsWith("#")) {
-      const rgb = hexToRgb(color);
-      if (rgb && darkMode) {
-        const lightened = blendColors(rgb, { r: 255, g: 255, b: 255 }, 0.3);
-        return {
-          backgroundColor: `rgb(${lightened.r}, ${lightened.g}, ${lightened.b})`,
-        };
-      }
-      return { backgroundColor: color };
-    }
-    return {};
-  };
-
-  // Get language color for underline
-  const getLanguageColorStyle = (langIn: string, langOut: string) => {
-    const color = getLanguageColor(langIn || "", langOut || "");
-    // If default black color, make it transparent
-    if (color === "#000000" || !color || color === "") {
+    const color = getSystemColorPreview(system);
+    if (color === "transparent" || !color) {
       return { backgroundColor: "transparent" };
     }
     return { backgroundColor: color };
   };
 
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ?
-        {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : null;
-  };
-
-  const blendColors = (
-    color1: { r: number; g: number; b: number },
-    color2: { r: number; g: number; b: number },
-    ratio: number
-  ) => {
-    return {
-      r: Math.round(color1.r * (1 - ratio) + color2.r * ratio),
-      g: Math.round(color1.g * (1 - ratio) + color2.g * ratio),
-      b: Math.round(color1.b * (1 - ratio) + color2.b * ratio),
-    };
+  // Get language color for underline using preview hex
+  const getLanguageColorStyle = (langIn: string, langOut: string) => {
+    const color = getLanguageColorPreview(langIn || "", langOut || "");
+    if (color === "transparent" || !color) {
+      return { backgroundColor: "transparent" };
+    }
+    return { backgroundColor: color };
   };
 
   // Sort projects by due date (earliest first)

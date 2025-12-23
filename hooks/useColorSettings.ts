@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { getBgClass, getTextClass, getColorPreview } from "@/utils/tailwindColors";
 
 export function useColorSettings() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,19 +33,54 @@ export function useColorSettings() {
     staleTime: 10 * 60 * 1000, // 10 minutes - color settings don't change often
   });
 
-  function getSystemColor(system: string) {
-    return settings.find(s => s.category === "system" && s.system_name === system)?.color_value || "#ffffff";
+  // Get color value (tailwind class like "blue-500") for a system
+  function getSystemColor(system: string): string {
+    return settings.find(s => s.category === "system" && s.system_name === system)?.color_value || "";
   }
 
-  function getStatusColor(status: string) {
-    return settings.find(s => s.category === "status" && s.status_key === status)?.color_value || "#ffffff";
+  // Get color value for a status
+  function getStatusColor(status: string): string {
+    return settings.find(s => s.category === "status" && s.status_key === status)?.color_value || "";
   }
 
-  function getLanguageColor(langIn: string, langOut: string) {
-    return settings.find(s => s.category === "language" && s.language_in === langIn && s.language_out === langOut)?.color_value || "#000000";
+  // Get color value for a language pair
+  function getLanguageColor(langIn: string, langOut: string): string {
+    return settings.find(s => s.category === "language" && s.language_in === langIn && s.language_out === langOut)?.color_value || "";
   }
 
-  // Determine final row colors
+  // Get Tailwind background class for a system
+  function getSystemBgClass(system: string): string {
+    const color = getSystemColor(system);
+    return getBgClass(color);
+  }
+
+  // Get Tailwind background class for a status
+  function getStatusBgClass(status: string): string {
+    const color = getStatusColor(status);
+    return getBgClass(color);
+  }
+
+  // Get Tailwind text class for a language pair
+  function getLanguageTextClass(langIn: string, langOut: string): string {
+    const color = getLanguageColor(langIn, langOut);
+    return getTextClass(color);
+  }
+
+  // Get preview hex color for a system (for inline styles when needed)
+  function getSystemColorPreview(system: string): string {
+    const color = getSystemColor(system);
+    if (!color) return "transparent";
+    return getColorPreview(color);
+  }
+
+  // Get preview hex color for a language pair (for inline styles when needed)
+  function getLanguageColorPreview(langIn: string, langOut: string): string {
+    const color = getLanguageColor(langIn, langOut);
+    if (!color) return "transparent";
+    return getColorPreview(color);
+  }
+
+  // Determine final row colors - returns Tailwind classes
   function getRowColors({
     status,
     system,
@@ -56,24 +92,41 @@ export function useColorSettings() {
     langIn?: string;
     langOut?: string;
   }) {
-    const bgColor = status === "complete" ? getStatusColor("complete") : getSystemColor(system || "");
-    let textColor = getLanguageColor(langIn || "", langOut || "");
+    // Background: use status color if complete, otherwise system color
+    const bgColor = status === "complete" 
+      ? getStatusColor("complete") 
+      : getSystemColor(system || "");
+    
+    // Text color: use language color
+    const textColor = getLanguageColor(langIn || "", langOut || "");
 
-    // Ensure contrast: if text and bg are too similar, fallback
-    if (textColor.toLowerCase() === bgColor.toLowerCase()) {
-      textColor = "#000000"; // fallback black text
-    }
-
-    return { bgColor, textColor };
+    return { 
+      bgColor: bgColor || "",  // Tailwind color value like "blue-500"
+      textColor: textColor || "",  // Tailwind color value like "red-600"
+      bgClass: getBgClass(bgColor),  // Full Tailwind class like "bg-blue-500"
+      textClass: getTextClass(textColor),  // Full Tailwind class like "text-red-600"
+      // Preview hex values for inline styles (fallback/preview)
+      bgColorPreview: bgColor ? getColorPreview(bgColor) : "transparent",
+      textColorPreview: textColor ? getColorPreview(textColor) : "inherit",
+    };
   }
 
   return {
     settings,
     loading,
     error,
+    // Raw color values (tailwind format like "blue-500")
     getSystemColor,
     getStatusColor,
     getLanguageColor,
+    // Tailwind classes (like "bg-blue-500", "text-red-600")
+    getSystemBgClass,
+    getStatusBgClass,
+    getLanguageTextClass,
+    // Preview hex colors (for inline styles when needed)
+    getSystemColorPreview,
+    getLanguageColorPreview,
+    // Combined row colors
     getRowColors,
   };
 }

@@ -24,12 +24,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ColorDynamicFields } from "./ColorDynamicFields";
+import {
+  TAILWIND_COLORS,
+  TAILWIND_SHADES,
+  SPECIAL_COLORS,
+  isValidTailwindColor,
+  getColorPreview,
+} from "@/utils/tailwindColors";
 
 export type Category = "system" | "language" | "status";
 
 export const colorSchema = z
   .object({
-    color_value: z.string().regex(/^#([A-Fa-f0-9]{6})$/, "Invalid hex"),
+    color_value: z.string().refine(
+      (val) => isValidTailwindColor(val),
+      "Please select a valid Tailwind color"
+    ),
     category: z.enum(["system", "language", "status"]),
     system_name: z.string().optional().nullable(),
     status_key: z.string().optional().nullable(),
@@ -86,7 +96,7 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
   const form = useForm<ColorFormValues>({
     resolver: zodResolver(colorSchema),
     defaultValues: {
-      color_value: "#000000",
+      color_value: "blue-500",
       category: "system",
       system_name: null,
       status_key: null,
@@ -101,7 +111,7 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
   useEffect(() => {
     if (editing) {
       form.reset({
-        color_value: editing.color_value || "#000000",
+        color_value: editing.color_value || "blue-500",
         category: editing.category || "system",
         system_name: editing.system_name ?? null,
         status_key: editing.status_key ?? null,
@@ -132,7 +142,7 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
   }
 
   const onSubmit = async (values: ColorFormValues) => {
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       ...values,
       updated_at: new Date().toISOString(),
     };
@@ -161,7 +171,7 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
       } else {
         const { error } = await supabase.from("color_settings").insert(payload);
         if (error) {
-          if ((error as any).code === "23505") {
+          if ((error as { code?: string }).code === "23505") {
             toast.error("This color setting already exists.");
             return;
           }
@@ -178,8 +188,39 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
     }
   };
 
-  const watchedColor = form.watch("color_value") ?? "#000000";
+  const watchedColor = form.watch("color_value") ?? "blue-500";
   const selectedCategory = form.watch("category") ?? "system";
+
+  // Parse current color value to get color name and shade
+  const parseColorValue = (value: string) => {
+    if (SPECIAL_COLORS.includes(value as "white" | "black" | "transparent")) {
+      return { colorName: value, shade: "" };
+    }
+    const parts = value.split("-");
+    if (parts.length === 2) {
+      return { colorName: parts[0], shade: parts[1] };
+    }
+    return { colorName: "blue", shade: "500" };
+  };
+
+  const { colorName, shade } = parseColorValue(watchedColor);
+
+  const handleColorChange = (newColorName: string) => {
+    if (SPECIAL_COLORS.includes(newColorName as "white" | "black" | "transparent")) {
+      form.setValue("color_value", newColorName);
+    } else {
+      const currentShade = shade || "500";
+      form.setValue("color_value", `${newColorName}-${currentShade}`);
+    }
+  };
+
+  const handleShadeChange = (newShade: string) => {
+    if (!SPECIAL_COLORS.includes(colorName as "white" | "black" | "transparent")) {
+      form.setValue("color_value", `${colorName}-${newShade}`);
+    }
+  };
+
+  const isSpecialColor = SPECIAL_COLORS.includes(colorName as "white" | "black" | "transparent");
 
   return (
     <Form {...form}>
@@ -219,30 +260,100 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
         <FormField
           control={form.control}
           name="color_value"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel>Color</FormLabel>
-              <div className="flex items-center gap-3">
-                <FormControl>
-                  <Input
-                    type="color"
-                    {...field}
-                    value={field.value ?? "#000000"}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    className="w-12 h-9 p-0"
-                  />
-                </FormControl>
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value)}
-                  className="w-36 font-mono"
-                />
-                <div
-                  aria-hidden
-                  className="w-12 h-8 rounded border shadow-sm"
-                  style={{ backgroundColor: watchedColor }}
-                />
+              <div className="space-y-3">
+                {/* Color Name Selector */}
+                <div className="flex items-center gap-3">
+                  <Select value={colorName} onValueChange={handleColorChange}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select color" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {SPECIAL_COLORS.map((special) => (
+                        <SelectItem key={special} value={special}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-4 h-4 rounded border"
+                              style={{ backgroundColor: getColorPreview(special) }}
+                            />
+                            <span className="capitalize">{special}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {TAILWIND_COLORS.map((color) => (
+                        <SelectItem key={color} value={color}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-4 h-4 rounded border"
+                              style={{ backgroundColor: getColorPreview(`${color}-500`) }}
+                            />
+                            <span className="capitalize">{color}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Shade Selector - only show for non-special colors */}
+                  {!isSpecialColor && (
+                    <Select value={shade} onValueChange={handleShadeChange}>
+                      <SelectTrigger className="w-24">
+                        <SelectValue placeholder="Shade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TAILWIND_SHADES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded"
+                                style={{ backgroundColor: getColorPreview(`${colorName}-${s}`) }}
+                              />
+                              <span>{s}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Color Preview */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-full h-10 rounded-md border shadow-sm flex items-center justify-center"
+                    style={{ backgroundColor: getColorPreview(watchedColor) }}
+                  >
+                    <span 
+                      className="text-xs font-mono px-2 py-1 rounded"
+                      style={{ 
+                        backgroundColor: "rgba(255,255,255,0.8)",
+                        color: "#000"
+                      }}
+                    >
+                      {watchedColor}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick shade selector for non-special colors */}
+                {!isSpecialColor && (
+                  <div className="flex gap-1 flex-wrap">
+                    {TAILWIND_SHADES.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`w-6 h-6 rounded border transition-all ${
+                          shade === s ? "ring-2 ring-offset-1 ring-primary scale-110" : "hover:scale-105"
+                        }`}
+                        style={{ backgroundColor: getColorPreview(`${colorName}-${s}`) }}
+                        onClick={() => handleShadeChange(s)}
+                        title={`${colorName}-${s}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
               <FormMessage />
             </FormItem>

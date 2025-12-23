@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Users, UserPlus, X } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
+import { AddTranslatorModal } from "@/components/management/AddTranslatorModal";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -61,6 +63,13 @@ export default function EditProjectPage() {
   const projectId = params.id ? Number(params.id) : null;
 
   const { data: project, isLoading, error } = useProject(projectId);
+
+  // State for translator management
+  const [showAddTranslatorModal, setShowAddTranslatorModal] = useState(false);
+  const [translatorToRemove, setTranslatorToRemove] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Include project's current system in the list if it's not already there
   const SYSTEMS = React.useMemo(() => {
@@ -190,6 +199,111 @@ export default function EditProjectPage() {
       toast.error(error.message);
     },
   });
+
+  // Add translators mutation
+  const addTranslatorsMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      userIds,
+      messages,
+    }: {
+      projectId: number;
+      userIds: string[];
+      messages: Record<string, string>;
+    }) => {
+      const assignments = userIds.map((userId) => ({
+        project_id: projectId,
+        user_id: userId,
+        assignment_status: "unclaimed",
+        initial_message: messages[userId] || null,
+      }));
+
+      const { error } = await supabase
+        .from("projects_assignment")
+        .insert(assignments);
+
+      if (error) throw new Error(`Failed to add translators: ${error.message}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Translators added successfully");
+      setShowAddTranslatorModal(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Remove translator mutation
+  const removeTranslatorMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      userId,
+    }: {
+      projectId: number;
+      userId: string;
+    }) => {
+      const { error } = await supabase
+        .from("projects_assignment")
+        .delete()
+        .eq("project_id", projectId)
+        .eq("user_id", userId);
+
+      if (error) {
+        throw new Error(`Failed to remove translator: ${error.message}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Translator removed successfully");
+      setTranslatorToRemove(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleAddTranslators = (
+    projectId: number,
+    userIds: string[],
+    messages: Record<string, string>
+  ) => {
+    addTranslatorsMutation.mutate({ projectId, userIds, messages });
+  };
+
+  const handleRemoveTranslator = () => {
+    if (!projectId || !translatorToRemove) return;
+    removeTranslatorMutation.mutate({
+      projectId,
+      userId: translatorToRemove.id,
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "claimed":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+      case "done":
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+      case "rejected":
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "claimed":
+        return "In Progress";
+      case "done":
+        return "Done";
+      case "rejected":
+        return "Rejected";
+      default:
+        return "Unclaimed";
+    }
+  };
 
   const onSubmit = (values: ProjectFormValues) => {
     updateProjectMutation.mutate(values);
@@ -573,6 +687,98 @@ export default function EditProjectPage() {
             </CardContent>
           </Card>
 
+          {/* Translators Management Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <CardTitle>Assigned Translators</CardTitle>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setShowAddTranslatorModal(true)}
+                  size="sm"
+                  className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {project.translators.length > 0 ? (
+                <div className="space-y-3">
+                  {project.translators.map((translator) => (
+                    <div
+                      key={translator.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <ProfileAvatar
+                          name={translator.name}
+                          avatar={translator.avatar}
+                          size="sm"
+                          showEditButton={false}
+                        />
+                        <div>
+                          <p className="text-gray-900 dark:text-white font-medium text-sm">
+                            {translator.name}
+                            {translator.short_name && (
+                              <span className="text-gray-500 dark:text-gray-400 font-normal">
+                                {" "}
+                                ({translator.short_name})
+                              </span>
+                            )}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">
+                              {translator.role}
+                            </span>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${getStatusColor(
+                                translator.assignment_status
+                              )}`}
+                            >
+                              {getStatusLabel(translator.assignment_status)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTranslatorToRemove({
+                            id: translator.id,
+                            name: translator.name,
+                          })
+                        }
+                        className="p-2 cursor-pointer text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Remove translator"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Users className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No translators assigned yet
+                  </p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+                    Click "Add" to assign translators to this project
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-4">
             <Button
@@ -605,6 +811,79 @@ export default function EditProjectPage() {
           </div>
         </form>
       </Form>
+
+      {/* Add Translator Modal */}
+      {showAddTranslatorModal && project && (
+        <AddTranslatorModal
+          open={showAddTranslatorModal}
+          projectId={project.id}
+          projectName={project.name}
+          assignedTranslatorIds={project.translators.map((t) => t.id)}
+          onClose={() => setShowAddTranslatorModal(false)}
+          onAddTranslators={handleAddTranslators}
+          isAdding={addTranslatorsMutation.isPending}
+        />
+      )}
+
+      {/* Remove Translator Confirmation Modal */}
+      {translatorToRemove && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setTranslatorToRemove(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-gray-900 dark:text-white font-semibold">
+                Confirm Removal
+              </h2>
+              <button
+                onClick={() => setTranslatorToRemove(null)}
+                className="p-1 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors"
+                type="button"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
+              Are you sure you want to remove{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {translatorToRemove.name}
+              </span>{" "}
+              from{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {project?.name}
+              </span>
+              ?
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setTranslatorToRemove(null)}
+                disabled={removeTranslatorMutation.isPending}
+                className="px-4 py-2 cursor-pointer text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRemoveTranslator}
+                disabled={removeTranslatorMutation.isPending}
+                className="px-4 py-2 cursor-pointer bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                type="button"
+              >
+                {removeTranslatorMutation.isPending && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

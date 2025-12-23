@@ -61,13 +61,20 @@ export default function InvoicingPage() {
     string | null
   >(null);
   const [lengthFilter, setLengthFilter] = useState<string | null>(null);
+  const [hideFullyProcessed, setHideFullyProcessed] = useState<boolean>(true);
 
   // Fetch all projects
   const {
-    data: allProjectsRaw = [],
+    data: projectsData = [],
     isLoading: projectsLoading,
     error: projectsError,
   } = useProjectsWithTranslators(false, true);
+
+  // Filter to only show complete projects in invoicing
+  const allProjectsRaw = useMemo(
+    () => projectsData.filter((p) => p.status === "complete"),
+    [projectsData]
+  );
 
   // Get unique systems and languages for filters
   const uniqueSystems = useMemo(() => {
@@ -216,8 +223,21 @@ export default function InvoicingPage() {
       );
     }
 
-    // Sort by due date (earliest first)
+    // Hide fully processed (invoiced + paid) filter
+    if (hideFullyProcessed) {
+      projects = projects.filter((p) => !(p.invoiced && p.paid));
+    }
+
+    // Sort: projects that are both invoiced AND paid go to the end, then by due date
     return projects.sort((a, b) => {
+      const aFullyProcessed = a.invoiced && a.paid;
+      const bFullyProcessed = b.invoiced && b.paid;
+      
+      // Put fully processed (invoiced + paid) projects at the end
+      if (aFullyProcessed && !bFullyProcessed) return 1;
+      if (!aFullyProcessed && bFullyProcessed) return -1;
+      
+      // Within the same group, sort by due date (earliest first)
       const dateA = getClosestDeadline(a);
       const dateB = getClosestDeadline(b);
       if (!dateA && !dateB) return 0;
@@ -236,6 +256,7 @@ export default function InvoicingPage() {
     sourceLanguageFilter,
     targetLanguageFilter,
     lengthFilter,
+    hideFullyProcessed,
     categorizedProjects,
   ]);
 
@@ -325,6 +346,7 @@ export default function InvoicingPage() {
     setSourceLanguageFilter(null);
     setTargetLanguageFilter(null);
     setLengthFilter(null);
+    setHideFullyProcessed(true);
   };
 
   const hasActiveFilters =
@@ -333,7 +355,8 @@ export default function InvoicingPage() {
     assignmentStatusFilter ||
     sourceLanguageFilter ||
     targetLanguageFilter ||
-    lengthFilter;
+    lengthFilter ||
+    !hideFullyProcessed;
 
   // Loading state
   if (userLoading || projectsLoading) {
@@ -459,6 +482,29 @@ export default function InvoicingPage() {
               selected={lengthFilter}
               onSelect={setLengthFilter}
             />
+            {/* Toggle for showing fully processed projects */}
+            <button
+              onClick={() => setHideFullyProcessed(!hideFullyProcessed)}
+              className={`px-4 py-2 cursor-pointer rounded-lg border text-sm transition-all flex items-center gap-2 ${
+                hideFullyProcessed
+                  ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
+                  : "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+              }`}
+              type="button"
+            >
+              <span className={`w-3 h-3 rounded-sm border ${
+                hideFullyProcessed
+                  ? "border-gray-400 dark:border-gray-500"
+                  : "border-blue-500 bg-blue-500"
+              }`}>
+                {!hideFullyProcessed && (
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 12 12">
+                    <path d="M10 3L4.5 8.5 2 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </span>
+              Show Completed
+            </button>
           </div>
 
           {/* Clear Filters Button */}

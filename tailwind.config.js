@@ -1,4 +1,29 @@
 /** @type {import('tailwindcss').Config} */
+
+// Generate safelist for all Tailwind color classes
+const colors = [
+  "slate", "gray", "zinc", "neutral", "stone",
+  "red", "orange", "amber", "yellow", "lime",
+  "green", "emerald", "teal", "cyan", "sky",
+  "blue", "indigo", "violet", "purple", "fuchsia",
+  "pink", "rose"
+];
+const shades = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"];
+
+const colorSafelist = [];
+
+// Add special colors
+colorSafelist.push("bg-white", "bg-black", "bg-transparent");
+colorSafelist.push("text-white", "text-black", "text-transparent");
+
+// Add all color/shade combinations for bg and text
+colors.forEach(color => {
+  shades.forEach(shade => {
+    colorSafelist.push(`bg-${color}-${shade}`);
+    colorSafelist.push(`text-${color}-${shade}`);
+  });
+});
+
 module.exports = {
     darkMode: ["class"],
     content: [
@@ -6,17 +31,13 @@ module.exports = {
 		"./components/**/*.{js,ts,jsx,tsx}",
 	],
 	safelist: [
-  'bg-green-400',
-  'bg-yellow-400',
-  'bg-orange-400',
-  'bg-purple-400',
-  'bg-gray-500',
-  'text-green-600',
-  'text-blue-600',
-  'text-red-600',
-  'text-black',
-  'bg-white',
-],
+    ...colorSafelist,
+    // Keep existing safelist items
+    'text-green-600',
+    'text-blue-600',
+    'text-red-600',
+    'text-black',
+  ],
   theme: {
   	extend: {
   		borderRadius: {
@@ -70,4 +91,3 @@ module.exports = {
   },
   plugins: [require("tailwindcss-animate")],
 }
-
