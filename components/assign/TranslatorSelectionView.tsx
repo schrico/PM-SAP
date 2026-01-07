@@ -1,12 +1,20 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X } from "lucide-react";
-import { formatNumber, formatDate } from "@/utils/formatters";
+import { X, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { formatNumber } from "@/utils/formatters";
 import { useUsers } from "@/hooks/useUsers";
+import { useUserWorkload } from "@/hooks/useUserWorkload";
 import type { Project } from "@/types/project";
 import type { User } from "@/types/user";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProjectWithTranslators extends Project {
   translators: Array<{
@@ -32,6 +40,7 @@ export function TranslatorSelectionView({
   onAssign,
 }: TranslatorSelectionViewProps) {
   const { data: users = [], isLoading } = useUsers();
+  const { workloads, isLoading: workloadsLoading } = useUserWorkload();
   const [selectedTranslators, setSelectedTranslators] = useState<Set<string>>(
     new Set()
   );
@@ -79,7 +88,7 @@ export function TranslatorSelectionView({
     return users.filter((user) => !assignedUserIds.has(user.id));
   }, [users, assignedUserIds]);
 
-  if (isLoading) {
+  if (isLoading || workloadsLoading) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
         <div className="flex justify-center items-center py-12">
@@ -120,10 +129,6 @@ export function TranslatorSelectionView({
         </h3>
         <div className="space-y-2">
           {selectedProjects.map((project) => {
-            const dueDate =
-              project.final_deadline ||
-              project.interim_deadline ||
-              project.initial_deadline;
             return (
               <div
                 key={project.id}
@@ -136,8 +141,13 @@ export function TranslatorSelectionView({
                   <span>
                     {project.words ? formatNumber(project.words) : "0"} words
                   </span>
-                  <span>
-                    Due: {dueDate ? formatDate(dueDate) : "No deadline"}
+                  <span className="flex items-center gap-1">
+                    Due:
+                    <DeadlineDisplay
+                      initialDeadline={project.initial_deadline}
+                      interimDeadline={project.interim_deadline}
+                      finalDeadline={project.final_deadline}
+                    />
                   </span>
                 </div>
               </div>
@@ -150,6 +160,7 @@ export function TranslatorSelectionView({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {availableUsers.map((user: User) => {
           const isSelected = selectedTranslators.has(user.id);
+          const userWorkload = workloads.get(user.id);
 
           return (
             <div
@@ -209,6 +220,84 @@ export function TranslatorSelectionView({
                   </p>
                 </div>
               </div>
+
+              {/* Workload Info */}
+              {userWorkload && (userWorkload.totalWords > 0 || userWorkload.totalLines > 0) && (
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50 space-y-2">
+                  {/* Next Week Workload */}
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Predicted workload:</span>
+                  <div>
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span className="font-medium">Next week: {userWorkload.nextWeekEstimatedHours}h</span>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            {userWorkload.nextWeekIsFeasible ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <AlertTriangle className="w-4 h-4 text-amber-500" />
+                            )}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              {userWorkload.nextWeekIsFeasible
+                                ? "Can handle next week workload"
+                                : "May struggle with next week workload"}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-500 pl-5">
+                      {userWorkload.nextWeekWords.toLocaleString()} words • {userWorkload.nextWeekLines.toLocaleString()} lines
+                    </div>
+                  </div>
+
+                  {/* Total Workload */}
+                  <div>
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Total: {userWorkload.estimatedHours}h</span>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            {userWorkload.isFeasible ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <AlertTriangle className="w-4 h-4 text-amber-500" />
+                            )}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              {userWorkload.isFeasible
+                                ? "Has capacity for more work"
+                                : "May be overloaded"}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-500 pl-5">
+                      {userWorkload.totalWords.toLocaleString()} words • {userWorkload.totalLines.toLocaleString()} lines
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* No workload - show available indicator */}
+              {userWorkload && userWorkload.totalWords === 0 && userWorkload.totalLines === 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50">
+                  <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Available - no current projects</span>
+                  </div>
+                </div>
+              )}
 
               {isSelected && (
                 <div

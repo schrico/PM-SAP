@@ -21,7 +21,7 @@ export function useUsers() {
     queryFn: async (): Promise<User[]> => {
       const { data, error } = await supabase
         .from('users')
-        .select('id, name, email, role, C_user, TE_user, short_name, avatar')
+        .select('id, name, email, role, C_user, TE_user, short_name, avatar, words_per_hour, lines_per_hour')
         .order('name', { ascending: true });
 
       if (error) {

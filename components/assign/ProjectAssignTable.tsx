@@ -1,8 +1,9 @@
 "use client";
 
 import { UserCircle } from "lucide-react";
-import { formatNumber, formatDate } from "@/utils/formatters";
+import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import type { Project } from "@/types/project";
 
 interface ProjectWithTranslators extends Project {
@@ -98,10 +99,6 @@ export function ProjectAssignTable({
           <tbody>
             {projects.map((project) => {
               const isSelected = selectedProjects.has(project.id);
-              const dueDate =
-                project.final_deadline ||
-                project.interim_deadline ||
-                project.initial_deadline;
 
               return (
                 <tr
@@ -165,8 +162,12 @@ export function ProjectAssignTable({
                       </span>
                     }
                   </td>
-                  <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                    {dueDate ? formatDate(dueDate) : "-"}
+                  <td className="px-6 py-4">
+                    <DeadlineDisplay
+                      initialDeadline={project.initial_deadline}
+                      interimDeadline={project.interim_deadline}
+                      finalDeadline={project.final_deadline}
+                    />
                   </td>
                   <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs overflow-hidden text-ellipsis">
                     {project.instructions || "-"}

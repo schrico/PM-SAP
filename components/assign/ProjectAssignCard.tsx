@@ -1,8 +1,9 @@
 "use client";
 
 import { UserCircle } from "lucide-react";
-import { formatNumber, formatDate } from "@/utils/formatters";
+import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import type { Project } from "@/types/project";
 
 interface ProjectWithTranslators extends Project {
@@ -49,10 +50,6 @@ export function ProjectAssignCard({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
       {projects.map((project) => {
         const isSelected = selectedProjects.has(project.id);
-        const dueDate =
-          project.final_deadline ||
-          project.interim_deadline ||
-          project.initial_deadline;
 
         return (
           <div
@@ -126,9 +123,11 @@ export function ProjectAssignCard({
                 <span className="text-gray-500 dark:text-gray-400 text-xs">
                   Due Date
                 </span>
-                <span className="text-gray-900 dark:text-white text-sm">
-                  {dueDate ? formatDate(dueDate) : "-"}
-                </span>
+                <DeadlineDisplay
+                  initialDeadline={project.initial_deadline}
+                  interimDeadline={project.interim_deadline}
+                  finalDeadline={project.final_deadline}
+                />
               </div>
             </div>
 

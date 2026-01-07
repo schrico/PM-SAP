@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Circle, Clock, CheckCircle2, XCircle } from "lucide-react";
-import { formatNumber, formatDate } from "@/utils/formatters";
+import { Circle, Clock, CheckCircle2, XCircle, Check } from "lucide-react";
+import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { ProjectActionsMenu } from "./ProjectActionsMenu";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import {
   Tooltip,
   TooltipContent,
@@ -27,6 +28,8 @@ interface ProjectWithTranslators {
     assignment_status: string;
     avatar?: string | null;
   }>;
+  initial_deadline: string | null;
+  interim_deadline: string | null;
   final_deadline: string | null;
   instructions?: string | null;
   status: "complete" | "active" | "cancelled";
@@ -44,6 +47,16 @@ interface ManagementCardProps {
   onEditDetails: (projectId: number) => void;
   onCompleteProject: (projectId: number) => void;
   activeTab: "all" | "ready" | "inProgress" | "unclaimed";
+  // Words/Lines editing props
+  editingProjectId: number | null;
+  editWords: string;
+  editLines: string;
+  onEditWordsChange: (value: string) => void;
+  onEditLinesChange: (value: string) => void;
+  onStartWordsLinesEdit: (projectId: number, words: number | null, lines: number | null) => void;
+  onSaveWordsLines: (projectId: number) => void;
+  onCancelWordsLinesEdit: () => void;
+  isUpdatingWordsLines: boolean;
 }
 
 export function ManagementCard({
@@ -55,6 +68,15 @@ export function ManagementCard({
   onDuplicate,
   onEditDetails,
   onCompleteProject,
+  editingProjectId,
+  editWords,
+  editLines,
+  onEditWordsChange,
+  onEditLinesChange,
+  onStartWordsLinesEdit,
+  onSaveWordsLines,
+  onCancelWordsLinesEdit,
+  isUpdatingWordsLines,
 }: ManagementCardProps) {
   const router = useRouter();
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
@@ -115,25 +137,9 @@ export function ManagementCard({
     }
   };
 
-  const getClosestDeadline = (
-    project: ProjectWithTranslators
-  ): string | null => {
-    const validDates = [project.final_deadline]
-      .filter(Boolean)
-      .map((d) => {
-        const date = new Date(d!);
-        return isNaN(date.getTime()) ? null : d;
-      })
-      .filter(Boolean);
-
-    if (validDates.length === 0) return null;
-    return validDates[0] as string;
-  };
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {projects.map((project) => {
-        const dueDate = getClosestDeadline(project);
         return (
           <div
             key={project.id}
@@ -179,10 +185,52 @@ export function ManagementCard({
             <h3 className="text-gray-900 dark:text-white text-sm font-bold mt-2">
               {project.name}
             </h3>
-            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
-              Words: {project.words ? formatNumber(project.words) : "-"}, Lines:{" "}
-              {project.lines ? formatNumber(project.lines) : "-"}
-            </p>
+            <div className="text-gray-500 dark:text-gray-400 text-xs mt-1" onClick={(e) => e.stopPropagation()}>
+              {editingProjectId === project.id ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span>Words:</span>
+                  <input
+                    type="number"
+                    value={editWords}
+                    onChange={(e) => onEditWordsChange(e.target.value)}
+                    className="w-16 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    min="0"
+                  />
+                  <span>Lines:</span>
+                  <input
+                    type="number"
+                    value={editLines}
+                    onChange={(e) => onEditLinesChange(e.target.value)}
+                    className="w-16 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    min="0"
+                  />
+                  <button
+                    onClick={() => onSaveWordsLines(project.id)}
+                    disabled={isUpdatingWordsLines}
+                    className="p-0.5 text-green-600 hover:text-green-700 hover:scale-125 transition-transform disabled:opacity-50"
+                    type="button"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={onCancelWordsLinesEdit}
+                    className="p-0.5 text-red-600 hover:text-red-700 hover:scale-125 transition-transform"
+                    type="button"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => onStartWordsLinesEdit(project.id, project.words, project.lines)}
+                  className="hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
+                  type="button"
+                >
+                  Words: {project.words ? formatNumber(project.words) : "-"}, Lines:{" "}
+                  {project.lines ? formatNumber(project.lines) : "-"}
+                </button>
+              )}
+            </div>
 
             <div className="mt-2">
               {project.translators.length > 0 ?
@@ -222,9 +270,14 @@ export function ManagementCard({
               }
             </div>
 
-            <p className="text-gray-700 dark:text-gray-300 text-xs md:text-sm mt-2">
-              Due Date: {dueDate ? formatDate(dueDate) : "-"}
-            </p>
+            <div className="text-gray-700 dark:text-gray-300 text-xs md:text-sm mt-2 flex items-center gap-1">
+              <span>Due Date:</span>
+              <DeadlineDisplay
+                initialDeadline={project.initial_deadline}
+                interimDeadline={project.interim_deadline}
+                finalDeadline={project.final_deadline}
+              />
+            </div>
             <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate mt-1">
               Instructions: {project.instructions || "No instructions"}
             </p>

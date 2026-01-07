@@ -1,8 +1,8 @@
 "use client";
 
-import { formatDate } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import type { ProjectWithTranslators } from "@/types/project";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 
 interface InvoicingCardProps {
   projects: ProjectWithTranslators[];
@@ -26,24 +26,10 @@ export function InvoicingCard({
     return { backgroundColor: color };
   };
 
-  // Get closest deadline
-  const getClosestDeadline = (project: ProjectWithTranslators) => {
-    const deadlines = [
-      project.final_deadline,
-      project.interim_deadline,
-      project.initial_deadline,
-    ].filter(Boolean) as string[];
-    if (deadlines.length === 0) return null;
-    return deadlines.sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
-    )[0];
-  };
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
       {projects.map((project) => {
         const isSelected = selectedProjects.has(project.id);
-        const deadline = getClosestDeadline(project);
         return (
           <div
             key={project.id}
@@ -119,9 +105,11 @@ export function InvoicingCard({
                 <span className="text-gray-500 dark:text-gray-400 text-sm">
                   Due Date
                 </span>
-                <span className="text-gray-900 dark:text-white">
-                  {deadline ? formatDate(deadline) : "N/A"}
-                </span>
+                <DeadlineDisplay
+                  initialDeadline={project.initial_deadline}
+                  interimDeadline={project.interim_deadline}
+                  finalDeadline={project.final_deadline}
+                />
               </div>
             </div>
 

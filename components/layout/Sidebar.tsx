@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Receipt,
+  BarChart3,
 } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
@@ -35,6 +36,7 @@ export function Sidebar() {
     { path: "/assign-projects", icon: UserPlus, label: "Assign Projects" },
     { path: "/management", icon: FolderKanban, label: "Manage Projects" },
     { path: "/invoicing", icon: Receipt, label: "Invoicing" },
+    { path: "/workload", icon: BarChart3, label: "Workload" },
   ];
 
   // Controls when text labels are visible (for smooth transition)

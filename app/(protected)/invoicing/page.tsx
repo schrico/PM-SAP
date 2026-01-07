@@ -303,6 +303,26 @@ export default function InvoicingPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const markPaidAndInvoicedMutation = useMutation({
+    mutationFn: async (projectIds: number[]) => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ paid: true, invoiced: true })
+        .in("id", projectIds);
+
+      if (error)
+        throw new Error(`Failed to mark projects as paid & invoiced: ${error.message}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects-with-translators"],
+      });
+      toast.success("Projects marked as paid & invoiced");
+      setSelectedProjects(new Set());
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   // Handlers
   const handleRowClick = (id: number, e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button")) {
@@ -336,6 +356,11 @@ export default function InvoicingPage() {
   const handleConfirmPaid = () => {
     if (selectedProjects.size === 0) return;
     markPaidMutation.mutate(Array.from(selectedProjects));
+  };
+
+  const handleConfirmPaidAndInvoiced = () => {
+    if (selectedProjects.size === 0) return;
+    markPaidAndInvoicedMutation.mutate(Array.from(selectedProjects));
   };
 
   const clearAllFilters = () => {
@@ -568,6 +593,18 @@ export default function InvoicingPage() {
                   {markInvoicedMutation.isPending ?
                     "Processing..."
                   : "Confirm Invoiced"}
+                </button>
+              )}
+              {activeTab === "all" && (
+                <button
+                  onClick={handleConfirmPaidAndInvoiced}
+                  disabled={markPaidAndInvoicedMutation.isPending}
+                  className="px-6 py-3 cursor-pointer bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="button"
+                >
+                  {markPaidAndInvoicedMutation.isPending ?
+                    "Processing..."
+                  : "Confirm Paid & Invoiced"}
                 </button>
               )}
               {(activeTab === "all" || activeTab === "toBePaid") && (

@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LayoutGrid, Circle, Clock, CheckCircle2, XCircle } from "lucide-react";
-import { formatNumber, formatDate } from "@/utils/formatters";
+import { LayoutGrid, Circle, Clock, CheckCircle2, XCircle, Check } from "lucide-react";
+import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { ProjectActionsMenu } from "./ProjectActionsMenu";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import {
   Tooltip,
   TooltipContent,
@@ -27,6 +28,8 @@ interface ProjectWithTranslators {
     assignment_status: string;
     avatar?: string | null;
   }>;
+  initial_deadline: string | null;
+  interim_deadline: string | null;
   final_deadline: string | null;
   instructions?: string | null;
   status: "complete" | "active" | "cancelled";
@@ -44,6 +47,16 @@ interface ManagementTableProps {
   onEditDetails: (projectId: number) => void;
   onCompleteProject: (projectId: number) => void;
   activeTab: "all" | "ready" | "inProgress" | "unclaimed";
+  // Words/Lines editing props
+  editingProjectId: number | null;
+  editWords: string;
+  editLines: string;
+  onEditWordsChange: (value: string) => void;
+  onEditLinesChange: (value: string) => void;
+  onStartWordsLinesEdit: (projectId: number, words: number | null, lines: number | null) => void;
+  onSaveWordsLines: (projectId: number) => void;
+  onCancelWordsLinesEdit: () => void;
+  isUpdatingWordsLines: boolean;
 }
 
 export function ManagementTable({
@@ -55,6 +68,15 @@ export function ManagementTable({
   onDuplicate,
   onEditDetails,
   onCompleteProject,
+  editingProjectId,
+  editWords,
+  editLines,
+  onEditWordsChange,
+  onEditLinesChange,
+  onStartWordsLinesEdit,
+  onSaveWordsLines,
+  onCancelWordsLinesEdit,
+  isUpdatingWordsLines,
 }: ManagementTableProps) {
   const router = useRouter();
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
@@ -115,21 +137,6 @@ export function ManagementTable({
     }
   };
 
-  const getClosestDeadline = (
-    project: ProjectWithTranslators
-  ): string | null => {
-    const validDates = [project.final_deadline]
-      .filter(Boolean)
-      .map((d) => {
-        const date = new Date(d!);
-        return isNaN(date.getTime()) ? null : d;
-      })
-      .filter(Boolean);
-
-    if (validDates.length === 0) return null;
-    return validDates[0] as string;
-  };
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="overflow-x-auto">
@@ -166,7 +173,6 @@ export function ManagementTable({
           <tbody>
             {projects.length > 0 ?
               projects.map((project) => {
-                const dueDate = getClosestDeadline(project);
                 return (
                   <tr
                     key={project.id}
@@ -196,11 +202,60 @@ export function ManagementTable({
                     <td className="px-6 py-4 text-gray-900 dark:text-white">
                       {project.name}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300 text-right">
-                      {project.words ? formatNumber(project.words) : "-"}
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      {editingProjectId === project.id ? (
+                        <input
+                          type="number"
+                          value={editWords}
+                          onChange={(e) => onEditWordsChange(e.target.value)}
+                          className="w-20 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          min="0"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => onStartWordsLinesEdit(project.id, project.words, project.lines)}
+                          className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
+                          type="button"
+                        >
+                          {project.words ? formatNumber(project.words) : "-"}
+                        </button>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300 text-right">
-                      {project.lines ? formatNumber(project.lines) : "-"}
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      {editingProjectId === project.id ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <input
+                            type="number"
+                            value={editLines}
+                            onChange={(e) => onEditLinesChange(e.target.value)}
+                            className="w-20 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            min="0"
+                          />
+                          <button
+                            onClick={() => onSaveWordsLines(project.id)}
+                            disabled={isUpdatingWordsLines}
+                            className="p-1 text-green-600 hover:text-green-700 hover:scale-125 transition-transform disabled:opacity-50"
+                            type="button"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={onCancelWordsLinesEdit}
+                            className="p-1 text-red-600 hover:text-red-700 hover:scale-125 transition-transform"
+                            type="button"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => onStartWordsLinesEdit(project.id, project.words, project.lines)}
+                          className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
+                          type="button"
+                        >
+                          {project.lines ? formatNumber(project.lines) : "-"}
+                        </button>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       {project.translators.length > 0 ?
@@ -241,8 +296,12 @@ export function ManagementTable({
                         </span>
                       }
                     </td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                      {dueDate ? formatDate(dueDate) : "-"}
+                    <td className="px-6 py-4">
+                      <DeadlineDisplay
+                        initialDeadline={project.initial_deadline}
+                        interimDeadline={project.interim_deadline}
+                        finalDeadline={project.final_deadline}
+                      />
                     </td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate">
                       {project.instructions || "No instructions"}

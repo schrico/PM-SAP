@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
-import { formatNumber, formatDate } from "@/utils/formatters";
+import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import type { ProjectAssignment } from "@/types/project-assignment";
 
 interface MyProjectsTableProps {
@@ -101,10 +102,6 @@ export function MyProjectsTable({
           <tbody>
             {sortedProjects.map((assignment) => {
               const project = assignment.projects;
-              const dueDate =
-                project.final_deadline ||
-                project.interim_deadline ||
-                project.initial_deadline;
 
               return (
                 <tr
@@ -141,8 +138,12 @@ export function MyProjectsTable({
                   <td className="px-6 py-4 text-gray-700 dark:text-gray-300 text-right">
                     {project.lines ? formatNumber(project.lines) : "-"}
                   </td>
-                  <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                    {dueDate ? formatDate(dueDate) : "-"}
+                  <td className="px-6 py-4">
+                    <DeadlineDisplay
+                      initialDeadline={project.initial_deadline}
+                      interimDeadline={project.interim_deadline}
+                      finalDeadline={project.final_deadline}
+                    />
                   </td>
                   <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate">
                     {project.instructions || "-"}

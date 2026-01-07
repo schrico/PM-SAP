@@ -11,4 +11,6 @@ export interface User {
   short_name?: string | null;
   avatar?: string | null;
   custom_avatar?: string | null;
+  words_per_hour?: number | null;
+  lines_per_hour?: number | null;
 }

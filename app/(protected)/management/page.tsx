@@ -64,6 +64,11 @@ export default function ProjectManagementPage() {
     }>;
   }>({ open: false, projectId: 0, projectName: "", translators: [] });
 
+  // State for editing project words/lines
+  const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
+  const [editWords, setEditWords] = useState<string>("");
+  const [editLines, setEditLines] = useState<string>("");
+
   // Filter states
   const [systemFilter, setSystemFilter] = useState<string | null>(null);
   const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
@@ -438,6 +443,59 @@ export default function ProjectManagementPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Mutation to update project words/lines
+  const updateWordsLinesMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      words,
+      lines,
+    }: {
+      projectId: number;
+      words: number | null;
+      lines: number | null;
+    }) => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ words, lines })
+        .eq("id", projectId);
+
+      if (error) {
+        throw new Error(`Failed to update words/lines: ${error.message}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects-with-translators"],
+      });
+      toast.success("Words/Lines updated successfully");
+      setEditingProjectId(null);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Handlers for words/lines editing
+  const handleStartWordsLinesEdit = (
+    projectId: number,
+    words: number | null,
+    lines: number | null
+  ) => {
+    setEditingProjectId(projectId);
+    setEditWords(words?.toString() || "");
+    setEditLines(lines?.toString() || "");
+  };
+
+  const handleSaveWordsLines = (projectId: number) => {
+    const words = editWords ? parseInt(editWords) : null;
+    const lines = editLines ? parseInt(editLines) : null;
+    updateWordsLinesMutation.mutate({ projectId, words, lines });
+  };
+
+  const handleCancelWordsLinesEdit = () => {
+    setEditingProjectId(null);
+    setEditWords("");
+    setEditLines("");
+  };
+
   // Handlers
   const handleAddTranslator = (projectId: number) => {
     const project = allProjects.find((p) => p.id === projectId);
@@ -644,6 +702,15 @@ export default function ProjectManagementPage() {
           onEditDetails={handleEditDetails}
           onCompleteProject={handleCompleteProject}
           activeTab={activeTab}
+          editingProjectId={editingProjectId}
+          editWords={editWords}
+          editLines={editLines}
+          onEditWordsChange={setEditWords}
+          onEditLinesChange={setEditLines}
+          onStartWordsLinesEdit={handleStartWordsLinesEdit}
+          onSaveWordsLines={handleSaveWordsLines}
+          onCancelWordsLinesEdit={handleCancelWordsLinesEdit}
+          isUpdatingWordsLines={updateWordsLinesMutation.isPending}
         />
       : <ManagementCard
           projects={filteredProjects}
@@ -655,6 +722,15 @@ export default function ProjectManagementPage() {
           onEditDetails={handleEditDetails}
           onCompleteProject={handleCompleteProject}
           activeTab={activeTab}
+          editingProjectId={editingProjectId}
+          editWords={editWords}
+          editLines={editLines}
+          onEditWordsChange={setEditWords}
+          onEditLinesChange={setEditLines}
+          onStartWordsLinesEdit={handleStartWordsLinesEdit}
+          onSaveWordsLines={handleSaveWordsLines}
+          onCancelWordsLinesEdit={handleCancelWordsLinesEdit}
+          isUpdatingWordsLines={updateWordsLinesMutation.isPending}
         />
       }
 

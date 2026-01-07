@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
-import { formatNumber, formatDate } from "@/utils/formatters";
+import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import type { ProjectAssignment } from "@/types/project-assignment";
 
 interface MyProjectsCardProps {
@@ -72,10 +73,6 @@ export function MyProjectsCard({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {sortedProjects.map((assignment) => {
         const project = assignment.projects;
-        const dueDate =
-          project.final_deadline ||
-          project.interim_deadline ||
-          project.initial_deadline;
 
         return (
           <div
@@ -110,9 +107,14 @@ export function MyProjectsCard({
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
               Lines: {project.lines ? formatNumber(project.lines) : "-"}
             </p>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
-              Due Date: {dueDate ? formatDate(dueDate) : "-"}
-            </p>
+            <div className="text-gray-500 dark:text-gray-400 text-sm mb-1 flex items-center gap-1">
+              <span>Due Date:</span>
+              <DeadlineDisplay
+                initialDeadline={project.initial_deadline}
+                interimDeadline={project.interim_deadline}
+                finalDeadline={project.final_deadline}
+              />
+            </div>
             <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate mb-4">
               {project.instructions || "-"}
             </p>

@@ -1,9 +1,9 @@
 "use client";
 
-import { formatDate } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import type { ProjectWithTranslators } from "@/types/project";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 
 interface InvoicingTableProps {
   projects: ProjectWithTranslators[];
@@ -27,19 +27,6 @@ export function InvoicingTable({
       return { backgroundColor: "transparent" };
     }
     return { backgroundColor: color };
-  };
-
-  // Get closest deadline
-  const getClosestDeadline = (project: ProjectWithTranslators) => {
-    const deadlines = [
-      project.final_deadline,
-      project.interim_deadline,
-      project.initial_deadline,
-    ].filter(Boolean) as string[];
-    if (deadlines.length === 0) return null;
-    return deadlines.sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
-    )[0];
   };
 
   return (
@@ -75,7 +62,6 @@ export function InvoicingTable({
           </thead>
           <tbody>
             {projects.map((project) => {
-              const deadline = getClosestDeadline(project);
               return (
                 <tr
                   key={project.id}
@@ -152,8 +138,12 @@ export function InvoicingTable({
                       </span>
                     }
                   </td>
-                  <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                    {deadline ? formatDate(deadline) : "N/A"}
+                  <td className="px-6 py-4">
+                    <DeadlineDisplay
+                      initialDeadline={project.initial_deadline}
+                      interimDeadline={project.interim_deadline}
+                      finalDeadline={project.final_deadline}
+                    />
                   </td>
                   <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate">
                     {project.instructions || "No instructions"}
