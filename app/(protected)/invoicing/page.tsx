@@ -503,7 +503,7 @@ export default function InvoicingPage() {
                   </svg>
                 )}
               </span>
-              Show Completed
+              Show Invoiced/Paid
             </button>
           </div>
 
