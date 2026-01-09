@@ -310,7 +310,7 @@ function ProjectManagementContent() {
       const assignments = userIds.map((userId) => ({
         project_id: projectId,
         user_id: userId,
-        assignment_status: (userId === user?.id ? "claimed" : "unclaimed") as const, // Auto-claim if self-assigning
+        assignment_status: userId === user?.id ? "claimed" : "unclaimed", // Auto-claim if self-assigning
         initial_message: messages[userId] || null,
       }));
 
