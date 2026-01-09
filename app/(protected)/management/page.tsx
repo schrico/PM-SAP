@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 import {
   matchesDueDateFilter,
   matchesLengthFilter,
@@ -293,7 +294,7 @@ function ProjectManagementContent() {
       toast.success("Project marked as complete");
       setOpenMenu(null);
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getUserFriendlyError(error, "project management")),
   });
 
   const addTranslatorsMutation = useMutation({
@@ -330,7 +331,7 @@ function ProjectManagementContent() {
         assignedTranslatorIds: [],
       });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getUserFriendlyError(error, "project management")),
   });
 
   const removeTranslatorMutation = useMutation({
@@ -450,7 +451,7 @@ function ProjectManagementContent() {
       });
       setOpenMenu(null);
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getUserFriendlyError(error, "project management")),
   });
 
   // Mutation to update project words/lines
@@ -480,7 +481,7 @@ function ProjectManagementContent() {
       toast.success("Words/Lines updated successfully");
       setEditingProjectId(null);
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getUserFriendlyError(error, "project management")),
   });
 
   // Handlers for words/lines editing

@@ -33,6 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 
 const projectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
@@ -196,7 +197,7 @@ export default function EditProjectPage() {
       router.push(`/project/${projectId}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "project update"));
     },
   });
 
@@ -230,7 +231,7 @@ export default function EditProjectPage() {
       setShowAddTranslatorModal(false);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "project update"));
     },
   });
 
@@ -259,7 +260,7 @@ export default function EditProjectPage() {
       setTranslatorToRemove(null);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "project update"));
     },
   });
 

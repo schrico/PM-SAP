@@ -42,6 +42,16 @@ export function RefusalDialog({
     onCancel();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      // Only trigger if validation passes (same as button)
+      if (message.trim().length > 10) {
+        handleConfirm();
+      }
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
       <DialogContent className="sm:max-w-[500px]">
@@ -60,6 +70,7 @@ export function RefusalDialog({
                 setMessage(e.target.value);
                 setError("");
               }}
+              onKeyDown={handleKeyDown}
               placeholder="Enter your refusal reason..."
               className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none min-h-[120px]"
               rows={4}

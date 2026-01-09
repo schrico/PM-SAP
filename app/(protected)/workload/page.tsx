@@ -43,6 +43,7 @@ import {
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 
 type DatePreset = "today" | "3days" | "week" | "2weeks" | "month" | "custom";
 type TabType = "byDate" | "byUser";
@@ -242,7 +243,7 @@ function WorkloadContent() {
       setEditingUserId(null);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "rate update"));
     },
   });
 

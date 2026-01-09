@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import {
   matchesDueDateFilter,
@@ -290,7 +291,7 @@ function InvoicingContent() {
       toast.success("Projects marked as invoiced");
       setSelectedProjects(new Set());
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getUserFriendlyError(error, "invoicing")),
   });
 
   const markPaidMutation = useMutation({
@@ -310,7 +311,7 @@ function InvoicingContent() {
       toast.success("Projects marked as paid");
       setSelectedProjects(new Set());
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getUserFriendlyError(error, "invoicing")),
   });
 
   const markPaidAndInvoicedMutation = useMutation({
@@ -332,7 +333,7 @@ function InvoicingContent() {
       toast.success("Projects marked as paid & invoiced");
       setSelectedProjects(new Set());
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getUserFriendlyError(error, "invoicing")),
   });
 
   // Handlers

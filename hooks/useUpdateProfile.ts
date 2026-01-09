@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 
 interface UpdateProfileData {
   name?: string;
@@ -93,7 +94,7 @@ export function useUpdateProfile() {
       }
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to update profile");
+      toast.error(getUserFriendlyError(error, "profile update"));
     },
   });
 }

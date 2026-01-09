@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -132,7 +133,7 @@ export default function ProjectPage() {
       setShowAddTranslatorModal(false);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "translator management"));
     },
   });
 
@@ -160,7 +161,7 @@ export default function ProjectPage() {
       toast.success("Translator removed successfully");
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "translator management"));
     },
   });
 
@@ -194,7 +195,7 @@ export default function ProjectPage() {
       setShowReminderModal({ open: false, userId: "", userName: "" });
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "translator management"));
     },
   });
 

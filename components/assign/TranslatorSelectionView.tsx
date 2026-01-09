@@ -443,7 +443,7 @@ export function TranslatorSelectionView({
               type="button"
             >
               <CheckCircle2 className="w-5 h-5" />
-              Assign All ({totalAssignments} assignment{totalAssignments !== 1 ? "s" : ""})
+              Assign All ({projectsWithAssignments} assignment{projectsWithAssignments !== 1 ? "s" : ""})
             </button>
           ) : (
             <button

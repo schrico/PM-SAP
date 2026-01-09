@@ -43,6 +43,16 @@ export function ReminderModal({
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      // Only trigger if validation passes (same as button)
+      if (message.trim() && !isSending) {
+        handleSend();
+      }
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
@@ -57,6 +67,7 @@ export function ReminderModal({
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Type your custom message here..."
             className="min-h-32"
             disabled={isSending}

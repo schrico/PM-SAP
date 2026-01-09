@@ -21,6 +21,7 @@ import {
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import type { Project } from "@/types/project";
 
@@ -271,7 +272,7 @@ function AssignProjectsContent() {
       setSelectedProjects(new Set());
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Error assigning projects.");
+      toast.error(getUserFriendlyError(error, "project assignment"));
     },
   });
 

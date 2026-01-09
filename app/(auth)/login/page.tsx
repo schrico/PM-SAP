@@ -6,6 +6,7 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 function AuthFormContent() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -58,6 +59,7 @@ function AuthFormContent() {
         } else {
           // Clear and invalidate all queries to ensure fresh data for new user
           queryClient.clear();
+          toast.success("Login successful! Welcome back.");
           // Get the redirect URL from search params or default to home
           const redirectTo = searchParams.get("redirectedFrom") || "/";
           router.push(redirectTo);
@@ -76,11 +78,18 @@ function AuthFormContent() {
         if (error) {
           throw error;
         } else {
+          toast.success(
+            "Account created successfully! Please check your email to verify your account."
+          );
           setShowVerifyPopup(true);
         }
       }
     } catch (err: any) {
-      setError(err.message);
+      // Show user-friendly error messages
+      const errorMessage =
+        err.message || "An error occurred. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

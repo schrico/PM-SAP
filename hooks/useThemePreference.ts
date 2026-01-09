@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 
 export type ThemePreference = "system" | "light" | "dark";
 
@@ -45,7 +46,7 @@ export function useThemePreference() {
       toast.success(`Theme set to ${label}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "theme update"));
     },
   });
 

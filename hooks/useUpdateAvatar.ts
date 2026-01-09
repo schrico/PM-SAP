@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 
 // Custom error class for avatar-specific errors
 export class AvatarAlreadyTakenError extends Error {
@@ -129,7 +130,7 @@ export function useUpdateAvatar() {
           duration: 5000,
         });
       } else {
-        toast.error(error.message || "Failed to update avatar");
+        toast.error(getUserFriendlyError(error, "avatar update"));
       }
     },
   });

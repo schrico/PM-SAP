@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import type { ProjectAssignment } from "@/types/project-assignment";
 
 export function useMyProjects(userId: string | null) {
@@ -16,7 +16,6 @@ export function useMyProjects(userId: string | null) {
   }
 
   const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const {
@@ -125,25 +124,20 @@ export function useMyProjects(userId: string | null) {
         done: `Project "${projectName}" marked as done`,
       };
 
-      toast({
-        title: status === "rejected" ? "Project Rejected" : "Success",
-        description: messages[status],
-      });
+      toast.success(messages[status]);
 
       // Invalidate and refetch the projects query
       queryClient.invalidateQueries({ queryKey: ['my-projects', userId] });
     },
     onError: (error: any, { status }) => {
+      const action = status === "claimed"
+        ? "claim"
+        : status === "rejected"
+        ? "reject"
+        : "mark as done";
+      
       console.error(`Error updating project status to ${status}:`, error?.message || error);
-      toast({
-        title: "Error",
-        description: `Failed to ${status === "claimed"
-          ? "claim"
-          : status === "rejected"
-          ? "reject"
-          : "mark as done"} project`,
-        variant: "destructive",
-      });
+      toast.error(`Failed to ${action} project. Please try again.`);
     },
   });
 

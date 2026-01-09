@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ColorSettings } from "@/components/settings/ColorSettings";
 import { ThemeSettings } from "@/components/settings/ThemeSettings";
+import { UserRoleManagement } from "@/components/settings/UserRoleManagement";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useQueryClient } from "@tanstack/react-query";
@@ -78,6 +79,13 @@ export default function SettingsPage() {
       {canEditColors() && (
         <Card className="p-6">
           <ColorSettings userRole={user.role} />
+        </Card>
+      )}
+
+      {/* User Role Management - Only for admins */}
+      {user.role === "admin" && (
+        <Card className="p-6 text-left">
+          <UserRoleManagement />
         </Card>
       )}
 

@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RouteId } from "@/lib/roleAccess";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 import type { Project } from "@/types/project";
 
 function NewProjectPageContent() {
@@ -173,7 +174,7 @@ function NewProjectPageContent() {
       router.push(`/project/${newProject.id}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "project creation"));
     },
   });
 

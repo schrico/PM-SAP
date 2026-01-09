@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 import imageCompression from "browser-image-compression";
 
 interface UploadResult {
@@ -117,7 +118,7 @@ export function useUploadAvatar() {
       toast.success("Avatar uploaded successfully!");
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(getUserFriendlyError(error, "avatar upload"));
     },
   });
 }
