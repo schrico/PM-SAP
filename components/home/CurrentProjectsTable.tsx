@@ -147,7 +147,9 @@ export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
                         <TooltipProvider>
                           <div className="flex flex-wrap gap-2">
                             {project.translators.map((translator) => {
-                              const statusInfo = getStatusIcon(translator.assignment_status);
+                              const statusInfo = getStatusIcon(
+                                translator.assignment_status
+                              );
                               const StatusIcon = statusInfo.icon;
                               return (
                                 <div
@@ -156,7 +158,9 @@ export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
                                 >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.color} shrink-0`} />
+                                      <StatusIcon
+                                        className={`w-3.5 h-3.5 ${statusInfo.color} shrink-0`}
+                                      />
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>{statusInfo.label}</p>

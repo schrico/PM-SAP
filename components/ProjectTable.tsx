@@ -85,15 +85,17 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
           {projects.map((project) => {
             const nearest =
               project.interim_deadline || project.final_deadline || null;
-            const { bgClass, textClass, bgColorPreview, textColorPreview } = getRowColors({
-              status: project.status,
-              system: project.system,
-              langIn: project.language_in,
-              langOut: project.language_out,
-            });
+            const { bgClass, textClass, bgColorPreview, textColorPreview } =
+              getRowColors({
+                status: project.status,
+                system: project.system,
+                langIn: project.language_in,
+                langOut: project.language_out,
+              });
 
             // Use Tailwind classes when available, fallback to inline styles for preview
-            const rowBgStyle = bgClass ? {} : { backgroundColor: bgColorPreview };
+            const rowBgStyle =
+              bgClass ? {} : { backgroundColor: bgColorPreview };
             const textStyle = textClass ? {} : { color: textColorPreview };
 
             return (
@@ -147,7 +149,7 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
                   className="px-5 py-3"
                   onClick={() => router.push(`/project/${project.id}`)}
                 >
-                  {project.translators && project.translators.length > 0 ? (
+                  {project.translators && project.translators.length > 0 ?
                     <div className="space-y-1">
                       {project.translators.map((translator) => (
                         <div key={translator.id} className="text-xs">
@@ -156,17 +158,19 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
                             ({translator.role})
                           </span>
                           {translator.assignment_status === "claimed" && (
-                            <span className="ml-1 text-green-800 font-bold">✓</span>
+                            <span className="ml-1 text-green-800 font-bold">
+                              ✓
+                            </span>
                           )}
                           {translator.assignment_status === "done" && (
-                            <span className="ml-1 text-blue-800 font-bold">✓✓</span>
+                            <span className="ml-1 text-blue-800 font-bold">
+                              ✓✓
+                            </span>
                           )}
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    "-"
-                  )}
+                  : "-"}
                 </td>
                 <td className="px-5 py-3 break-words max-w-[600px]">
                   {project.instructions || "-"}

@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LayoutGrid, Circle, Clock, CheckCircle2, XCircle, Check } from "lucide-react";
+import {
+  LayoutGrid,
+  Circle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Check,
+} from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { ProjectActionsMenu } from "./ProjectActionsMenu";
@@ -53,7 +60,11 @@ interface ManagementTableProps {
   editLines: string;
   onEditWordsChange: (value: string) => void;
   onEditLinesChange: (value: string) => void;
-  onStartWordsLinesEdit: (projectId: number, words: number | null, lines: number | null) => void;
+  onStartWordsLinesEdit: (
+    projectId: number,
+    words: number | null,
+    lines: number | null
+  ) => void;
   onSaveWordsLines: (projectId: number) => void;
   onCancelWordsLinesEdit: () => void;
   isUpdatingWordsLines: boolean;
@@ -202,8 +213,11 @@ export function ManagementTable({
                     <td className="px-6 py-4 text-gray-900 dark:text-white">
                       {project.name}
                     </td>
-                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      {editingProjectId === project.id ? (
+                    <td
+                      className="px-6 py-4 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {editingProjectId === project.id ?
                         <input
                           type="number"
                           value={editWords}
@@ -211,18 +225,26 @@ export function ManagementTable({
                           className="w-20 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                           min="0"
                         />
-                      ) : (
-                        <button
-                          onClick={() => onStartWordsLinesEdit(project.id, project.words, project.lines)}
+                      : <button
+                          onClick={() =>
+                            onStartWordsLinesEdit(
+                              project.id,
+                              project.words,
+                              project.lines
+                            )
+                          }
                           className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
                           type="button"
                         >
                           {project.words ? formatNumber(project.words) : "-"}
                         </button>
-                      )}
+                      }
                     </td>
-                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      {editingProjectId === project.id ? (
+                    <td
+                      className="px-6 py-4 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {editingProjectId === project.id ?
                         <div className="flex items-center justify-end gap-2">
                           <input
                             type="number"
@@ -247,22 +269,29 @@ export function ManagementTable({
                             <XCircle className="w-4 h-4" />
                           </button>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => onStartWordsLinesEdit(project.id, project.words, project.lines)}
+                      : <button
+                          onClick={() =>
+                            onStartWordsLinesEdit(
+                              project.id,
+                              project.words,
+                              project.lines
+                            )
+                          }
                           className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
                           type="button"
                         >
                           {project.lines ? formatNumber(project.lines) : "-"}
                         </button>
-                      )}
+                      }
                     </td>
                     <td className="px-6 py-4">
                       {project.translators.length > 0 ?
                         <TooltipProvider>
                           <div className="flex flex-wrap gap-2">
                             {project.translators.map((translator) => {
-                              const statusInfo = getStatusIcon(translator.assignment_status);
+                              const statusInfo = getStatusIcon(
+                                translator.assignment_status
+                              );
                               const StatusIcon = statusInfo.icon;
                               return (
                                 <div
@@ -271,7 +300,9 @@ export function ManagementTable({
                                 >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.color} shrink-0`} />
+                                      <StatusIcon
+                                        className={`w-3.5 h-3.5 ${statusInfo.color} shrink-0`}
+                                      />
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>{statusInfo.label}</p>

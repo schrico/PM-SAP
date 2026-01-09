@@ -48,10 +48,10 @@ function countWorkingDays(startDate: Date, endDate: Date): number {
   let count = 0;
   const current = new Date(startDate);
   current.setHours(0, 0, 0, 0);
-  
+
   const end = new Date(endDate);
   end.setHours(23, 59, 59, 999);
-  
+
   while (current <= end) {
     const dayOfWeek = current.getDay();
     // 0 = Sunday, 6 = Saturday
@@ -60,7 +60,7 @@ function countWorkingDays(startDate: Date, endDate: Date): number {
     }
     current.setDate(current.getDate() + 1);
   }
-  
+
   return count;
 }
 
@@ -363,7 +363,8 @@ function WorkloadContent() {
           const now = new Date();
           const deadlineDate = new Date(filteredEarliestDeadlineTime);
           const workingDaysUntilDeadline = countWorkingDays(now, deadlineDate);
-          const workingHoursUntilDeadline = workingDaysUntilDeadline * HOURS_PER_WORKDAY;
+          const workingHoursUntilDeadline =
+            workingDaysUntilDeadline * HOURS_PER_WORKDAY;
           filteredIsFeasible =
             filteredEstimatedHours <= workingHoursUntilDeadline;
         }

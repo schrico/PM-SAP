@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { SearchBar } from "@/components/general/SearchBar";
 import { FilterDropdown } from "@/components/general/FilterDropdown";
 import { ViewToggle } from "@/components/general/ViewToggle";
+import { ScrollToTopButton } from "@/components/general/ScrollToTopButton";
 import { ProjectAssignTable } from "@/components/assign/ProjectAssignTable";
 import { ProjectAssignCard } from "@/components/assign/ProjectAssignCard";
 import {
@@ -318,8 +319,8 @@ function AssignProjectsContent() {
         </p>
       </div>
 
-      {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
+      {/* Search and Filters - Sticky Header */}
+      <div className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 backdrop-blur-sm shadow-md mb-6 pt-4 pb-4 -mx-8 px-8 space-y-4">
         <div className="flex flex-wrap gap-4 items-end">
           <SearchBar
             value={searchTerm}
@@ -446,6 +447,9 @@ function AssignProjectsContent() {
           </div>
         </div>
       )}
+
+      {/* Scroll to Top Button */}
+      <ScrollToTopButton />
     </div>
   );
 }
