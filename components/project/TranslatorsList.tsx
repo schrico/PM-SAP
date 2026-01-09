@@ -8,6 +8,7 @@ import {
   UserMinus,
   Bell,
   X,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,14 @@ interface TranslatorsListProps {
   onAddTranslator: () => void;
   onRemoveTranslator: (userId: string) => void;
   onSendReminder: (userId: string, userName: string) => void;
+  currentUserId?: string;
+  onClaim?: (projectId: number) => void;
+  onRefuse?: (projectId: number) => void;
+  onDone?: (projectId: number) => void;
+  onMarkComplete?: () => void;
+  canMarkComplete?: boolean;
+  isUpdating?: boolean;
+  projectStatus?: string;
 }
 
 export function TranslatorsList({
@@ -31,6 +40,14 @@ export function TranslatorsList({
   onAddTranslator,
   onRemoveTranslator,
   onSendReminder,
+  currentUserId,
+  onClaim,
+  onRefuse,
+  onDone,
+  onMarkComplete,
+  canMarkComplete = false,
+  isUpdating = false,
+  projectStatus,
 }: TranslatorsListProps) {
   const [translatorToRemove, setTranslatorToRemove] = useState<{
     id: string;
@@ -115,12 +132,25 @@ export function TranslatorsList({
                 />
                 <div className="flex-1">
                   <p className="text-gray-900 dark:text-white font-medium">
-                    {translator.name}
-                    {translator.short_name && (
-                      <span className="text-gray-500 dark:text-gray-400 font-normal">
-                        {" "}
-                        ({translator.short_name})
-                      </span>
+                    {translator.id === currentUserId ? (
+                      <>
+                        Me
+                        {translator.short_name && (
+                          <span className="text-gray-500 dark:text-gray-400 font-normal">
+                            ({translator.short_name})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {translator.name}
+                        {translator.short_name && (
+                          <span className="text-gray-500 dark:text-gray-400 font-normal">
+                            {" "}
+                            ({translator.short_name})
+                          </span>
+                        )}
+                      </>
                     )}
                   </p>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -162,6 +192,49 @@ export function TranslatorsList({
                 >
                   {getStatusLabel(translator.assignment_status)}
                 </span>
+                {/* Action buttons for current user when assigned as translator */}
+                {currentUserId &&
+                  translator.id === currentUserId &&
+                  onClaim &&
+                  onRefuse &&
+                  onDone && (
+                    <div className="flex items-center gap-2 ml-2">
+                      {translator.assignment_status === "unclaimed" && (
+                        <>
+                          <Button
+                            onClick={() => onClaim(project.id)}
+                            size="sm"
+                            disabled={isUpdating}
+                            className="cursor-pointer bg-green-500 hover:bg-green-600 text-white h-7 text-xs"
+                          >
+                            <Check className="w-3 h-3 mr-1" />
+                            Claim
+                          </Button>
+                          <Button
+                            onClick={() => onRefuse(project.id)}
+                            size="sm"
+                            variant="outline"
+                            disabled={isUpdating}
+                            className="cursor-pointer border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 h-7 text-xs"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Refuse
+                          </Button>
+                        </>
+                      )}
+                      {translator.assignment_status === "claimed" && (
+                        <Button
+                          onClick={() => onDone(project.id)}
+                          size="sm"
+                          disabled={isUpdating}
+                          className="cursor-pointer bg-green-500 hover:bg-green-600 text-white h-7 text-xs"
+                        >
+                          <Check className="w-3 h-3 mr-1" />
+                          Done
+                        </Button>
+                      )}
+                    </div>
+                  )}
               </div>
 
               {/* Messages */}
@@ -213,6 +286,21 @@ export function TranslatorsList({
           </p>
         </div>
       }
+
+      {/* Mark Complete Button for PM/Admin */}
+      {canMarkComplete && onMarkComplete && (
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <Button
+            onClick={onMarkComplete}
+            disabled={isUpdating}
+            className="cursor-pointer w-full bg-green-500 hover:bg-green-600 text-white"
+            size="default"
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Mark Project as Complete
+          </Button>
+        </div>
+      )}
 
       {/* Remove Confirmation Modal */}
       {translatorToRemove && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Edit, Loader2, Check, X } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Check, X, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useProject } from "@/hooks/useProject";
 import { useColorSettings } from "@/hooks/useColorSettings";
@@ -117,7 +117,7 @@ export default function ProjectPage() {
       const assignments = userIds.map((userId) => ({
         project_id: projectId,
         user_id: userId,
-        assignment_status: "unclaimed",
+        assignment_status: userId === user?.id ? "claimed" : "unclaimed", // Auto-claim if self-assigning
         initial_message: messages[userId] || null,
       }));
 
@@ -258,9 +258,35 @@ export default function ProjectPage() {
     },
   });
 
+  // Mark complete mutation (PM/Admin only)
+  const markCompleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!projectId) throw new Error("Project ID is required");
+      const { error } = await supabase
+        .from("projects")
+        .update({ status: "complete" })
+        .eq("id", projectId);
+
+      if (error)
+        throw new Error(`Failed to mark project as complete: ${error.message}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Project marked as complete");
+    },
+    onError: (error: Error) => {
+      toast.error(getUserFriendlyError(error, "project management"));
+    },
+  });
+
   // PM/Admin handlers
   const handleEdit = () => {
     router.push(`/project/${projectId}/edit`);
+  };
+
+  const handleDuplicate = () => {
+    if (!projectId) return;
+    router.push(`/new-project?duplicateFrom=${projectId}`);
   };
 
   const handleAddTranslator = () => {
@@ -299,6 +325,44 @@ export default function ProjectPage() {
     messages: Record<string, string>
   ) => {
     addTranslatorsMutation.mutate({ projectId, userIds, messages });
+  };
+
+  // Wrapper handlers for TranslatorsList (for PM/Admin when assigned as translators)
+  const handleClaimForTranslator = (projectId: number) => {
+    if (!user?.id) return;
+    const translator = project?.translators.find((t) => t.id === user.id);
+    if (translator?.initial_message) {
+      setInitialMessageDialog({
+        open: true,
+        projectId,
+        projectName: project?.name || "",
+        message: translator.initial_message,
+      });
+    } else {
+      updateAssignmentMutation.mutate({
+        projectId,
+        userId: user.id,
+        status: "claimed",
+      });
+    }
+  };
+
+  const handleRefuseForTranslator = (projectId: number) => {
+    if (!project) return;
+    setRefusalDialog({
+      open: true,
+      projectId,
+      projectName: project.name,
+    });
+  };
+
+  const handleDoneForTranslator = (projectId: number) => {
+    if (!project) return;
+    setDoneDialog({
+      open: true,
+      projectId,
+      projectName: project.name,
+    });
   };
 
   // Translator handlers
@@ -473,16 +537,27 @@ export default function ProjectPage() {
 
           {/* Action buttons based on role */}
           <div className="flex gap-2">
-            {/* PM/Admin: Edit button */}
+            {/* PM/Admin: Duplicate and Edit buttons */}
             {canManageAssignments() && (
-              <Button
-                onClick={handleEdit}
-                size="lg"
-                className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
-              >
-                <Edit className="w-12 h-12 mr-2" />
-                Edit Project
-              </Button>
+              <>
+                <Button
+                  onClick={handleDuplicate}
+                  size="sm"
+                  variant="outline"
+                  className="cursor-pointer"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Duplicate
+                </Button>
+                <Button
+                  onClick={handleEdit}
+                  size="lg"
+                  className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  <Edit className="w-12 h-12 mr-2" />
+                  Edit Project
+                </Button>
+              </>
             )}
 
             {/* Translator: Claim/Refuse or Done buttons */}
@@ -548,6 +623,24 @@ export default function ProjectPage() {
               onAddTranslator={handleAddTranslator}
               onRemoveTranslator={handleRemoveTranslator}
               onSendReminder={handleSendReminder}
+              currentUserId={user?.id}
+              onClaim={handleClaimForTranslator}
+              onRefuse={handleRefuseForTranslator}
+              onDone={handleDoneForTranslator}
+              onMarkComplete={() => markCompleteMutation.mutate()}
+              canMarkComplete={
+                canManageAssignments() &&
+                project.translators.length > 0 &&
+                project.translators.every(
+                  (t) => t.assignment_status === "done"
+                ) &&
+                project.status !== "complete"
+              }
+              isUpdating={
+                updateAssignmentMutation.isPending ||
+                markCompleteMutation.isPending
+              }
+              projectStatus={project.status}
             />
           </div>
         )}

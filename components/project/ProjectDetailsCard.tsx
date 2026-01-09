@@ -37,6 +37,9 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
   };
 
   const closestDeadline = getClosestDeadline();
+  
+  // Use final_deadline for Days Left calculation
+  const finalDeadline = project.final_deadline ? new Date(project.final_deadline) : null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
@@ -59,7 +62,7 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
           </div>
         </div>
 
-        {closestDeadline && (
+        {finalDeadline && !isNaN(finalDeadline.getTime()) && (
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -69,7 +72,7 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
                 Days Left
               </p>
               <p className="text-gray-900 dark:text-white font-medium">
-                {calculateDaysLeft(closestDeadline.toISOString())}
+                {calculateDaysLeft(finalDeadline.toISOString())}
               </p>
             </div>
           </div>
