@@ -125,21 +125,12 @@ export function useUserWorkload() {
       const wordsShare = Math.ceil((project.words || 0) / translatorCount);
       const linesShare = Math.ceil((project.lines || 0) / translatorCount);
 
-      // Get closest deadline
-      const deadlines = [
-        project.final_deadline,
-        project.interim_deadline,
-        project.initial_deadline,
-      ]
-        .filter(Boolean)
-        .map((d) => {
-          const date = new Date(d!);
-          return isNaN(date.getTime()) ? null : date;
-        })
-        .filter(Boolean) as Date[];
-
-      const projectDeadline = deadlines.length > 0
-        ? new Date(Math.min(...deadlines.map((d) => d.getTime())))
+      // Use only final deadline
+      const projectDeadline = project.final_deadline
+        ? (() => {
+            const date = new Date(project.final_deadline);
+            return isNaN(date.getTime()) ? null : date;
+          })()
         : null;
 
       // Map translator info for this project

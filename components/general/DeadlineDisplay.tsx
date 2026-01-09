@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { isAfter, startOfDay } from "date-fns";
+import { isAfter, isBefore, startOfDay } from "date-fns";
 import { formatDate } from "@/utils/formatters";
 import {
   Tooltip,
@@ -51,30 +51,39 @@ export function DeadlineDisplay({
   const { nextDeadline, remainingDeadlines, hasMoreDeadlines } = useMemo(() => {
     const today = startOfDay(new Date());
 
+    // Check if initial and interim deadlines have passed
+    const initialPassed = initialDeadline ? isBefore(new Date(initialDeadline), today) : false;
+    const interimPassed = interimDeadline ? isBefore(new Date(interimDeadline), today) : false;
+
+    // If both initial and interim have passed, only show final deadline
+    const onlyShowFinal = initialPassed && interimPassed;
+
     // Build array of all valid deadlines
     const allDeadlines: DeadlineInfo[] = [];
 
-    if (initialDeadline) {
-      const date = new Date(initialDeadline);
-      if (!isNaN(date.getTime())) {
-        allDeadlines.push({
-          type: "initial",
-          date,
-          dateString: initialDeadline,
-          ...DEADLINE_CONFIG.initial,
-        });
+    if (!onlyShowFinal) {
+      if (initialDeadline) {
+        const date = new Date(initialDeadline);
+        if (!isNaN(date.getTime())) {
+          allDeadlines.push({
+            type: "initial",
+            date,
+            dateString: initialDeadline,
+            ...DEADLINE_CONFIG.initial,
+          });
+        }
       }
-    }
 
-    if (interimDeadline) {
-      const date = new Date(interimDeadline);
-      if (!isNaN(date.getTime())) {
-        allDeadlines.push({
-          type: "interim",
-          date,
-          dateString: interimDeadline,
-          ...DEADLINE_CONFIG.interim,
-        });
+      if (interimDeadline) {
+        const date = new Date(interimDeadline);
+        if (!isNaN(date.getTime())) {
+          allDeadlines.push({
+            type: "interim",
+            date,
+            dateString: interimDeadline,
+            ...DEADLINE_CONFIG.interim,
+          });
+        }
       }
     }
 

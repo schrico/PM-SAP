@@ -40,6 +40,31 @@ import {
   addWeeks,
   addMonths,
 } from "date-fns";
+
+/**
+ * Count the number of working days (Mon-Fri) between two dates
+ */
+function countWorkingDays(startDate: Date, endDate: Date): number {
+  let count = 0;
+  const current = new Date(startDate);
+  current.setHours(0, 0, 0, 0);
+  
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+  
+  while (current <= end) {
+    const dayOfWeek = current.getDay();
+    // 0 = Sunday, 6 = Saturday
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return count;
+}
+
+const HOURS_PER_WORKDAY = 8;
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -125,22 +150,11 @@ function WorkloadContent() {
     }
   }, [selectedPreset, customDate]);
 
-  // Get closest deadline for a project
-  const getClosestDeadline = (project: (typeof activeProjects)[0]) => {
-    const deadlines = [
-      project.final_deadline,
-      project.interim_deadline,
-      project.initial_deadline,
-    ]
-      .filter(Boolean)
-      .map((d) => {
-        const date = new Date(d!);
-        return isNaN(date.getTime()) ? null : date;
-      })
-      .filter(Boolean) as Date[];
-
-    if (deadlines.length === 0) return null;
-    return new Date(Math.min(...deadlines.map((d) => d.getTime())));
+  // Get final deadline for a project
+  const getFinalDeadline = (project: (typeof activeProjects)[0]) => {
+    if (!project.final_deadline) return null;
+    const date = new Date(project.final_deadline);
+    return isNaN(date.getTime()) ? null : date;
   };
 
   // Filter projects by target date and calculate totals
@@ -150,7 +164,7 @@ function WorkloadContent() {
     }
 
     const filteredProjects = activeProjects.filter((project) => {
-      const deadline = getClosestDeadline(project);
+      const deadline = getFinalDeadline(project);
       if (!deadline) return false;
       return (
         isBefore(deadline, targetDate) ||
@@ -343,15 +357,13 @@ function WorkloadContent() {
             new Date(filteredEarliestDeadlineTime)
           : null;
 
-        // Calculate feasibility based on filtered deadline
+        // Calculate feasibility based on filtered deadline using working days
         let filteredIsFeasible = true;
         if (filteredEarliestDeadlineTime !== null) {
           const now = new Date();
-          const hoursUntilDeadline = Math.max(
-            0,
-            (filteredEarliestDeadlineTime - now.getTime()) / (1000 * 60 * 60)
-          );
-          const workingHoursUntilDeadline = (hoursUntilDeadline / 24) * 8;
+          const deadlineDate = new Date(filteredEarliestDeadlineTime);
+          const workingDaysUntilDeadline = countWorkingDays(now, deadlineDate);
+          const workingHoursUntilDeadline = workingDaysUntilDeadline * HOURS_PER_WORKDAY;
           filteredIsFeasible =
             filteredEstimatedHours <= workingHoursUntilDeadline;
         }

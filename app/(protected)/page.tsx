@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FolderKanban,
   UserPlus,
   ClipboardList,
+  ChevronDown,
+  ChevronUp,
   type LucideIcon,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
@@ -14,6 +16,9 @@ import { useHomeCounts } from "@/hooks/useHomeCounts";
 import { TypewriterText } from "@/components/ui/TypewriterText";
 import { HomeCard } from "@/components/home/HomeCard";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { CurrentProjectsTable } from "@/components/home/CurrentProjectsTable";
+import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
+import { Button } from "@/components/ui/button";
 import type { UserRole } from "@/types/user";
 
 interface HomeCardConfig {
@@ -34,8 +39,31 @@ export default function HomePage() {
     loading: countsLoading,
   } = useHomeCounts();
   const router = useRouter();
+  const [showProjectsTable, setShowProjectsTable] = useState(false);
+  const { data: allProjects = [], isLoading: projectsLoading } =
+    useProjectsWithTranslators(false, true);
 
-  const loading = userLoading || countsLoading;
+  // Filter and sort by final deadline
+  const currentProjects = useMemo(() => {
+    const now = new Date();
+
+    // Filter: only projects with final_deadline after today
+    const filtered = allProjects.filter((project) => {
+      if (!project.final_deadline) return false;
+      const finalDate = new Date(project.final_deadline);
+      if (isNaN(finalDate.getTime())) return false;
+      return finalDate.getTime() > now.getTime();
+    });
+
+    // Sort: by final_deadline, closest to today first
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.final_deadline!);
+      const dateB = new Date(b.final_deadline!);
+      return dateA.getTime() - dateB.getTime();
+    });
+  }, [allProjects]);
+
+  const loading = userLoading || countsLoading || projectsLoading;
 
   const userName = user?.name || user?.short_name || "User";
 
@@ -154,6 +182,45 @@ export default function HomePage() {
             Update your information
           </p>
         </button>
+      </div>
+
+      {/* Current Projects Table Section */}
+      <div className="mt-12">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-gray-900 dark:text-white text-2xl mb-2 font-semibold">
+              Current Projects
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              Projects with final deadline after today, sorted by closest
+              deadline
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowProjectsTable(!showProjectsTable)}
+            className="flex items-center gap-2"
+          >
+            {showProjectsTable ?
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Hide
+              </>
+            : <>
+                <ChevronDown className="w-4 h-4" />
+                Show
+              </>
+            }
+          </Button>
+        </div>
+
+        {showProjectsTable && (
+          <div className="mt-4 transition-all duration-300 ease-in-out">
+            <div className="max-h-[600px] overflow-y-auto">
+              <CurrentProjectsTable projects={currentProjects} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
