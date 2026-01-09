@@ -9,11 +9,13 @@ import { ColorSettings } from "@/components/settings/ColorSettings";
 import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { user, loading, canEditColors } = useRoleAccess();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -37,6 +39,8 @@ export default function SettingsPage() {
         setLoggingOut(false);
         setShowLogoutModal(false);
       } else {
+        // Clear all React Query cache to remove old user data
+        queryClient.clear();
         toast.success("Logged out successfully");
         router.push("/login");
         router.refresh();

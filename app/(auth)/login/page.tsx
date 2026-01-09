@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
 function AuthFormContent() {
@@ -18,6 +19,7 @@ function AuthFormContent() {
 
   const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -54,10 +56,13 @@ function AuthFormContent() {
         if (error) {
           throw error;
         } else {
+          // Clear and invalidate all queries to ensure fresh data for new user
+          queryClient.clear();
           // Get the redirect URL from search params or default to home
           const redirectTo = searchParams.get("redirectedFrom") || "/";
-          router.refresh();
           router.push(redirectTo);
+          router.prefetch(redirectTo);
+          router.refresh();
         }
       } else {
         const { data, error } = await supabase.auth.signUp({
