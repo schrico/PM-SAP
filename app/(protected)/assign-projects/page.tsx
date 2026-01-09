@@ -180,15 +180,14 @@ function AssignProjectsContent() {
         return true;
       })
       .sort((a, b) => {
-        // Sort by due date (earliest first)
-        const dateA =
-          a.final_deadline || a.interim_deadline || a.initial_deadline || "";
-        const dateB =
-          b.final_deadline || b.interim_deadline || b.initial_deadline || "";
-        if (!dateA && !dateB) return 0;
-        if (!dateA) return 1;
-        if (!dateB) return -1;
-        return new Date(dateA).getTime() - new Date(dateB).getTime();
+        // Sort by final deadline (earliest first) - same as Manage Projects
+        const dateA = new Date(a.final_deadline || "").getTime();
+        const dateB = new Date(b.final_deadline || "").getTime();
+        // Handle projects without final_deadline - put them at the end
+        if (!a.final_deadline && !b.final_deadline) return 0;
+        if (!a.final_deadline) return 1;
+        if (!b.final_deadline) return -1;
+        return dateA - dateB;
       });
   }, [
     allProjects,

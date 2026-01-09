@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutGrid, Circle, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
@@ -12,6 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Pagination } from "@/components/ui/pagination";
 import type { ProjectWithTranslators } from "@/types/project";
 
 interface CurrentProjectsTableProps {
@@ -21,6 +23,28 @@ interface CurrentProjectsTableProps {
 export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
   const router = useRouter();
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calculate pagination
+  const totalPages = Math.ceil(projects.length / itemsPerPage);
+  const paginatedProjects = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return projects.slice(startIndex, endIndex);
+  }, [projects, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when projects change or if current page is invalid
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  // Reset to page 1 when projects array changes (e.g., filters change)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [projects.length]);
 
   // Get system color style using preview hex for the color indicator
   const getSystemColorStyle = (system: string) => {
@@ -105,8 +129,8 @@ export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
             </tr>
           </thead>
           <tbody>
-            {projects.length > 0 ?
-              projects.map((project) => {
+            {paginatedProjects.length > 0 ?
+              paginatedProjects.map((project) => {
                 return (
                   <tr
                     key={project.id}
@@ -217,6 +241,15 @@ export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
           </tbody>
         </table>
       </div>
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          totalItems={projects.length}
+        />
+      )}
     </div>
   );
 }

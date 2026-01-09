@@ -1,9 +1,11 @@
 "use client";
 
+import { useState, useMemo, useEffect } from "react";
 import { UserCircle } from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
+import { Pagination } from "@/components/ui/pagination";
 import type { Project } from "@/types/project";
 
 interface ProjectWithTranslators extends Project {
@@ -29,6 +31,28 @@ export function ProjectAssignTable({
   onRowClick,
 }: ProjectAssignTableProps) {
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calculate pagination
+  const totalPages = Math.ceil(projects.length / itemsPerPage);
+  const paginatedProjects = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return projects.slice(startIndex, endIndex);
+  }, [projects, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when projects change or if current page is invalid
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  // Reset to page 1 when projects array changes (e.g., filters change)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [projects.length]);
 
   const handleRowClick = (projectId: number, e: React.MouseEvent) => {
     // Don't handle clicks on buttons or checkboxes
@@ -97,7 +121,8 @@ export function ProjectAssignTable({
             </tr>
           </thead>
           <tbody>
-            {projects.map((project) => {
+            {paginatedProjects.length > 0 ?
+              paginatedProjects.map((project) => {
               const isSelected = selectedProjects.has(project.id);
 
               return (
@@ -174,10 +199,29 @@ export function ProjectAssignTable({
                   </td>
                 </tr>
               );
-            })}
+            })
+            : <tr>
+                <td colSpan={9} className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      No projects found
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            }
           </tbody>
         </table>
       </div>
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          totalItems={projects.length}
+        />
+      )}
     </div>
   );
 }

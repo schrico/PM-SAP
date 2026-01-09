@@ -253,14 +253,14 @@ function ProjectManagementContent() {
       );
     }
 
-    // Sort by due date (earliest first)
+    // Sort by final deadline (earliest first)
     return projects.sort((a, b) => {
-      const dateA = new Date(
-        a.final_deadline || a.interim_deadline || a.initial_deadline || ""
-      ).getTime();
-      const dateB = new Date(
-        b.final_deadline || b.interim_deadline || b.initial_deadline || ""
-      ).getTime();
+      const dateA = new Date(a.final_deadline || "").getTime();
+      const dateB = new Date(b.final_deadline || "").getTime();
+      // Handle projects without final_deadline - put them at the end
+      if (!a.final_deadline && !b.final_deadline) return 0;
+      if (!a.final_deadline) return 1;
+      if (!b.final_deadline) return -1;
       return dateA - dateB;
     });
   }, [

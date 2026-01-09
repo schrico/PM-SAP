@@ -43,7 +43,7 @@ export default function HomePage() {
   const { data: allProjects = [], isLoading: projectsLoading } =
     useProjectsWithTranslators(false, true);
 
-  // Filter and sort by final deadline
+  // Filter and sort by deadline (same as Manage Projects)
   const currentProjects = useMemo(() => {
     const now = new Date();
 
@@ -55,11 +55,15 @@ export default function HomePage() {
       return finalDate.getTime() > now.getTime();
     });
 
-    // Sort: by final_deadline, closest to today first
+    // Sort by final deadline (earliest first) - same as Manage Projects
     return filtered.sort((a, b) => {
-      const dateA = new Date(a.final_deadline!);
-      const dateB = new Date(b.final_deadline!);
-      return dateA.getTime() - dateB.getTime();
+      const dateA = new Date(a.final_deadline || "").getTime();
+      const dateB = new Date(b.final_deadline || "").getTime();
+      // Handle projects without final_deadline - put them at the end
+      if (!a.final_deadline && !b.final_deadline) return 0;
+      if (!a.final_deadline) return 1;
+      if (!b.final_deadline) return -1;
+      return dateA - dateB;
     });
   }, [allProjects]);
 
