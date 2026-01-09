@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { X, Clock, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
 import { useUsers } from "@/hooks/useUsers";
 import { useUserWorkload } from "@/hooks/useUserWorkload";
@@ -25,13 +25,16 @@ interface ProjectWithTranslators extends Project {
   }>;
 }
 
+// Per-project assignment data
+export interface ProjectAssignmentData {
+  translatorIds: Set<string>;
+  messages: Record<string, string>;
+}
+
 interface TranslatorSelectionViewProps {
   selectedProjects: ProjectWithTranslators[];
   onCancel: () => void;
-  onAssign: (
-    selectedTranslatorIds: Set<string>,
-    messages: Record<string, string>
-  ) => void;
+  onAssign: (assignments: Map<number, ProjectAssignmentData>) => void;
 }
 
 export function TranslatorSelectionView({
@@ -41,52 +44,112 @@ export function TranslatorSelectionView({
 }: TranslatorSelectionViewProps) {
   const { data: users = [], isLoading } = useUsers();
   const { workloads, isLoading: workloadsLoading } = useUserWorkload();
-  const [selectedTranslators, setSelectedTranslators] = useState<Set<string>>(
-    new Set()
+  
+  // Track current project index for sequential selection
+  const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
+  
+  // Store selections per project: Map<projectId, { translatorIds, messages }>
+  const [projectAssignments, setProjectAssignments] = useState<Map<number, ProjectAssignmentData>>(
+    () => new Map()
   );
-  const [translatorMessages, setTranslatorMessages] = useState<
-    Record<string, string>
-  >({});
+
+  const currentProject = selectedProjects[currentProjectIndex];
+  const isLastProject = currentProjectIndex === selectedProjects.length - 1;
+  const isFirstProject = currentProjectIndex === 0;
+
+  // Get current project's selection state
+  const currentAssignment = projectAssignments.get(currentProject?.id) || {
+    translatorIds: new Set<string>(),
+    messages: {} as Record<string, string>,
+  };
 
   const handleTranslatorToggle = (userId: string) => {
-    const newSelection = new Set(selectedTranslators);
-    if (newSelection.has(userId)) {
-      newSelection.delete(userId);
-      const newMessages = { ...translatorMessages };
+    const newTranslatorIds = new Set(currentAssignment.translatorIds);
+    const newMessages = { ...currentAssignment.messages };
+    
+    if (newTranslatorIds.has(userId)) {
+      newTranslatorIds.delete(userId);
       delete newMessages[userId];
-      setTranslatorMessages(newMessages);
     } else {
-      newSelection.add(userId);
+      newTranslatorIds.add(userId);
     }
-    setSelectedTranslators(newSelection);
+    
+    setProjectAssignments((prev) => {
+      const updated = new Map(prev);
+      updated.set(currentProject.id, {
+        translatorIds: newTranslatorIds,
+        messages: newMessages,
+      });
+      return updated;
+    });
   };
 
   const handleMessageChange = (userId: string, message: string) => {
-    setTranslatorMessages((prev) => ({ ...prev, [userId]: message }));
+    setProjectAssignments((prev) => {
+      const updated = new Map(prev);
+      const current = updated.get(currentProject.id) || {
+        translatorIds: new Set<string>(),
+        messages: {},
+      };
+      updated.set(currentProject.id, {
+        ...current,
+        messages: { ...current.messages, [userId]: message },
+      });
+      return updated;
+    });
   };
 
-  const handleAssignClick = () => {
-    onAssign(selectedTranslators, translatorMessages);
+  const handleNextProject = () => {
+    if (!isLastProject) {
+      setCurrentProjectIndex((prev) => prev + 1);
+    }
   };
 
-  // Get all user IDs that are already assigned to any of the selected projects
+  const handlePreviousProject = () => {
+    if (!isFirstProject) {
+      setCurrentProjectIndex((prev) => prev - 1);
+    }
+  };
+
+  const handleAssignAll = () => {
+    onAssign(projectAssignments);
+  };
+
+  // Get user IDs that are already assigned to the current project
   const assignedUserIds = useMemo(() => {
     const assignedIds = new Set<string>();
-    selectedProjects.forEach((project) => {
-      if (project.translators && project.translators.length > 0) {
-        project.translators.forEach((translator) => {
-          assignedIds.add(translator.id);
-        });
-      }
-    });
+    if (currentProject?.translators) {
+      currentProject.translators.forEach((translator) => {
+        assignedIds.add(translator.id);
+      });
+    }
     return assignedIds;
-  }, [selectedProjects]);
+  }, [currentProject]);
 
-  // Filter out users who are already assigned to any of the selected projects
-  // Allow all users to be selected, except those already assigned
+  // Filter out users who are already assigned to the current project
   const availableUsers = useMemo(() => {
     return users.filter((user) => !assignedUserIds.has(user.id));
   }, [users, assignedUserIds]);
+
+  // Count total translators assigned across all projects
+  const totalAssignments = useMemo(() => {
+    let count = 0;
+    projectAssignments.forEach((assignment) => {
+      count += assignment.translatorIds.size;
+    });
+    return count;
+  }, [projectAssignments]);
+
+  // Count projects that have at least one translator assigned
+  const projectsWithAssignments = useMemo(() => {
+    let count = 0;
+    projectAssignments.forEach((assignment) => {
+      if (assignment.translatorIds.size > 0) {
+        count++;
+      }
+    });
+    return count;
+  }, [projectAssignments]);
 
   if (isLoading || workloadsLoading) {
     return (
@@ -102,14 +165,14 @@ export function TranslatorSelectionView({
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      {/* Header with progress */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-gray-900 dark:text-white mb-2">
             Assign to Translator
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Select one or more translators for {selectedProjects.length}{" "}
-            selected project{selectedProjects.length !== 1 ? "s" : ""}
+            Project {currentProjectIndex + 1} of {selectedProjects.length}
           </p>
         </div>
         <button
@@ -122,44 +185,66 @@ export function TranslatorSelectionView({
         </button>
       </div>
 
-      {/* Selected Projects Summary */}
+      {/* Progress Bar */}
+      {selectedProjects.length > 1 && (
+        <div className="mb-6">
+          <div className="flex gap-2">
+            {selectedProjects.map((project, index) => {
+              const hasAssignment = projectAssignments.get(project.id)?.translatorIds.size ?? 0 > 0;
+              const isCurrent = index === currentProjectIndex;
+              return (
+                <button
+                  key={project.id}
+                  onClick={() => setCurrentProjectIndex(index)}
+                  className={`flex-1 h-2 rounded-full transition-all cursor-pointer ${
+                    isCurrent
+                      ? "bg-blue-500"
+                      : hasAssignment
+                        ? "bg-green-500"
+                        : "bg-gray-200 dark:bg-gray-700"
+                  }`}
+                  title={`${project.system} - ${project.name}`}
+                  type="button"
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Current Project Info */}
       <div className="mb-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
-        <h3 className="text-blue-900 dark:text-blue-200 mb-3">
-          Selected Projects ({selectedProjects.length})
-        </h3>
-        <div className="space-y-2">
-          {selectedProjects.map((project) => {
-            return (
-              <div
-                key={project.id}
-                className="flex items-center justify-between text-sm"
-              >
-                <span className="text-blue-800 dark:text-blue-300">
-                  {project.system} - {project.name}
-                </span>
-                <div className="flex items-center gap-4 text-blue-700 dark:text-blue-400">
-                  <span>
-                    {project.words ? formatNumber(project.words) : "0"} words
-                  </span>
-                  <span className="flex items-center gap-1">
-                    Due:
-                    <DeadlineDisplay
-                      initialDeadline={project.initial_deadline}
-                      interimDeadline={project.interim_deadline}
-                      finalDeadline={project.final_deadline}
-                    />
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-blue-900 dark:text-blue-200 mb-1 text-lg font-medium">
+              {currentProject.system} - {currentProject.name}
+            </h3>
+            <div className="flex items-center gap-4 text-blue-700 dark:text-blue-400 text-sm">
+              <span>
+                {currentProject.words ? formatNumber(currentProject.words) : "0"} words
+              </span>
+              <span className="flex items-center gap-1">
+                Due:
+                <DeadlineDisplay
+                  initialDeadline={currentProject.initial_deadline}
+                  interimDeadline={currentProject.interim_deadline}
+                  finalDeadline={currentProject.final_deadline}
+                />
+              </span>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-blue-600 dark:text-blue-400 font-medium">
+              {currentAssignment.translatorIds.size} translator{currentAssignment.translatorIds.size !== 1 ? "s" : ""} selected
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Translator Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {availableUsers.map((user: User) => {
-          const isSelected = selectedTranslators.has(user.id);
+          const isSelected = currentAssignment.translatorIds.has(user.id);
           const userWorkload = workloads.get(user.id);
 
           return (
@@ -244,8 +329,8 @@ export function TranslatorSelectionView({
                           <TooltipContent>
                             <p>
                               {userWorkload.nextWeekIsFeasible
-                                ? "Can handle next week workload"
-                                : "May struggle with next week workload"}
+                                ? "Should be able to handle workload"
+                                : "Workload may be challenging"}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -275,8 +360,8 @@ export function TranslatorSelectionView({
                           <TooltipContent>
                             <p>
                               {userWorkload.isFeasible
-                                ? "Has capacity for more work"
-                                : "May be overloaded"}
+                                ? "Appears to have availability"
+                                : "Workload appears high"}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -304,15 +389,18 @@ export function TranslatorSelectionView({
                   className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <label className="block text-gray-700 dark:text-gray-300 text-sm mb-2">
-                    Instructions (optional)
+                  <label className="block text-gray-700 dark:text-gray-300 text-sm mb-1">
+                    Custom Instruction (optional)
                   </label>
+                  <span className="block text-gray-400 dark:text-gray-500 text-xs mb-2">
+                    Only visible to translator after claiming
+                  </span>
                   <textarea
-                    value={translatorMessages[user.id] || ""}
+                    value={currentAssignment.messages[user.id] || ""}
                     onChange={(e) =>
                       handleMessageChange(user.id, e.target.value)
                     }
-                    placeholder="Add special instructions..."
+                    placeholder="Add custom instruction..."
                     className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     rows={3}
                     onClick={(e) => e.stopPropagation()}
@@ -324,17 +412,50 @@ export function TranslatorSelectionView({
         })}
       </div>
 
-      {/* Assign Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleAssignClick}
-          disabled={selectedTranslators.size === 0}
-          className="px-8 py-4 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-lg"
-          type="button"
-        >
-          Assign to {selectedTranslators.size} Translator
-          {selectedTranslators.size !== 1 ? "s" : ""}
-        </button>
+      {/* Navigation and Assign Buttons */}
+      <div className="flex items-center justify-between">
+        {/* Left: Previous button */}
+        <div>
+          {!isFirstProject && (
+            <button
+              onClick={handlePreviousProject}
+              className="px-6 py-3 cursor-pointer bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors flex items-center gap-2 border border-gray-200 dark:border-gray-600"
+              type="button"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              Previous Project
+            </button>
+          )}
+        </div>
+
+        {/* Center: Summary info */}
+        <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
+          {projectsWithAssignments} of {selectedProjects.length} projects have translators assigned
+        </div>
+
+        {/* Right: Next or Assign All button */}
+        <div>
+          {isLastProject ? (
+            <button
+              onClick={handleAssignAll}
+              disabled={totalAssignments === 0}
+              className="px-8 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center gap-2"
+              type="button"
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              Assign All ({totalAssignments} assignment{totalAssignments !== 1 ? "s" : ""})
+            </button>
+          ) : (
+            <button
+              onClick={handleNextProject}
+              className="px-6 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors flex items-center gap-2 shadow-lg"
+              type="button"
+            >
+              Next Project
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

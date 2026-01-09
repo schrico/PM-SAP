@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Home,
   FolderKanban,
@@ -13,31 +13,77 @@ import {
   ChevronRight,
   Receipt,
   BarChart3,
+  type LucideIcon,
 } from "lucide-react";
-import { useUser } from "@/hooks/useUser";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import { TypewriterText } from "@/components/ui/TypewriterText";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import type { UserRole } from "@/types/user";
+
+interface NavItemConfig {
+  path: string;
+  icon: LucideIcon;
+  label: string;
+  allowedRoles: UserRole[];
+}
+
+// All navigation items with role restrictions
+const allNavItems: NavItemConfig[] = [
+  {
+    path: "/",
+    icon: Home,
+    label: "Home",
+    allowedRoles: ["employee", "pm", "admin"],
+  },
+  {
+    path: "/my-projects",
+    icon: ClipboardList,
+    label: "My Projects",
+    allowedRoles: ["employee", "pm", "admin"],
+  },
+  {
+    path: "/assign-projects",
+    icon: UserPlus,
+    label: "Assign Projects",
+    allowedRoles: ["pm", "admin"],
+  },
+  {
+    path: "/management",
+    icon: FolderKanban,
+    label: "Manage Projects",
+    allowedRoles: ["pm", "admin"],
+  },
+  {
+    path: "/invoicing",
+    icon: Receipt,
+    label: "Invoicing",
+    allowedRoles: ["admin"],
+  },
+  {
+    path: "/workload",
+    icon: BarChart3,
+    label: "Workload",
+    allowedRoles: ["pm", "admin"],
+  },
+];
 
 export function Sidebar() {
   const { collapsed, toggleCollapsed } = useLayoutStore();
   const pathname = usePathname();
-  const { user, loading: userLoading } = useUser();
+  const { user, loading: userLoading, role } = useRoleAccess();
 
   const roleLabel =
-    user?.role === "admin" ? "Administrator"
-    : user?.role === "pm" ? "Project Manager"
-    : user?.role ? "Translator"
+    role === "admin" ? "Administrator"
+    : role === "pm" ? "Project Manager"
+    : role ? "Translator"
     : "Account";
 
-  const navItems = [
-    { path: "/", icon: Home, label: "Home" },
-    { path: "/my-projects", icon: ClipboardList, label: "My Projects" },
-    { path: "/assign-projects", icon: UserPlus, label: "Assign Projects" },
-    { path: "/management", icon: FolderKanban, label: "Manage Projects" },
-    { path: "/invoicing", icon: Receipt, label: "Invoicing" },
-    { path: "/workload", icon: BarChart3, label: "Workload" },
-  ];
+  // Filter nav items based on user role
+  const navItems = useMemo(() => {
+    if (!role) return [];
+    return allNavItems.filter((item) => item.allowedRoles.includes(role));
+  }, [role]);
 
   // Controls when text labels are visible (for smooth transition)
   const [showLabels, setShowLabels] = useState(!collapsed);

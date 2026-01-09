@@ -10,6 +10,8 @@ import { SearchBar } from "@/components/general/SearchBar";
 import { InvoicingTabs } from "@/components/invoicing/InvoicingTabs";
 import { InvoicingTable } from "@/components/invoicing/InvoicingTable";
 import { InvoicingCard } from "@/components/invoicing/InvoicingCard";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +26,14 @@ type TabType = "all" | "toBeInvoiced" | "toBePaid";
 type ViewMode = "table" | "card";
 
 export default function InvoicingPage() {
+  return (
+    <RoleGuard routeId={RouteId.INVOICING}>
+      <InvoicingContent />
+    </RoleGuard>
+  );
+}
+
+function InvoicingContent() {
   const { user, loading: userLoading } = useUser();
   const queryClient = useQueryClient();
   const collapsed = useLayoutStore((state) => state.collapsed);
@@ -232,11 +242,11 @@ export default function InvoicingPage() {
     return projects.sort((a, b) => {
       const aFullyProcessed = a.invoiced && a.paid;
       const bFullyProcessed = b.invoiced && b.paid;
-      
+
       // Put fully processed (invoiced + paid) projects at the end
       if (aFullyProcessed && !bFullyProcessed) return 1;
       if (!aFullyProcessed && bFullyProcessed) return -1;
-      
+
       // Within the same group, sort by due date (earliest first)
       const dateA = getClosestDeadline(a);
       const dateB = getClosestDeadline(b);
@@ -311,7 +321,9 @@ export default function InvoicingPage() {
         .in("id", projectIds);
 
       if (error)
-        throw new Error(`Failed to mark projects as paid & invoiced: ${error.message}`);
+        throw new Error(
+          `Failed to mark projects as paid & invoiced: ${error.message}`
+        );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -511,20 +523,33 @@ export default function InvoicingPage() {
             <button
               onClick={() => setHideFullyProcessed(!hideFullyProcessed)}
               className={`px-4 py-2 cursor-pointer rounded-lg border text-sm transition-all flex items-center gap-2 ${
-                hideFullyProcessed
-                  ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
-                  : "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                hideFullyProcessed ?
+                  "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
+                : "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
               }`}
               type="button"
             >
-              <span className={`w-3 h-3 rounded-sm border ${
-                hideFullyProcessed
-                  ? "border-gray-400 dark:border-gray-500"
+              <span
+                className={`w-3 h-3 rounded-sm border ${
+                  hideFullyProcessed ?
+                    "border-gray-400 dark:border-gray-500"
                   : "border-blue-500 bg-blue-500"
-              }`}>
+                }`}
+              >
                 {!hideFullyProcessed && (
-                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 12 12">
-                    <path d="M10 3L4.5 8.5 2 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 12 12"
+                  >
+                    <path
+                      d="M10 3L4.5 8.5 2 6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 )}
               </span>

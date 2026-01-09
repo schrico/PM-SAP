@@ -9,6 +9,7 @@ export { useUpdateProfile } from './useUpdateProfile';
 export { useUpdateAvatar, AvatarAlreadyTakenError } from './useUpdateAvatar';
 export { useUploadAvatar } from './useUploadAvatar';
 export { useAvailableAvatars } from './useAvailableAvatars';
+export { useRoleAccess } from './useRoleAccess';
 
 // Project hooks
 export { useProject } from './useProject';

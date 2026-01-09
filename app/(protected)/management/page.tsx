@@ -13,6 +13,8 @@ import { ManagementTable } from "@/components/management/ManagementTable";
 import { ManagementCard } from "@/components/management/ManagementCard";
 import { AddTranslatorModal } from "@/components/management/AddTranslatorModal";
 import { RemoveTranslatorModal } from "@/components/management/RemoveTranslatorModal";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +28,14 @@ type ProjectStatus = "all" | "ready" | "inProgress" | "unclaimed";
 type ViewMode = "table" | "card";
 
 export default function ProjectManagementPage() {
+  return (
+    <RoleGuard routeId={RouteId.MANAGEMENT}>
+      <ProjectManagementContent />
+    </RoleGuard>
+  );
+}
+
+function ProjectManagementContent() {
   const router = useRouter();
   const { user, loading: userLoading } = useUser();
   const queryClient = useQueryClient();

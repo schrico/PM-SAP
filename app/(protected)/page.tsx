@@ -1,16 +1,33 @@
 "use client";
 
-import { FolderKanban, UserPlus, ClipboardList, User } from "lucide-react";
+import { useMemo } from "react";
+import {
+  FolderKanban,
+  UserPlus,
+  ClipboardList,
+  type LucideIcon,
+} from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@/hooks/useUser";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useHomeCounts } from "@/hooks/useHomeCounts";
 import { TypewriterText } from "@/components/ui/TypewriterText";
 import { HomeCard } from "@/components/home/HomeCard";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import type { UserRole } from "@/types/user";
+
+interface HomeCardConfig {
+  title: string;
+  icon: LucideIcon;
+  path: string;
+  color: string;
+  description: string;
+  count?: number;
+  allowedRoles: UserRole[];
+}
 
 export default function HomePage() {
-  const { user, loading: userLoading } = useUser();
+  const { user, loading: userLoading, role } = useRoleAccess();
   const {
     myProjectsCount,
     manageProjectsCount,
@@ -20,6 +37,47 @@ export default function HomePage() {
 
   const loading = userLoading || countsLoading;
 
+  const userName = user?.name || user?.short_name || "User";
+
+  // All home cards with role restrictions
+  const allHomeCards: HomeCardConfig[] = useMemo(
+    () => [
+      {
+        title: "My Projects",
+        icon: ClipboardList,
+        path: "/my-projects",
+        color: "bg-blue-500",
+        description: "View and manage your assignments",
+        count: myProjectsCount,
+        allowedRoles: ["employee", "pm", "admin"],
+      },
+      {
+        title: "Manage Projects",
+        icon: FolderKanban,
+        path: "/management",
+        color: "bg-green-500",
+        description: "Oversee all active projects",
+        count: manageProjectsCount,
+        allowedRoles: ["pm", "admin"],
+      },
+      {
+        title: "Assign Projects",
+        icon: UserPlus,
+        path: "/assign-projects",
+        color: "bg-purple-500",
+        description: "Distribute work to translators",
+        allowedRoles: ["pm", "admin"],
+      },
+    ],
+    [myProjectsCount, manageProjectsCount]
+  );
+
+  // Filter cards based on user role
+  const homeCards = useMemo(() => {
+    if (!role) return [];
+    return allHomeCards.filter((card) => card.allowedRoles.includes(role));
+  }, [role, allHomeCards]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -27,34 +85,6 @@ export default function HomePage() {
       </div>
     );
   }
-
-  const userName = user?.name || user?.short_name || "User";
-
-  const homeCards = [
-    {
-      title: "My Projects",
-      icon: ClipboardList,
-      path: "/my-projects",
-      color: "bg-blue-500",
-      description: "View and manage your assignments",
-      count: myProjectsCount,
-    },
-    {
-      title: "Manage Projects",
-      icon: FolderKanban,
-      path: "/management",
-      color: "bg-green-500",
-      description: "Oversee all active projects",
-      count: manageProjectsCount,
-    },
-    {
-      title: "Assign Projects",
-      icon: UserPlus,
-      path: "/assign-projects",
-      color: "bg-purple-500",
-      description: "Distribute work to translators",
-    },
-  ];
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -101,7 +131,7 @@ export default function HomePage() {
           <HomeCard key={card.title} {...card} />
         ))}
 
-        {/* My Profile Card with Avatar */}
+        {/* My Profile Card with Avatar - always visible */}
         <button
           onClick={() => router.push("/profile")}
           className="p-6 cursor-pointer bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:scale-105 transition-all duration-200 text-left group"

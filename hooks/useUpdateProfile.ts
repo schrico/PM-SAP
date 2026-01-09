@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 interface UpdateProfileData {
   name?: string;
-  short_name?: string;
+  short_name?: string | null;
   C_user?: string;
   TE_user?: string;
   email?: string;
@@ -40,7 +40,10 @@ export function useUpdateProfile() {
 
       // Update user profile fields
       if (data.name !== undefined) updates.name = data.name;
-      if (data.short_name !== undefined) updates.short_name = data.short_name;
+      // Convert empty string to null for short_name (nullable field)
+      if (data.short_name !== undefined) {
+        updates.short_name = data.short_name === null ? null : data.short_name.trim() || null;
+      }
       if (data.C_user !== undefined) updates.C_user = data.C_user;
       if (data.TE_user !== undefined) updates.TE_user = data.TE_user;
 

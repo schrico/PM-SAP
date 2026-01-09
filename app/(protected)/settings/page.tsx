@@ -7,12 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ColorSettings } from "@/components/settings/ColorSettings";
 import { ThemeSettings } from "@/components/settings/ThemeSettings";
-import { useUser } from "@/hooks/useUser";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
-  const { user, loading } = useUser();
+  const { user, loading, canEditColors } = useRoleAccess();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -70,10 +70,13 @@ export default function SettingsPage() {
       <Card className="p-6 text-left">
         <ThemeSettings />
       </Card>
-      <Card className="p-6">
-        <ColorSettings userRole={user.role} />
-      </Card>
-      
+      {/* Only show ColorSettings card for admins */}
+      {canEditColors() && (
+        <Card className="p-6">
+          <ColorSettings userRole={user.role} />
+        </Card>
+      )}
+
       {/* Logout Section */}
       <Card className="p-6">
         <div className="flex flex-col items-center gap-4">
@@ -121,7 +124,8 @@ export default function SettingsPage() {
             </div>
 
             <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
-              Are you sure you want to sign out? You will need to sign in again to access your account.
+              Are you sure you want to sign out? You will need to sign in again
+              to access your account.
             </p>
 
             <div className="flex justify-end gap-3">

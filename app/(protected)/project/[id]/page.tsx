@@ -1,19 +1,23 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Check, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useProject } from "@/hooks/useProject";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { ProjectDetailsCard } from "@/components/project/ProjectDetailsCard";
 import { ProjectInstructionsCard } from "@/components/project/ProjectInstructionsCard";
 import { TranslatorsList } from "@/components/project/TranslatorsList";
 import { AddTranslatorModal } from "@/components/management/AddTranslatorModal";
 import { ReminderModal } from "@/components/project/ReminderModal";
+import { RefusalDialog } from "@/components/my-projects/RefusalDialog";
+import { DoneDialog } from "@/components/my-projects/DoneDialog";
+import { InitialMessageDialog } from "@/components/my-projects/InitialMessageDialog";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
-import { useState } from "react";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -23,6 +27,12 @@ export default function ProjectPage() {
 
   const { data: project, isLoading, error } = useProject(projectId);
   const { getSystemColorPreview } = useColorSettings();
+  const {
+    user,
+    loading: userLoading,
+    isTranslator,
+    canManageAssignments,
+  } = useRoleAccess();
 
   const [showAddTranslatorModal, setShowAddTranslatorModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState<{
@@ -30,6 +40,26 @@ export default function ProjectPage() {
     userId: string;
     userName: string;
   }>({ open: false, userId: "", userName: "" });
+
+  // Translator action dialogs
+  const [refusalDialog, setRefusalDialog] = useState<{
+    open: boolean;
+    projectId: number | null;
+    projectName: string;
+  }>({ open: false, projectId: null, projectName: "" });
+  const [doneDialog, setDoneDialog] = useState<{
+    open: boolean;
+    projectId: number | null;
+    projectName: string;
+  }>({ open: false, projectId: null, projectName: "" });
+  const [initialMessageDialog, setInitialMessageDialog] = useState<{
+    open: boolean;
+    projectId: number | null;
+    projectName: string;
+    message: string;
+  }>({ open: false, projectId: null, projectName: "", message: "" });
+
+  const hasRedirected = useRef(false);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
@@ -42,7 +72,37 @@ export default function ProjectPage() {
 
   const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
 
-  // Add translators mutation
+  // Check if translator is assigned to this project
+  const translatorAssignment =
+    isTranslator() && project ?
+      project.translators.find((t) => t.id === user?.id)
+    : null;
+
+  const isTranslatorAssigned = !!translatorAssignment;
+
+  // Redirect translator if not assigned to this project
+  useEffect(() => {
+    if (
+      !isLoading &&
+      !userLoading &&
+      project &&
+      isTranslator() &&
+      !isTranslatorAssigned &&
+      !hasRedirected.current
+    ) {
+      hasRedirected.current = true;
+      router.back();
+    }
+  }, [
+    isLoading,
+    userLoading,
+    project,
+    isTranslator,
+    isTranslatorAssigned,
+    router,
+  ]);
+
+  // Add translators mutation (PM/Admin only)
   const addTranslatorsMutation = useMutation({
     mutationFn: async ({
       projectId,
@@ -76,7 +136,7 @@ export default function ProjectPage() {
     },
   });
 
-  // Remove translator mutation
+  // Remove translator mutation (PM/Admin only)
   const removeTranslatorMutation = useMutation({
     mutationFn: async ({
       projectId,
@@ -104,7 +164,7 @@ export default function ProjectPage() {
     },
   });
 
-  // Send reminder mutation
+  // Send reminder mutation (PM/Admin only)
   const sendReminderMutation = useMutation({
     mutationFn: async ({
       projectId,
@@ -115,7 +175,6 @@ export default function ProjectPage() {
       userId: string;
       message?: string;
     }) => {
-      // Update the initial_message in the assignment
       const { error } = await supabase
         .from("projects_assignment")
         .update({
@@ -139,6 +198,66 @@ export default function ProjectPage() {
     },
   });
 
+  // Translator assignment status mutation (claim/reject/done)
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      userId,
+      status,
+      message,
+    }: {
+      projectId: number;
+      userId: string;
+      status: "claimed" | "rejected" | "done";
+      message?: string | null;
+    }) => {
+      const updateData: {
+        assignment_status: string;
+        refusal_message?: string | null;
+        done_message?: string | null;
+      } = { assignment_status: status };
+
+      if (status === "rejected" && message) {
+        updateData.refusal_message = message;
+      }
+      if (status === "done" && message) {
+        updateData.done_message = message;
+      }
+
+      const { error } = await supabase
+        .from("projects_assignment")
+        .update(updateData)
+        .eq("project_id", projectId)
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      return { projectId, status };
+    },
+    onSuccess: ({ status }) => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["my-projects", user?.id] });
+
+      const messages = {
+        claimed: "Project claimed successfully",
+        rejected: "Project has been rejected",
+        done: "Project marked as done",
+      };
+
+      toast.success(messages[status]);
+    },
+    onError: (error: Error, { status }) => {
+      toast.error(
+        `Failed to ${
+          status === "claimed" ? "claim"
+          : status === "rejected" ? "reject"
+          : "mark as done"
+        } project`
+      );
+    },
+  });
+
+  // PM/Admin handlers
   const handleEdit = () => {
     router.push(`/project/${projectId}/edit`);
   };
@@ -181,7 +300,96 @@ export default function ProjectPage() {
     addTranslatorsMutation.mutate({ projectId, userIds, messages });
   };
 
-  if (isLoading) {
+  // Translator handlers
+  const handleClaimClick = () => {
+    if (!project || !user?.id) return;
+
+    // Check if there's an initial_message
+    if (translatorAssignment?.initial_message) {
+      setInitialMessageDialog({
+        open: true,
+        projectId: project.id,
+        projectName: project.name,
+        message: translatorAssignment.initial_message,
+      });
+    } else {
+      handleClaimProject();
+    }
+  };
+
+  const handleClaimProject = () => {
+    if (!projectId || !user?.id) return;
+    updateAssignmentMutation.mutate({
+      projectId,
+      userId: user.id,
+      status: "claimed",
+    });
+    setInitialMessageDialog({
+      open: false,
+      projectId: null,
+      projectName: "",
+      message: "",
+    });
+  };
+
+  const handleRefuseClick = () => {
+    if (!project) return;
+    setRefusalDialog({
+      open: true,
+      projectId: project.id,
+      projectName: project.name,
+    });
+  };
+
+  const handleConfirmRefuse = (message: string) => {
+    if (!refusalDialog.projectId || !user?.id) return;
+    updateAssignmentMutation.mutate({
+      projectId: refusalDialog.projectId,
+      userId: user.id,
+      status: "rejected",
+      message,
+    });
+    setRefusalDialog({ open: false, projectId: null, projectName: "" });
+  };
+
+  const handleCancelRefuse = () => {
+    setRefusalDialog({ open: false, projectId: null, projectName: "" });
+  };
+
+  const handleDoneClick = () => {
+    if (!project) return;
+    setDoneDialog({
+      open: true,
+      projectId: project.id,
+      projectName: project.name,
+    });
+  };
+
+  const handleConfirmDone = (message: string | null) => {
+    if (!doneDialog.projectId || !user?.id) return;
+    updateAssignmentMutation.mutate({
+      projectId: doneDialog.projectId,
+      userId: user.id,
+      status: "done",
+      message,
+    });
+    setDoneDialog({ open: false, projectId: null, projectName: "" });
+  };
+
+  const handleCancelDone = () => {
+    setDoneDialog({ open: false, projectId: null, projectName: "" });
+  };
+
+  const handleCloseInitialMessage = () => {
+    setInitialMessageDialog({
+      open: false,
+      projectId: null,
+      projectName: "",
+      message: "",
+    });
+  };
+
+  if (isLoading || userLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
@@ -208,10 +416,24 @@ export default function ProjectPage() {
     );
   }
 
+  // If translator not assigned, show loading while redirecting
+  if (isTranslator() && !isTranslatorAssigned) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
+      </div>
+    );
+  }
+
   // Get system color preview for the indicator dot
   const systemColorPreview = getSystemColorPreview(project.system);
   const systemColorStyle =
-    systemColorPreview !== "transparent" ? { backgroundColor: systemColorPreview } : undefined;
+    systemColorPreview !== "transparent" ?
+      { backgroundColor: systemColorPreview }
+    : undefined;
+
+  // Determine translator's assignment status for action buttons
+  const assignmentStatus = translatorAssignment?.assignment_status;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -248,62 +470,140 @@ export default function ProjectPage() {
             </div>
           </div>
 
+          {/* Action buttons based on role */}
           <div className="flex gap-2">
-            <Button
-              onClick={handleEdit}
-              size="lg"
-              className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
-            >
-              <Edit className="w-12 h-12 mr-2" />
-              Edit Project
-            </Button>
+            {/* PM/Admin: Edit button */}
+            {canManageAssignments() && (
+              <Button
+                onClick={handleEdit}
+                size="lg"
+                className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                <Edit className="w-12 h-12 mr-2" />
+                Edit Project
+              </Button>
+            )}
+
+            {/* Translator: Claim/Refuse or Done buttons */}
+            {isTranslator() && isTranslatorAssigned && (
+              <>
+                {assignmentStatus === "unclaimed" && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleClaimClick}
+                      size="lg"
+                      disabled={updateAssignmentMutation.isPending}
+                      className="cursor-pointer bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      <Check className="w-5 h-5 mr-2" />
+                      Claim Project
+                    </Button>
+                    <Button
+                      onClick={handleRefuseClick}
+                      size="lg"
+                      variant="outline"
+                      disabled={updateAssignmentMutation.isPending}
+                      className="cursor-pointer border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                    >
+                      <X className="w-5 h-5 mr-2" />
+                      Refuse
+                    </Button>
+                  </div>
+                )}
+                {assignmentStatus === "claimed" && (
+                  <Button
+                    onClick={handleDoneClick}
+                    size="lg"
+                    disabled={updateAssignmentMutation.isPending}
+                    className="cursor-pointer bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    <Check className="w-5 h-5 mr-2" />
+                    Mark as Done
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div
+        className={`grid grid-cols-1 ${canManageAssignments() ? "lg:grid-cols-3" : ""} gap-6`}
+      >
         {/* Left Column - Main Info */}
-        <div className="lg:col-span-2 space-y-6">
+        <div
+          className={`${canManageAssignments() ? "lg:col-span-2" : ""} space-y-6`}
+        >
           <ProjectDetailsCard project={project} />
           <ProjectInstructionsCard instructions={project.instructions} />
         </div>
 
-        {/* Right Column - Translators */}
-        <div className="space-y-6">
-          <TranslatorsList
-            project={project}
-            onAddTranslator={handleAddTranslator}
-            onRemoveTranslator={handleRemoveTranslator}
-            onSendReminder={handleSendReminder}
-          />
-        </div>
+        {/* Right Column - Translators (PM/Admin only) */}
+        {canManageAssignments() && (
+          <div className="space-y-6">
+            <TranslatorsList
+              project={project}
+              onAddTranslator={handleAddTranslator}
+              onRemoveTranslator={handleRemoveTranslator}
+              onSendReminder={handleSendReminder}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Add Translator Modal */}
-      {showAddTranslatorModal && project && (
-        <AddTranslatorModal
-          open={showAddTranslatorModal}
-          projectId={project.id}
-          projectName={project.name}
-          assignedTranslatorIds={project.translators.map((t) => t.id)}
-          onClose={() => setShowAddTranslatorModal(false)}
-          onAddTranslators={handleAddTranslators}
-          isAdding={addTranslatorsMutation.isPending}
-        />
+      {/* PM/Admin Modals */}
+      {canManageAssignments() && (
+        <>
+          {showAddTranslatorModal && project && (
+            <AddTranslatorModal
+              open={showAddTranslatorModal}
+              projectId={project.id}
+              projectName={project.name}
+              assignedTranslatorIds={project.translators.map((t) => t.id)}
+              onClose={() => setShowAddTranslatorModal(false)}
+              onAddTranslators={handleAddTranslators}
+              isAdding={addTranslatorsMutation.isPending}
+            />
+          )}
+
+          <ReminderModal
+            open={showReminderModal.open}
+            translatorName={showReminderModal.userName}
+            onClose={() =>
+              setShowReminderModal({ open: false, userId: "", userName: "" })
+            }
+            onSend={handleSendReminderMessage}
+            onSendDefault={handleSendDefaultReminder}
+            isSending={sendReminderMutation.isPending}
+          />
+        </>
       )}
 
-      {/* Reminder Modal */}
-      <ReminderModal
-        open={showReminderModal.open}
-        translatorName={showReminderModal.userName}
-        onClose={() =>
-          setShowReminderModal({ open: false, userId: "", userName: "" })
-        }
-        onSend={handleSendReminderMessage}
-        onSendDefault={handleSendDefaultReminder}
-        isSending={sendReminderMutation.isPending}
-      />
+      {/* Translator Dialogs */}
+      {isTranslator() && (
+        <>
+          <RefusalDialog
+            open={refusalDialog.open}
+            projectName={refusalDialog.projectName}
+            onConfirm={handleConfirmRefuse}
+            onCancel={handleCancelRefuse}
+          />
+          <DoneDialog
+            open={doneDialog.open}
+            projectName={doneDialog.projectName}
+            onConfirm={handleConfirmDone}
+            onCancel={handleCancelDone}
+          />
+          <InitialMessageDialog
+            open={initialMessageDialog.open}
+            projectName={initialMessageDialog.projectName}
+            message={initialMessageDialog.message}
+            onClose={handleCloseInitialMessage}
+            onClaim={handleClaimProject}
+          />
+        </>
+      )}
     </div>
   );
 }

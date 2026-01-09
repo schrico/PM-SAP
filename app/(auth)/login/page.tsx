@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
-const AuthForm = () => {
+function AuthFormContent() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
@@ -17,11 +18,22 @@ const AuthForm = () => {
 
   const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showVerifyPopup, setShowVerifyPopup] = useState(false);
+
+  // Check for error params from callback
+  useEffect(() => {
+    const callbackError = searchParams.get("error");
+    if (callbackError === "callback") {
+      setError("Failed to verify your email. Please try again.");
+    } else if (callbackError === "config") {
+      setError("Configuration error. Please contact support.");
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,8 +54,10 @@ const AuthForm = () => {
         if (error) {
           throw error;
         } else {
+          // Get the redirect URL from search params or default to home
+          const redirectTo = searchParams.get("redirectedFrom") || "/";
           router.refresh();
-          router.push("/");
+          router.push(redirectTo);
         }
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -51,6 +65,7 @@ const AuthForm = () => {
           password,
           options: {
             data: { name },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
         if (error) {
@@ -104,7 +119,11 @@ const AuthForm = () => {
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
+            {loading ?
+              "Loading..."
+            : isLogin ?
+              "Sign In"
+            : "Sign Up"}
           </Button>
         </form>
         <p className="text-sm text-center text-muted-foreground">
@@ -137,6 +156,18 @@ const AuthForm = () => {
       </div>
     </div>
   );
-};
+}
 
-export default AuthForm;
+export default function AuthForm() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center min-h-screen">
+          <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
+        </div>
+      }
+    >
+      <AuthFormContent />
+    </Suspense>
+  );
+}

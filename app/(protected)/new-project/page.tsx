@@ -6,6 +6,8 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { RouteId } from "@/lib/roleAccess";
 import type { Project } from "@/types/project";
 
 function NewProjectPageContent() {
@@ -426,14 +428,16 @@ function NewProjectPageContent() {
 
 export default function NewProjectPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center items-center h-screen">
-          <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
-        </div>
-      }
-    >
-      <NewProjectPageContent />
-    </Suspense>
+    <RoleGuard routeId={RouteId.NEW_PROJECT}>
+      <Suspense
+        fallback={
+          <div className="flex justify-center items-center h-screen">
+            <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
+          </div>
+        }
+      >
+        <NewProjectPageContent />
+      </Suspense>
+    </RoleGuard>
   );
 }

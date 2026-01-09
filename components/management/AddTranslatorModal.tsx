@@ -210,8 +210,8 @@ export function AddTranslatorModal({
                               <TooltipContent>
                                 <p>
                                   {userWorkload.nextWeekIsFeasible ?
-                                    "Can handle next week workload"
-                                  : "May struggle with next week workload"}
+                                    "Should be able to handle workload"
+                                  : "Workload may be challenging"}
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -234,8 +234,8 @@ export function AddTranslatorModal({
                               <TooltipContent>
                                 <p>
                                   {userWorkload.isFeasible ?
-                                    "Has capacity for more work"
-                                  : "May be overloaded"}
+                                    "Appears to have availability"
+                                  : "Workload appears high"}
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -258,15 +258,18 @@ export function AddTranslatorModal({
 
                   {isSelected && (
                     <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                      <label className="block text-gray-700 dark:text-gray-300 text-xs mb-1">
-                        Instructions (optional)
+                      <label className="block text-gray-700 dark:text-gray-300 text-xs mb-0.5">
+                        Custom Instruction (optional)
                       </label>
+                      <span className="block text-gray-400 dark:text-gray-500 text-xs mb-1">
+                        Only visible to translator after claiming
+                      </span>
                       <textarea
                         value={translatorMessages[user.id] || ""}
                         onChange={(e) =>
                           handleMessageChange(user.id, e.target.value)
                         }
-                        placeholder="Add special instructions..."
+                        placeholder="Add custom instruction..."
                         className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         rows={2}
                       />

@@ -1,10 +1,27 @@
 "use client";
 
 import { useState, useMemo, Fragment } from "react";
-import { Loader2, AlertCircle, Calendar, FileText, Type, Circle, Clock, CheckCircle2, XCircle, Users, Check, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Loader2,
+  AlertCircle,
+  Calendar,
+  FileText,
+  Type,
+  Circle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Users,
+  Check,
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
 import { useUserWorkload } from "@/hooks/useUserWorkload";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
@@ -14,7 +31,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { format, isBefore, startOfDay, endOfDay, addDays, addWeeks, addMonths } from "date-fns";
+import {
+  format,
+  isBefore,
+  startOfDay,
+  endOfDay,
+  addDays,
+  addWeeks,
+  addMonths,
+} from "date-fns";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -23,6 +48,14 @@ type DatePreset = "today" | "3days" | "week" | "2weeks" | "month" | "custom";
 type TabType = "byDate" | "byUser";
 
 export default function WorkloadPage() {
+  return (
+    <RoleGuard routeId={RouteId.WORKLOAD}>
+      <WorkloadContent />
+    </RoleGuard>
+  );
+}
+
+function WorkloadContent() {
   const { loading: userLoading } = useUser();
   const queryClient = useQueryClient();
 
@@ -118,11 +151,20 @@ export default function WorkloadPage() {
     const filteredProjects = activeProjects.filter((project) => {
       const deadline = getClosestDeadline(project);
       if (!deadline) return false;
-      return isBefore(deadline, targetDate) || deadline.getTime() === targetDate.getTime();
+      return (
+        isBefore(deadline, targetDate) ||
+        deadline.getTime() === targetDate.getTime()
+      );
     });
 
-    const totalWords = filteredProjects.reduce((sum, p) => sum + (p.words || 0), 0);
-    const totalLines = filteredProjects.reduce((sum, p) => sum + (p.lines || 0), 0);
+    const totalWords = filteredProjects.reduce(
+      (sum, p) => sum + (p.words || 0),
+      0
+    );
+    const totalLines = filteredProjects.reduce(
+      (sum, p) => sum + (p.lines || 0),
+      0
+    );
 
     return {
       projects: filteredProjects,
@@ -204,7 +246,11 @@ export default function WorkloadPage() {
     },
   });
 
-  const handleStartEdit = (userId: string, wordsPerHour: number, linesPerHour: number) => {
+  const handleStartEdit = (
+    userId: string,
+    wordsPerHour: number,
+    linesPerHour: number
+  ) => {
     setEditingUserId(userId);
     setEditWordsPerHour(wordsPerHour.toString());
     setEditLinesPerHour(linesPerHour.toString());
@@ -261,19 +307,25 @@ export default function WorkloadPage() {
         // Calculate filtered stats based on userTargetDate
         let filteredWords = 0;
         let filteredLines = 0;
-        let filteredEarliestDeadline: Date | null = null;
+        let filteredEarliestDeadlineTime: number | null = null;
 
         workload.projects.forEach((project) => {
-          const isWithinDate = !userTargetDate || !project.deadline || 
-            isBefore(project.deadline, userTargetDate) || 
+          const isWithinDate =
+            !userTargetDate ||
+            !project.deadline ||
+            isBefore(project.deadline, userTargetDate) ||
             project.deadline.getTime() === userTargetDate.getTime();
 
           if (isWithinDate) {
             filteredWords += project.wordsShare;
             filteredLines += project.linesShare;
             if (project.deadline) {
-              if (!filteredEarliestDeadline || project.deadline < filteredEarliestDeadline) {
-                filteredEarliestDeadline = project.deadline;
+              const projectDeadlineTime = project.deadline.getTime();
+              if (
+                filteredEarliestDeadlineTime === null ||
+                projectDeadlineTime < filteredEarliestDeadlineTime
+              ) {
+                filteredEarliestDeadlineTime = projectDeadlineTime;
               }
             }
           }
@@ -281,18 +333,26 @@ export default function WorkloadPage() {
 
         const wordHours = filteredWords / workload.wordsPerHour;
         const lineHours = filteredLines / workload.linesPerHour;
-        const filteredEstimatedHours = Math.round((wordHours + lineHours) * 10) / 10;
+        const filteredEstimatedHours =
+          Math.round((wordHours + lineHours) * 10) / 10;
+
+        // Convert back to Date for return value
+        const filteredEarliestDeadline =
+          filteredEarliestDeadlineTime !== null ?
+            new Date(filteredEarliestDeadlineTime)
+          : null;
 
         // Calculate feasibility based on filtered deadline
         let filteredIsFeasible = true;
-        if (filteredEarliestDeadline) {
+        if (filteredEarliestDeadlineTime !== null) {
           const now = new Date();
           const hoursUntilDeadline = Math.max(
             0,
-            (filteredEarliestDeadline.getTime() - now.getTime()) / (1000 * 60 * 60)
+            (filteredEarliestDeadlineTime - now.getTime()) / (1000 * 60 * 60)
           );
           const workingHoursUntilDeadline = (hoursUntilDeadline / 24) * 8;
-          filteredIsFeasible = filteredEstimatedHours <= workingHoursUntilDeadline;
+          filteredIsFeasible =
+            filteredEstimatedHours <= workingHoursUntilDeadline;
         }
 
         return {
@@ -347,7 +407,9 @@ export default function WorkloadPage() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-gray-900 dark:text-white mb-2">Workload Overview</h1>
+        <h1 className="text-gray-900 dark:text-white mb-2">
+          Workload Overview
+        </h1>
         <p className="text-gray-500 dark:text-gray-400">
           View total word and line counts for projects and users
         </p>
@@ -359,9 +421,9 @@ export default function WorkloadPage() {
           <button
             onClick={() => setActiveTab("byDate")}
             className={`pb-3 cursor-pointer border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "byDate"
-                ? "border-blue-500 text-blue-500"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              activeTab === "byDate" ?
+                "border-blue-500 text-blue-500"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             }`}
             type="button"
           >
@@ -371,9 +433,9 @@ export default function WorkloadPage() {
           <button
             onClick={() => setActiveTab("byUser")}
             className={`pb-3 cursor-pointer border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "byUser"
-                ? "border-blue-500 text-blue-500"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              activeTab === "byUser" ?
+                "border-blue-500 text-blue-500"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             }`}
             type="button"
           >
@@ -394,9 +456,9 @@ export default function WorkloadPage() {
                   key={preset.id}
                   onClick={() => setSelectedPreset(preset.id)}
                   className={`px-4 py-2 rounded-lg border text-sm transition-all ${
-                    selectedPreset === preset.id
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
+                    selectedPreset === preset.id ?
+                      "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
                   }`}
                   type="button"
                 >
@@ -432,7 +494,9 @@ export default function WorkloadPage() {
                     <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Projects</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Projects
+                    </p>
                     <p className="text-3xl font-semibold text-gray-900 dark:text-white">
                       {workloadStats.projectCount}
                     </p>
@@ -449,7 +513,9 @@ export default function WorkloadPage() {
                     <Type className="w-6 h-6 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Words</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Total Words
+                    </p>
                     <p className="text-3xl font-semibold text-gray-900 dark:text-white">
                       {workloadStats.totalWords.toLocaleString()}
                     </p>
@@ -478,7 +544,9 @@ export default function WorkloadPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Lines</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Total Lines
+                    </p>
                     <p className="text-3xl font-semibold text-gray-900 dark:text-white">
                       {workloadStats.totalLines.toLocaleString()}
                     </p>
@@ -489,7 +557,7 @@ export default function WorkloadPage() {
           </div>
 
           {/* Projects List */}
-          {workloadStats.projects.length > 0 ? (
+          {workloadStats.projects.length > 0 ?
             <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -530,11 +598,13 @@ export default function WorkloadPage() {
                               {project.system}
                             </td>
                             <td className="py-3 px-4">
-                              {project.translators.length > 0 ? (
+                              {project.translators.length > 0 ?
                                 <TooltipProvider>
                                   <div className="flex flex-wrap gap-2">
                                     {project.translators.map((translator) => {
-                                      const statusInfo = getStatusIcon(translator.assignment_status);
+                                      const statusInfo = getStatusIcon(
+                                        translator.assignment_status
+                                      );
                                       const StatusIcon = statusInfo.icon;
                                       return (
                                         <div
@@ -543,7 +613,9 @@ export default function WorkloadPage() {
                                         >
                                           <Tooltip>
                                             <TooltipTrigger asChild>
-                                              <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.color} shrink-0`} />
+                                              <StatusIcon
+                                                className={`w-3.5 h-3.5 ${statusInfo.color} shrink-0`}
+                                              />
                                             </TooltipTrigger>
                                             <TooltipContent>
                                               <p>{statusInfo.label}</p>
@@ -556,18 +628,18 @@ export default function WorkloadPage() {
                                             showEditButton={false}
                                           />
                                           <span>
-                                            {translator.short_name || translator.name}
+                                            {translator.short_name ||
+                                              translator.name}
                                           </span>
                                         </div>
                                       );
                                     })}
                                   </div>
                                 </TooltipProvider>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500 text-xs italic">
+                              : <span className="text-gray-400 dark:text-gray-500 text-xs italic">
                                   Not assigned
                                 </span>
-                              )}
+                              }
                             </td>
                             <td className="py-3 px-4 text-sm">
                               <DeadlineDisplay
@@ -606,20 +678,19 @@ export default function WorkloadPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          : <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardContent className="flex items-center justify-center min-h-[200px]">
                 <div className="text-center">
                   <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500 dark:text-gray-400">
-                    {targetDate
-                      ? "No projects found with deadlines until this date"
-                      : "Select a date to view workload"}
+                    {targetDate ?
+                      "No projects found with deadlines until this date"
+                    : "Select a date to view workload"}
                   </p>
                 </div>
               </CardContent>
             </Card>
-          )}
+          }
         </>
       )}
 
@@ -634,9 +705,9 @@ export default function WorkloadPage() {
                   key={preset.id}
                   onClick={() => setUserDatePreset(preset.id)}
                   className={`px-4 py-2 rounded-lg border text-sm transition-all ${
-                    userDatePreset === preset.id
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
+                    userDatePreset === preset.id ?
+                      "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
                   }`}
                   type="button"
                 >
@@ -657,12 +728,13 @@ export default function WorkloadPage() {
             {userTargetDate && (
               <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Counting workload for projects due until {format(userTargetDate, "MMMM d, yyyy")}
+                Counting workload for projects due until{" "}
+                {format(userTargetDate, "MMMM d, yyyy")}
               </p>
             )}
           </div>
 
-          {workloadsArray.length > 0 ? (
+          {workloadsArray.length > 0 ?
             <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -704,7 +776,9 @@ export default function WorkloadPage() {
                           <Fragment key={workload.userId}>
                             <tr
                               className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
-                              onClick={() => toggleUserExpanded(workload.userId)}
+                              onClick={() =>
+                                toggleUserExpanded(workload.userId)
+                              }
                             >
                               <td className="py-3 px-2 text-center">
                                 <button
@@ -715,11 +789,9 @@ export default function WorkloadPage() {
                                     toggleUserExpanded(workload.userId);
                                   }}
                                 >
-                                  {isExpanded ? (
+                                  {isExpanded ?
                                     <ChevronDown className="w-4 h-4" />
-                                  ) : (
-                                    <ChevronRight className="w-4 h-4" />
-                                  )}
+                                  : <ChevronRight className="w-4 h-4" />}
                                 </button>
                               </td>
                               <td className="py-3 px-4">
@@ -742,37 +814,54 @@ export default function WorkloadPage() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                {isEditing ? (
+                              <td
+                                className="py-3 px-4 text-center"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {isEditing ?
                                   <input
                                     type="number"
                                     value={editWordsPerHour}
-                                    onChange={(e) => setEditWordsPerHour(e.target.value)}
+                                    onChange={(e) =>
+                                      setEditWordsPerHour(e.target.value)
+                                    }
                                     className="w-20 px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                     min="1"
                                   />
-                                ) : (
-                                  <button
-                                    onClick={() => handleStartEdit(workload.userId, workload.wordsPerHour, workload.linesPerHour)}
+                                : <button
+                                    onClick={() =>
+                                      handleStartEdit(
+                                        workload.userId,
+                                        workload.wordsPerHour,
+                                        workload.linesPerHour
+                                      )
+                                    }
                                     className="text-sm text-gray-900 dark:text-white hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
                                     type="button"
                                   >
                                     {workload.wordsPerHour}
                                   </button>
-                                )}
+                                }
                               </td>
-                              <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                {isEditing ? (
+                              <td
+                                className="py-3 px-4 text-center"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {isEditing ?
                                   <div className="flex items-center justify-center gap-2">
                                     <input
                                       type="number"
                                       value={editLinesPerHour}
-                                      onChange={(e) => setEditLinesPerHour(e.target.value)}
+                                      onChange={(e) =>
+                                        setEditLinesPerHour(e.target.value)
+                                      }
                                       className="w-20 px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                       min="1"
                                     />
                                     <button
-                                      onClick={() => handleSaveEdit(workload.userId)}
+                                      onClick={() =>
+                                        handleSaveEdit(workload.userId)
+                                      }
                                       disabled={updateRatesMutation.isPending}
                                       className="p-1 text-green-600 hover:text-green-700 hover:scale-125 transition-transform disabled:opacity-50"
                                       type="button"
@@ -787,15 +876,20 @@ export default function WorkloadPage() {
                                       <XCircle className="w-4 h-4" />
                                     </button>
                                   </div>
-                                ) : (
-                                  <button
-                                    onClick={() => handleStartEdit(workload.userId, workload.wordsPerHour, workload.linesPerHour)}
+                                : <button
+                                    onClick={() =>
+                                      handleStartEdit(
+                                        workload.userId,
+                                        workload.wordsPerHour,
+                                        workload.linesPerHour
+                                      )
+                                    }
                                     className="text-sm text-gray-900 dark:text-white hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
                                     type="button"
                                   >
                                     {workload.linesPerHour}
                                   </button>
-                                )}
+                                }
                               </td>
                               <td className="py-3 px-4 text-sm text-gray-900 dark:text-white text-right">
                                 {workload.filteredWords.toLocaleString()}
@@ -810,26 +904,28 @@ export default function WorkloadPage() {
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      {workload.filteredIsFeasible ? (
+                                      {workload.filteredIsFeasible ?
                                         <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" />
-                                      ) : (
-                                        <AlertTriangle className="w-5 h-5 text-red-500 mx-auto" />
-                                      )}
+                                      : <AlertTriangle className="w-5 h-5 text-red-500 mx-auto" />
+                                      }
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>
-                                        {workload.filteredIsFeasible
-                                          ? "On track to complete by deadline"
-                                          : "May not complete by deadline"}
+                                        {workload.filteredIsFeasible ?
+                                          "On track to complete by deadline"
+                                        : "May not complete by deadline"}
                                       </p>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               </td>
                               <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                {workload.filteredEarliestDeadline
-                                  ? format(workload.filteredEarliestDeadline, "MMM d, yyyy")
-                                  : "-"}
+                                {workload.filteredEarliestDeadline ?
+                                  format(
+                                    workload.filteredEarliestDeadline,
+                                    "MMM d, yyyy"
+                                  )
+                                : "-"}
                               </td>
                             </tr>
                             {/* Expanded project details */}
@@ -839,35 +935,57 @@ export default function WorkloadPage() {
                                   <div className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                                     <div className="px-8 py-4">
                                       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                        Assigned Projects ({workload.projects.length})
+                                        Assigned Projects (
+                                        {workload.projects.length})
                                       </h4>
                                       <table className="w-full">
                                         <thead>
                                           <tr className="text-xs text-gray-500 dark:text-gray-400">
-                                            <th className="text-left py-2 px-3 font-medium">Project</th>
-                                            <th className="text-left py-2 px-3 font-medium">System</th>
-                                            <th className="text-right py-2 px-3 font-medium">Words (Share)</th>
-                                            <th className="text-right py-2 px-3 font-medium">Lines (Share)</th>
-                                            <th className="text-left py-2 px-3 font-medium">Translators</th>
-                                            <th className="text-left py-2 px-3 font-medium">Deadline</th>
+                                            <th className="text-left py-2 px-3 font-medium">
+                                              Project
+                                            </th>
+                                            <th className="text-left py-2 px-3 font-medium">
+                                              System
+                                            </th>
+                                            <th className="text-right py-2 px-3 font-medium">
+                                              Words (Share)
+                                            </th>
+                                            <th className="text-right py-2 px-3 font-medium">
+                                              Lines (Share)
+                                            </th>
+                                            <th className="text-left py-2 px-3 font-medium">
+                                              Translators
+                                            </th>
+                                            <th className="text-left py-2 px-3 font-medium">
+                                              Deadline
+                                            </th>
                                           </tr>
                                         </thead>
                                         <tbody>
                                           {workload.projects.map((project) => {
-                                            const isWithinDate = !userTargetDate || !project.deadline || 
-                                              isBefore(project.deadline, userTargetDate) || 
-                                              project.deadline.getTime() === userTargetDate.getTime();
+                                            const isWithinDate =
+                                              !userTargetDate ||
+                                              !project.deadline ||
+                                              isBefore(
+                                                project.deadline,
+                                                userTargetDate
+                                              ) ||
+                                              project.deadline.getTime() ===
+                                                userTargetDate.getTime();
                                             return (
-                                              <tr 
-                                                key={project.id} 
+                                              <tr
+                                                key={project.id}
                                                 className={`text-xs border-t border-gray-200 dark:border-gray-700/50 ${
-                                                  !isWithinDate ? "opacity-40" : ""
+                                                  !isWithinDate ? "opacity-40"
+                                                  : ""
                                                 }`}
                                               >
                                                 <td className="py-2 px-3 text-gray-900 dark:text-white">
                                                   {project.name}
                                                   {!isWithinDate && (
-                                                    <span className="ml-2 text-gray-400 italic">(outside date range)</span>
+                                                    <span className="ml-2 text-gray-400 italic">
+                                                      (outside date range)
+                                                    </span>
                                                   )}
                                                 </td>
                                                 <td className="py-2 px-3 text-gray-600 dark:text-gray-400">
@@ -881,29 +999,44 @@ export default function WorkloadPage() {
                                                 </td>
                                                 <td className="py-2 px-3">
                                                   <div className="flex flex-wrap gap-2">
-                                                    {project.translators.map((translator) => (
-                                                      <div
-                                                        key={translator.id}
-                                                        className="flex items-center gap-1 text-gray-700 dark:text-gray-300"
-                                                      >
-                                                        <ProfileAvatar
-                                                          name={translator.name}
-                                                          avatar={translator.avatar}
-                                                          size="xs"
-                                                          showEditButton={false}
-                                                        />
-                                                        <span className="text-xs">
-                                                          {translator.shortName || translator.name}
-                                                        </span>
-                                                      </div>
-                                                    ))}
+                                                    {project.translators.map(
+                                                      (translator) => (
+                                                        <div
+                                                          key={translator.id}
+                                                          className="flex items-center gap-1 text-gray-700 dark:text-gray-300"
+                                                        >
+                                                          <ProfileAvatar
+                                                            name={
+                                                              translator.name
+                                                            }
+                                                            avatar={
+                                                              translator.avatar
+                                                            }
+                                                            size="xs"
+                                                            showEditButton={
+                                                              false
+                                                            }
+                                                          />
+                                                          <span className="text-xs">
+                                                            {translator.shortName ||
+                                                              translator.name}
+                                                          </span>
+                                                        </div>
+                                                      )
+                                                    )}
                                                   </div>
                                                 </td>
                                                 <td className="py-2 px-3">
                                                   <DeadlineDisplay
-                                                    initialDeadline={project.initialDeadline}
-                                                    interimDeadline={project.interimDeadline}
-                                                    finalDeadline={project.finalDeadline}
+                                                    initialDeadline={
+                                                      project.initialDeadline
+                                                    }
+                                                    interimDeadline={
+                                                      project.interimDeadline
+                                                    }
+                                                    finalDeadline={
+                                                      project.finalDeadline
+                                                    }
                                                   />
                                                 </td>
                                               </tr>
@@ -924,8 +1057,7 @@ export default function WorkloadPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          : <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardContent className="flex items-center justify-center min-h-[200px]">
                 <div className="text-center">
                   <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -935,7 +1067,7 @@ export default function WorkloadPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
+          }
         </>
       )}
     </div>

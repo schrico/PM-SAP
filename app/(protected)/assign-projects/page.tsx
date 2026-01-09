@@ -7,8 +7,12 @@ import { FilterDropdown } from "@/components/general/FilterDropdown";
 import { ViewToggle } from "@/components/general/ViewToggle";
 import { ProjectAssignTable } from "@/components/assign/ProjectAssignTable";
 import { ProjectAssignCard } from "@/components/assign/ProjectAssignCard";
-import { TranslatorSelectionView } from "@/components/assign/TranslatorSelectionView";
-import { useUser } from "@/hooks/useUser";
+import {
+  TranslatorSelectionView,
+  type ProjectAssignmentData,
+} from "@/components/assign/TranslatorSelectionView";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { RouteId } from "@/lib/roleAccess";
 import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
 import {
   matchesDueDateFilter,
@@ -30,7 +34,14 @@ interface ProjectWithTranslators extends Project {
 }
 
 export default function AssignProjectsPage() {
-  const { user, loading: userLoading } = useUser();
+  return (
+    <RoleGuard routeId={RouteId.ASSIGN_PROJECTS}>
+      <AssignProjectsContent />
+    </RoleGuard>
+  );
+}
+
+function AssignProjectsContent() {
   const { data: allProjects = [], isLoading: projectsLoading } =
     useProjectsWithTranslators(false, true);
   const queryClient = useQueryClient();
@@ -65,16 +76,7 @@ export default function AssignProjectsPage() {
 
   const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
 
-  const loading = userLoading || projectsLoading;
-
-  // Access control — only PMs and Admins can assign projects
-  if (!loading && user && !["pm", "admin"].includes(user.role)) {
-    return (
-      <div className="p-8 text-center text-gray-500">
-        Restricted access. Only PMs and Admins can assign projects.
-      </div>
-    );
-  }
+  const loading = projectsLoading;
 
   // Get unique values for filters
   const uniqueSystems = useMemo(() => {
@@ -214,45 +216,56 @@ export default function AssignProjectsPage() {
     }
   };
 
-  // Assignment mutation
+  // Assignment mutation - handles per-project translator assignments
   const assignMutation = useMutation({
     mutationFn: async ({
-      projectIds,
-      translatorIds,
-      messages,
+      assignments,
     }: {
-      projectIds: number[];
-      translatorIds: string[];
-      messages: Record<string, string>;
+      assignments: Map<number, ProjectAssignmentData>;
     }) => {
-      // Create assignments for each project-translator combination
-      const assignments = [];
-      for (const projectId of projectIds) {
-        for (const translatorId of translatorIds) {
-          assignments.push({
+      // Create assignments for each project with its specific translators
+      const dbAssignments: Array<{
+        project_id: number;
+        user_id: string;
+        assignment_status: string;
+        initial_message: string | null;
+      }> = [];
+
+      assignments.forEach((data, projectId) => {
+        data.translatorIds.forEach((translatorId) => {
+          dbAssignments.push({
             project_id: projectId,
             user_id: translatorId,
             assignment_status: "unclaimed",
-            initial_message: messages[translatorId] || null,
+            initial_message: data.messages[translatorId] || null,
           });
-        }
+        });
+      });
+
+      if (dbAssignments.length === 0) {
+        throw new Error("No assignments to create");
       }
 
       const { error } = await supabase
         .from("projects_assignment")
-        .insert(assignments);
+        .insert(dbAssignments);
 
       if (error) {
         throw new Error(`Failed to assign projects: ${error.message}`);
       }
+
+      return {
+        projectCount: assignments.size,
+        assignmentCount: dbAssignments.length,
+      };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({
         queryKey: ["projects-with-translators"],
       });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success(
-        `Successfully assigned ${variables.projectIds.length} project(s) to ${variables.translatorIds.length} translator(s).`
+        `Successfully created ${result.assignmentCount} assignment${result.assignmentCount !== 1 ? "s" : ""} across ${result.projectCount} project${result.projectCount !== 1 ? "s" : ""}.`
       );
       setShowUserSelection(false);
       setSelectedProjects(new Set());
@@ -262,15 +275,8 @@ export default function AssignProjectsPage() {
     },
   });
 
-  const handleAssign = (
-    selectedTranslatorIds: Set<string>,
-    messages: Record<string, string>
-  ) => {
-    assignMutation.mutate({
-      projectIds: Array.from(selectedProjects),
-      translatorIds: Array.from(selectedTranslatorIds),
-      messages,
-    });
+  const handleAssign = (assignments: Map<number, ProjectAssignmentData>) => {
+    assignMutation.mutate({ assignments });
   };
 
   const selectedProjectsList = filteredProjects.filter((p) =>

@@ -46,6 +46,39 @@ export interface UserWorkload {
 
 const DEFAULT_WORDS_PER_HOUR = 500;
 const DEFAULT_LINES_PER_HOUR = 50;
+const HOURS_PER_WORKDAY = 8;
+
+/**
+ * Count the number of working days (Mon-Fri) between two dates
+ */
+function countWorkingDays(startDate: Date, endDate: Date): number {
+  let count = 0;
+  const current = new Date(startDate);
+  current.setHours(0, 0, 0, 0);
+  
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+  
+  while (current <= end) {
+    const dayOfWeek = current.getDay();
+    // 0 = Sunday, 6 = Saturday
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return count;
+}
+
+/**
+ * Count working days in the next 7 calendar days from now
+ */
+function getNextWeekWorkingDays(): number {
+  const now = new Date();
+  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  return countWorkingDays(now, nextWeek);
+}
 
 export function useUserWorkload() {
   const { data: users = [], isLoading: usersLoading } = useUsers();
@@ -168,22 +201,19 @@ export function useUserWorkload() {
       const nextWeekLineHours = workload.nextWeekLines / workload.linesPerHour;
       workload.nextWeekEstimatedHours = Math.round((nextWeekWordHours + nextWeekLineHours) * 10) / 10;
 
-      // Calculate feasibility based on time until deadline
-      // Assuming 8 working hours per day
+      // Calculate feasibility based on working days until deadline (excludes weekends)
       if (workload.earliestDeadline) {
-        const hoursUntilDeadline = Math.max(
-          0,
-          (workload.earliestDeadline.getTime() - now.getTime()) / (1000 * 60 * 60)
-        );
-        const workingHoursUntilDeadline = (hoursUntilDeadline / 24) * 8; // Approximate working hours
+        const workingDaysUntilDeadline = countWorkingDays(now, workload.earliestDeadline);
+        const workingHoursUntilDeadline = workingDaysUntilDeadline * HOURS_PER_WORKDAY;
         workload.isFeasible = workload.estimatedHours <= workingHoursUntilDeadline;
       } else {
         workload.isFeasible = true; // No deadline means feasible
       }
 
-      // Next week feasibility: can they complete next week work within 7 days?
-      // 7 days * 8 working hours = 56 working hours available
-      const nextWeekWorkingHours = 7 * 8;
+      // Next week feasibility: can they complete next week work within working days?
+      // Uses actual weekdays in the next 7 calendar days (typically 5 days = 40h)
+      const nextWeekWorkingDays = getNextWeekWorkingDays();
+      const nextWeekWorkingHours = nextWeekWorkingDays * HOURS_PER_WORKDAY;
       workload.nextWeekIsFeasible = workload.nextWeekEstimatedHours <= nextWeekWorkingHours;
     });
 
