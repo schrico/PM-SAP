@@ -5,6 +5,7 @@ import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RouteId } from "@/lib/roleAccess";
@@ -30,7 +31,7 @@ function NewProjectPageContent() {
 
   // Fetch source project if duplicating
   const { data: sourceProject, isLoading: loadingSource } = useQuery({
-    queryKey: ["project", duplicateFromId],
+    queryKey: queryKeys.project(duplicateFromId),
     queryFn: async (): Promise<Project | null> => {
       if (!duplicateFromId) return null;
 

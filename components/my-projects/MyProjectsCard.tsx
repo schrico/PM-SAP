@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import type { ProjectAssignment } from "@/types/project-assignment";
 
@@ -33,23 +34,11 @@ export function MyProjectsCard({
     router.push(`/project/${projectId}`);
   };
 
-  // Get system color style using preview hex for the color indicator
-  const getSystemColorStyle = (system: string) => {
-    const color = getSystemColorPreview(system);
-    if (color === "transparent" || !color) {
-      return { backgroundColor: "transparent" };
-    }
-    return { backgroundColor: color };
-  };
-
-  // Get language color for underline using preview hex
-  const getLanguageColorStyle = (langIn: string, langOut: string) => {
-    const color = getLanguageColorPreview(langIn || "", langOut || "");
-    if (color === "transparent" || !color) {
-      return { backgroundColor: "transparent" };
-    }
-    return { backgroundColor: color };
-  };
+  // Use shared utility functions for color styles
+  const getSystemColorStyleLocal = (system: string) =>
+    getSystemColorStyle(system, getSystemColorPreview);
+  const getLanguageColorStyleLocal = (langIn: string, langOut: string) =>
+    getLanguageColorStyle(langIn, langOut, getLanguageColorPreview);
 
   // Sort projects by due date (earliest first)
   const sortedProjects = [...projects].sort((a, b) => {
@@ -84,11 +73,11 @@ export function MyProjectsCard({
               <div className="flex flex-col items-center shrink-0 mr-2">
                 <div
                   className="w-3 h-3 rounded"
-                  style={getSystemColorStyle(project.system)}
+                  style={getSystemColorStyleLocal(project.system)}
                 />
                 <div
                   className="w-3 h-0.5 mt-0.5"
-                  style={getLanguageColorStyle(
+                  style={getLanguageColorStyleLocal(
                     project.language_in || "",
                     project.language_out || ""
                   )}

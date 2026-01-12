@@ -140,6 +140,15 @@ export function TranslatorSelectionView({
     return count;
   }, [projectAssignments]);
 
+  // Count unique translators across all projects
+  const totalUniqueTranslators = useMemo(() => {
+    const uniqueIds = new Set<string>();
+    projectAssignments.forEach((assignment) => {
+      assignment.translatorIds.forEach((id) => uniqueIds.add(id));
+    });
+    return uniqueIds.size;
+  }, [projectAssignments]);
+
   // Count projects that have at least one translator assigned
   const projectsWithAssignments = useMemo(() => {
     let count = 0;
@@ -412,51 +421,58 @@ export function TranslatorSelectionView({
         })}
       </div>
 
-      {/* Navigation and Assign Buttons */}
-      <div className="flex items-center justify-between">
-        {/* Left: Previous button */}
-        <div>
-          {!isFirstProject && (
-            <button
-              onClick={handlePreviousProject}
-              className="px-6 py-3 cursor-pointer bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors flex items-center gap-2 border border-gray-200 dark:border-gray-600"
-              type="button"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              Previous Project
-            </button>
-          )}
-        </div>
+      {/* Navigation and Assign Buttons - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
+        <div className="max-w-7xl mx-auto px-8 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Previous button */}
+            <div>
+              {!isFirstProject && (
+                <button
+                  onClick={handlePreviousProject}
+                  className="px-6 py-3 cursor-pointer bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors flex items-center gap-2 border border-gray-200 dark:border-gray-600"
+                  type="button"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                  Previous Project
+                </button>
+              )}
+            </div>
 
-        {/* Center: Summary info */}
-        <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
-          {projectsWithAssignments} of {selectedProjects.length} projects have translators assigned
-        </div>
+            {/* Center: Summary info */}
+            <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
+              {projectsWithAssignments} of {selectedProjects.length} projects have translators assigned
+            </div>
 
-        {/* Right: Next or Assign All button */}
-        <div>
-          {isLastProject ? (
-            <button
-              onClick={handleAssignAll}
-              disabled={totalAssignments === 0}
-              className="px-8 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center gap-2"
-              type="button"
-            >
-              <CheckCircle2 className="w-5 h-5" />
-              Assign All ({projectsWithAssignments} assignment{projectsWithAssignments !== 1 ? "s" : ""})
-            </button>
-          ) : (
-            <button
-              onClick={handleNextProject}
-              className="px-6 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors flex items-center gap-2 shadow-lg"
-              type="button"
-            >
-              Next Project
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          )}
+            {/* Right: Next or Assign button */}
+            <div>
+              {isLastProject ? (
+                <button
+                  onClick={handleAssignAll}
+                  disabled={totalAssignments === 0}
+                  className="px-8 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center gap-2"
+                  type="button"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  Assign {totalUniqueTranslators} translator{totalUniqueTranslators !== 1 ? "s" : ""} ({totalAssignments} assignment{totalAssignments !== 1 ? "s" : ""})
+                </button>
+              ) : (
+                <button
+                  onClick={handleNextProject}
+                  className="px-6 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors flex items-center gap-2 shadow-lg"
+                  type="button"
+                >
+                  Next Project
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+      
+      {/* Spacer to prevent content from being hidden behind fixed button */}
+      <div className="h-24" />
     </div>
   );
 }

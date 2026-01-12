@@ -1,6 +1,7 @@
 "use client";
 
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { getSystemColorStyle } from "@/utils/projectTableHelpers";
 import type { ProjectWithTranslators } from "@/types/project";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 
@@ -17,14 +18,9 @@ export function InvoicingCard({
 }: InvoicingCardProps) {
   const { getSystemColorPreview } = useColorSettings();
 
-  // Get system color style using preview hex for the color indicator
-  const getSystemColorStyle = (system: string) => {
-    const color = getSystemColorPreview(system);
-    if (color === "transparent" || !color) {
-      return { backgroundColor: "transparent" };
-    }
-    return { backgroundColor: color };
-  };
+  // Use shared utility function for color style
+  const getSystemColorStyleLocal = (system: string) =>
+    getSystemColorStyle(system, getSystemColorPreview);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
@@ -59,7 +55,7 @@ export function InvoicingCard({
               />
               <div
                 className="w-3 h-3 mt-1 rounded shrink-0"
-                style={getSystemColorStyle(project.system)}
+                style={getSystemColorStyleLocal(project.system)}
               />
               <div className="flex-1 min-w-0">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm mb-2">

@@ -88,7 +88,7 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
                 Initial Deadline
               </p>
               <p className="text-gray-900 dark:text-white font-medium">
-                {format(new Date(project.initial_deadline), "dd MMM yyyy")}
+                {format(new Date(project.initial_deadline), "dd MMM yyyy 'at' HH:mm")}
               </p>
             </div>
           </div>
@@ -104,7 +104,7 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
                 Interim Deadline
               </p>
               <p className="text-gray-900 dark:text-white font-medium">
-                {format(new Date(project.interim_deadline), "dd MMM yyyy")}
+                {format(new Date(project.interim_deadline), "dd MMM yyyy 'at' HH:mm")}
               </p>
             </div>
           </div>
@@ -120,7 +120,7 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
                 Final Deadline
               </p>
               <p className="text-gray-900 dark:text-white font-medium">
-                {format(new Date(project.final_deadline), "dd MMM yyyy")}
+                {format(new Date(project.final_deadline), "dd MMM yyyy 'at' HH:mm")}
               </p>
             </div>
           </div>

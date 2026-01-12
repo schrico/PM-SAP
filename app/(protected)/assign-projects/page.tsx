@@ -21,6 +21,7 @@ import {
 } from "@/utils/filterHelpers";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
@@ -262,9 +263,9 @@ function AssignProjectsContent() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({
-        queryKey: ["projects-with-translators"],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       toast.success(
         `Successfully created ${result.assignmentCount} assignment${result.assignmentCount !== 1 ? "s" : ""} across ${result.projectCount} project${result.projectCount !== 1 ? "s" : ""}.`
       );

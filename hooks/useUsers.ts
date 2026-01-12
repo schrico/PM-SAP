@@ -1,23 +1,15 @@
 "use client";
 
 import { useQuery } from '@tanstack/react-query';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabase } from "./useSupabase";
 import type { User } from '@/types/user';
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useUsers() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ['users'],
+    queryKey: queryKeys.users(),
     queryFn: async (): Promise<User[]> => {
       const { data, error } = await supabase
         .from('users')

@@ -15,6 +15,7 @@ import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
@@ -286,12 +287,13 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects-with-translators"],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Projects marked as invoiced");
       setSelectedProjects(new Set());
     },
-    onError: (error: Error) => toast.error(getUserFriendlyError(error, "invoicing")),
+    onError: (error: Error) =>
+      toast.error(getUserFriendlyError(error, "invoicing")),
   });
 
   const markPaidMutation = useMutation({
@@ -306,12 +308,13 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects-with-translators"],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Projects marked as paid");
       setSelectedProjects(new Set());
     },
-    onError: (error: Error) => toast.error(getUserFriendlyError(error, "invoicing")),
+    onError: (error: Error) =>
+      toast.error(getUserFriendlyError(error, "invoicing")),
   });
 
   const markPaidAndInvoicedMutation = useMutation({
@@ -328,12 +331,13 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects-with-translators"],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Projects marked as paid & invoiced");
       setSelectedProjects(new Set());
     },
-    onError: (error: Error) => toast.error(getUserFriendlyError(error, "invoicing")),
+    onError: (error: Error) =>
+      toast.error(getUserFriendlyError(error, "invoicing")),
   });
 
   // Handlers
@@ -444,131 +448,134 @@ function InvoicingContent() {
         </p>
       </div>
 
-      {/* Tabs + View Toggle */}
-      <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-end justify-between">
-          <InvoicingTabs
-            tabs={tabs}
-            activeTab={activeTab}
-            onTabChange={(tab) => {
-              setActiveTab(tab);
-              setSelectedProjects(new Set());
-            }}
-          />
-          <div className="mb-3 flex flex-col items-center gap-1">
-            <span className="text-gray-500 dark:text-gray-400 text-xs">
-              View
-            </span>
-            <ViewToggle view={viewMode} onViewChange={setViewMode} />
+      {/* Tabs + View Toggle + Search + Filters - Sticky Header */}
+      <div className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 backdrop-blur-sm shadow-md mb-6 pt-4 pb-4 -mx-8 px-8">
+        {/* Tabs + View Toggle */}
+        <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-end justify-between">
+            <InvoicingTabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={(tab) => {
+                setActiveTab(tab);
+                setSelectedProjects(new Set());
+              }}
+            />
+            <div className="mb-3 flex flex-col items-center gap-1">
+              <span className="text-gray-500 dark:text-gray-400 text-xs">
+                View
+              </span>
+              <ViewToggle view={viewMode} onViewChange={setViewMode} />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Search + Filters */}
-      <div className="mb-6 space-y-4">
-        <SearchBar
-          value={searchTerm}
-          onChange={setSearchTerm}
-          placeholder="Search by project name"
-        />
+        {/* Search + Filters */}
+        <div className="space-y-4">
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search by project name"
+          />
 
-        {/* Individual Filter Dropdowns */}
-        <div className="flex justify-between items-start gap-3">
-          <div className="flex flex-wrap gap-3 items-start">
-            <FilterDropdown
-              label="System"
-              options={uniqueSystems}
-              selected={systemFilter}
-              onSelect={setSystemFilter}
-            />
-            <FilterDropdown
-              label="Due Date"
-              options={[
-                "Today",
-                "In 1 day",
-                "In 3 days",
-                "In a week",
-                "In a month",
-                "Custom date",
-              ]}
-              selected={dueDateFilter}
-              onSelect={setDueDateFilter}
-              customDateValue={customDueDate}
-              onCustomDateChange={setCustomDueDate}
-            />
-            <FilterDropdown
-              label="Assignment Status"
-              options={["Unassigned", "Assigned"]}
-              selected={assignmentStatusFilter}
-              onSelect={setAssignmentStatusFilter}
-            />
-            <FilterDropdown
-              label="Source Language"
-              options={uniqueLanguages}
-              selected={sourceLanguageFilter}
-              onSelect={setSourceLanguageFilter}
-            />
-            <FilterDropdown
-              label="Target Language"
-              options={uniqueLanguages}
-              selected={targetLanguageFilter}
-              onSelect={setTargetLanguageFilter}
-            />
-            <FilterDropdown
-              label="Length"
-              options={["Short", "Long"]}
-              selected={lengthFilter}
-              onSelect={setLengthFilter}
-            />
-            {/* Toggle for showing fully processed projects */}
-            <button
-              onClick={() => setHideFullyProcessed(!hideFullyProcessed)}
-              className={`px-4 py-2 cursor-pointer rounded-lg border text-sm transition-all flex items-center gap-2 ${
-                hideFullyProcessed ?
-                  "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
-                : "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-              }`}
-              type="button"
-            >
-              <span
-                className={`w-3 h-3 rounded-sm border ${
+          {/* Individual Filter Dropdowns */}
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex flex-wrap gap-3 items-start">
+              <FilterDropdown
+                label="System"
+                options={uniqueSystems}
+                selected={systemFilter}
+                onSelect={setSystemFilter}
+              />
+              <FilterDropdown
+                label="Due Date"
+                options={[
+                  "Today",
+                  "In 1 day",
+                  "In 3 days",
+                  "In a week",
+                  "In a month",
+                  "Custom date",
+                ]}
+                selected={dueDateFilter}
+                onSelect={setDueDateFilter}
+                customDateValue={customDueDate}
+                onCustomDateChange={setCustomDueDate}
+              />
+              <FilterDropdown
+                label="Assignment Status"
+                options={["Unassigned", "Assigned"]}
+                selected={assignmentStatusFilter}
+                onSelect={setAssignmentStatusFilter}
+              />
+              <FilterDropdown
+                label="Source Language"
+                options={uniqueLanguages}
+                selected={sourceLanguageFilter}
+                onSelect={setSourceLanguageFilter}
+              />
+              <FilterDropdown
+                label="Target Language"
+                options={uniqueLanguages}
+                selected={targetLanguageFilter}
+                onSelect={setTargetLanguageFilter}
+              />
+              <FilterDropdown
+                label="Length"
+                options={["Short", "Long"]}
+                selected={lengthFilter}
+                onSelect={setLengthFilter}
+              />
+              {/* Toggle for showing fully processed projects */}
+              <button
+                onClick={() => setHideFullyProcessed(!hideFullyProcessed)}
+                className={`px-4 py-2 cursor-pointer rounded-lg border text-sm transition-all flex items-center gap-2 ${
                   hideFullyProcessed ?
-                    "border-gray-400 dark:border-gray-500"
-                  : "border-blue-500 bg-blue-500"
+                    "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500"
+                  : "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
                 }`}
+                type="button"
               >
-                {!hideFullyProcessed && (
-                  <svg
-                    className="w-3 h-3 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 12 12"
-                  >
-                    <path
-                      d="M10 3L4.5 8.5 2 6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </span>
-              Show Invoiced/Paid
-            </button>
-          </div>
+                <span
+                  className={`w-3 h-3 rounded-sm border ${
+                    hideFullyProcessed ?
+                      "border-gray-400 dark:border-gray-500"
+                    : "border-blue-500 bg-blue-500"
+                  }`}
+                >
+                  {!hideFullyProcessed && (
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 12 12"
+                    >
+                      <path
+                        d="M10 3L4.5 8.5 2 6"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </span>
+                Show Invoiced/Paid
+              </button>
+            </div>
 
-          {/* Clear Filters Button */}
-          {hasActiveFilters && (
-            <button
-              onClick={clearAllFilters}
-              className="px-4 py-2 cursor-pointer rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-black text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400 transition-all flex items-center gap-2 text-sm shadow-sm shrink-0"
-              type="button"
-            >
-              <X className="w-4 h-4" />
-              Clear Filters
-            </button>
-          )}
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 cursor-pointer rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-black text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400 transition-all flex items-center gap-2 text-sm shadow-sm shrink-0"
+                type="button"
+              >
+                <X className="w-4 h-4" />
+                Clear Filters
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

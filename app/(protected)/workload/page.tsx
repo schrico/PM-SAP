@@ -67,6 +67,7 @@ function countWorkingDays(startDate: Date, endDate: Date): number {
 const HOURS_PER_WORKDAY = 8;
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 
@@ -252,7 +253,7 @@ function WorkloadContent() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users() });
       toast.success("Rates updated successfully");
       setEditingUserId(null);
     },

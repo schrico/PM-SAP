@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { UserCircle } from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
+import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
-import { Pagination } from "@/components/ui/pagination";
+import { UserCircle } from "lucide-react";
 import type { Project } from "@/types/project";
 
 interface ProjectWithTranslators extends Project {
@@ -31,197 +31,136 @@ export function ProjectAssignTable({
   onRowClick,
 }: ProjectAssignTableProps) {
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
-  // Calculate pagination
-  const totalPages = Math.ceil(projects.length / itemsPerPage);
-  const paginatedProjects = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return projects.slice(startIndex, endIndex);
-  }, [projects, currentPage, itemsPerPage]);
+  // Use shared utility functions for color styles
+  const getSystemColorStyleLocal = (system: string) =>
+    getSystemColorStyle(system, getSystemColorPreview);
+  const getLanguageColorStyleLocal = (langIn: string, langOut: string) =>
+    getLanguageColorStyle(langIn, langOut, getLanguageColorPreview);
 
-  // Reset to page 1 when projects change or if current page is invalid
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
-
-  // Reset to page 1 when projects array changes (e.g., filters change)
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [projects.length]);
-
-  const handleRowClick = (projectId: number, e: React.MouseEvent) => {
+  const handleRowClick = (project: ProjectWithTranslators, e: React.MouseEvent) => {
     // Don't handle clicks on buttons or checkboxes
-    if ((e.target as HTMLElement).closest("button")) {
-      return;
-    }
     const target = e.target as HTMLElement;
     if (
-      target.tagName === "INPUT" &&
-      target.getAttribute("type") === "checkbox"
+      target.closest("button") ||
+      (target.tagName === "INPUT" && target.getAttribute("type") === "checkbox")
     ) {
       return;
     }
     if (onRowClick) {
-      onRowClick(projectId);
+      onRowClick(project.id);
     }
   };
 
-  // Get system color style using preview hex for the color indicator
-  const getSystemColorStyle = (system: string) => {
-    const color = getSystemColorPreview(system);
-    if (color === "transparent" || !color) {
-      return { backgroundColor: "transparent" };
-    }
-    return { backgroundColor: color };
-  };
-
-  // Get language color for underline using preview hex
-  const getLanguageColorStyle = (langIn: string, langOut: string) => {
-    const color = getLanguageColorPreview(langIn || "", langOut || "");
-    if (color === "transparent" || !color) {
-      return { backgroundColor: "transparent" };
-    }
-    return { backgroundColor: color };
-  };
+  const columns = [
+    {
+      header: "",
+      className: "w-12",
+      render: (project: ProjectWithTranslators) => (
+        <div className="flex flex-col items-center">
+          <div
+            className="w-3 h-3 rounded"
+            style={getSystemColorStyleLocal(project.system)}
+          />
+          <div
+            className="w-3 h-0.5 mt-0.5"
+            style={getLanguageColorStyleLocal(
+              project.language_in || "",
+              project.language_out || ""
+            )}
+          />
+        </div>
+      ),
+    },
+    {
+      header: "System",
+      render: (project: ProjectWithTranslators) => (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm">
+          {project.system}
+        </span>
+      ),
+    },
+    {
+      header: "Project",
+      render: (project: ProjectWithTranslators) => (
+        <span className="text-gray-900 dark:text-white">{project.name}</span>
+      ),
+    },
+    {
+      header: "Words",
+      className: "text-right",
+      render: (project: ProjectWithTranslators) => (
+        <span className="text-gray-700 dark:text-gray-300">
+          {project.words ? formatNumber(project.words) : "-"}
+        </span>
+      ),
+    },
+    {
+      header: "Lines",
+      className: "text-right",
+      render: (project: ProjectWithTranslators) => (
+        <span className="text-gray-700 dark:text-gray-300">
+          {project.lines ? formatNumber(project.lines) : "-"}
+        </span>
+      ),
+    },
+    {
+      header: "Translator(s)",
+      render: (project: ProjectWithTranslators) =>
+        project.translators && project.translators.length > 0 ?
+          <div className="flex flex-wrap gap-2">
+            {project.translators.map((translator, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-1 text-gray-700 dark:text-gray-300 text-xs md:text-sm"
+              >
+                <UserCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <span>{translator.name}</span>
+              </div>
+            ))}
+          </div>
+        : <span className="text-gray-400 dark:text-gray-500 text-xs md:text-sm italic">
+            Not assigned
+          </span>,
+    },
+    {
+      header: "Due Date",
+      render: (project: ProjectWithTranslators) => (
+        <DeadlineDisplay
+          initialDeadline={project.initial_deadline}
+          interimDeadline={project.interim_deadline}
+          finalDeadline={project.final_deadline}
+        />
+      ),
+    },
+    {
+      header: "Instructions",
+      className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs overflow-hidden text-ellipsis",
+      render: (project: ProjectWithTranslators) => (
+        project.instructions || "-"
+      ),
+    },
+  ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              <th className="px-6 py-4 w-4" />
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300 w-12" />
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">
-                System
-              </th>
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">
-                Project
-              </th>
-              <th className="px-6 py-4 text-right text-gray-700 dark:text-gray-300">
-                Words
-              </th>
-              <th className="px-6 py-4 text-right text-gray-700 dark:text-gray-300">
-                Lines
-              </th>
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">
-                Translator(s)
-              </th>
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">
-                Due Date
-              </th>
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">
-                Instructions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedProjects.length > 0 ?
-              paginatedProjects.map((project) => {
-              const isSelected = selectedProjects.has(project.id);
-
-              return (
-                <tr
-                  key={project.id}
-                  className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors cursor-pointer"
-                  onClick={(e) => handleRowClick(project.id, e)}
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => onToggleProject(project.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="outline-style w-4 h-4 rounded cursor-pointer"
-                    />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className="w-3 h-3 rounded"
-                        style={getSystemColorStyle(project.system)}
-                      />
-                      <div
-                        className="w-3 h-0.5 mt-0.5"
-                        style={getLanguageColorStyle(
-                          project.language_in || "",
-                          project.language_out || ""
-                        )}
-                      />
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm">
-                      {project.system}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-900 dark:text-white">
-                    {project.name}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700 dark:text-gray-300 text-right">
-                    {project.words ? formatNumber(project.words) : "-"}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700 dark:text-gray-300 text-right">
-                    {project.lines ? formatNumber(project.lines) : "-"}
-                  </td>
-                  <td className="px-6 py-4">
-                    {project.translators && project.translators.length > 0 ?
-                      <div className="flex flex-wrap gap-2">
-                        {project.translators.map((translator, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-1 text-gray-700 dark:text-gray-300 text-xs md:text-sm"
-                          >
-                            <UserCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                            <span>{translator.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    : <span className="text-gray-400 dark:text-gray-500 text-xs md:text-sm italic">
-                        Not assigned
-                      </span>
-                    }
-                  </td>
-                  <td className="px-6 py-4">
-                    <DeadlineDisplay
-                      initialDeadline={project.initial_deadline}
-                      interimDeadline={project.interim_deadline}
-                      finalDeadline={project.final_deadline}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs overflow-hidden text-ellipsis">
-                    {project.instructions || "-"}
-                  </td>
-                </tr>
-              );
-            })
-            : <tr>
-                <td colSpan={9} className="px-6 py-12 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      No projects found
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          itemsPerPage={itemsPerPage}
-          totalItems={projects.length}
+    <ProjectTableBase
+      items={projects}
+      columns={columns}
+      emptyStateTitle="No projects found"
+      onRowClick={handleRowClick}
+      enablePagination={true}
+      itemsPerPage={10}
+      className="mb-6"
+      getRowKey={(project) => project.id}
+      leadingColumn={(project) => (
+        <input
+          type="checkbox"
+          checked={selectedProjects.has(project.id)}
+          onChange={() => onToggleProject(project.id)}
+          onClick={(e) => e.stopPropagation()}
+          className="outline-style w-4 h-4 rounded cursor-pointer"
         />
       )}
-    </div>
+    />
   );
 }

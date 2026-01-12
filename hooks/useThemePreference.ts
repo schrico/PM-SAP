@@ -1,9 +1,10 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
+import { queryKeys } from "@/lib/queryKeys";
 
 export type ThemePreference = "system" | "light" | "dark";
 
@@ -13,16 +14,7 @@ interface UpdateThemeParams {
 }
 
 export function useThemePreference() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
 
   const updateThemeMutation = useMutation({
@@ -40,7 +32,7 @@ export function useThemePreference() {
     },
     onSuccess: (preference) => {
       // Invalidate user query to refresh theme preference
-      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.user() });
       
       const label = preference === "system" ? "System" : preference === "light" ? "Light" : "Dark";
       toast.success(`Theme set to ${label}`);

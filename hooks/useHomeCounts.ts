@@ -1,25 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
 import { useUser } from "@/hooks/useUser";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useHomeCounts() {
   const { user } = useUser();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
 
   // Count of user's projects (unclaimed + claimed)
   const { data: myProjectsCount = 0, isLoading: myProjectsLoading } = useQuery({
-    queryKey: ["home-my-projects-count", user?.id],
+    queryKey: queryKeys.homeMyProjectsCount(user?.id),
     queryFn: async () => {
       if (!user?.id) return 0;
 
@@ -42,7 +34,7 @@ export function useHomeCounts() {
   // Count of projects that are not completed (for manage projects)
   const { data: manageProjectsCount = 0, isLoading: manageProjectsLoading } =
     useQuery({
-      queryKey: ["home-manage-projects-count"],
+      queryKey: queryKeys.homeManageProjectsCount(),
       queryFn: async () => {
         const { count, error } = await supabase
           .from("projects")

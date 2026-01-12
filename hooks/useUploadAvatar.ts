@@ -1,10 +1,11 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import imageCompression from "browser-image-compression";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface UploadResult {
   success: boolean;
@@ -16,21 +17,11 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_WIDTH_HEIGHT = 512; // Max dimensions for avatar
 
 export function useUploadAvatar() {
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (file: File): Promise<UploadResult> => {
-      // Create Supabase client inside mutation to avoid hook ordering issues
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey =
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error("Missing Supabase environment variables.");
-      }
-
-      const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
 
       // 1. Get current user
       const {
@@ -111,10 +102,10 @@ export function useUploadAvatar() {
       return { success: true, url: publicUrl };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["user"] });
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["available-avatars"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userProfile() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.user() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.availableAvatars() });
       toast.success("Avatar uploaded successfully!");
     },
     onError: (error: Error) => {

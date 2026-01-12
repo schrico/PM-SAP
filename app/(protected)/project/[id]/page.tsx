@@ -9,13 +9,15 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { ProjectDetailsCard } from "@/components/project/ProjectDetailsCard";
 import { ProjectInstructionsCard } from "@/components/project/ProjectInstructionsCard";
 import { TranslatorsList } from "@/components/project/TranslatorsList";
-import { AddTranslatorModal } from "@/components/management/AddTranslatorModal";
+import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
 import { ReminderModal } from "@/components/project/ReminderModal";
 import { RefusalDialog } from "@/components/my-projects/RefusalDialog";
 import { DoneDialog } from "@/components/my-projects/DoneDialog";
 import { InitialMessageDialog } from "@/components/my-projects/InitialMessageDialog";
+import { ConfirmationDialog } from "@/components/management/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
@@ -59,6 +61,8 @@ export default function ProjectPage() {
     projectName: string;
     message: string;
   }>({ open: false, projectId: null, projectName: "", message: "" });
+
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
 
   const hasRedirected = useRef(false);
 
@@ -128,7 +132,7 @@ export default function ProjectPage() {
       if (error) throw new Error(`Failed to add translators: ${error.message}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Translators added successfully");
       setShowAddTranslatorModal(false);
     },
@@ -157,7 +161,7 @@ export default function ProjectPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Translator removed successfully");
     },
     onError: (error: Error) => {
@@ -190,7 +194,7 @@ export default function ProjectPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Reminder sent successfully");
       setShowReminderModal({ open: false, userId: "", userName: "" });
     },
@@ -236,8 +240,10 @@ export default function ProjectPage() {
       return { projectId, status };
     },
     onSuccess: ({ status }) => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["my-projects", user?.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.myProjects(user?.id || null),
+      });
 
       const messages = {
         claimed: "Project claimed successfully",
@@ -271,7 +277,7 @@ export default function ProjectPage() {
         throw new Error(`Failed to mark project as complete: ${error.message}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Project marked as complete");
     },
     onError: (error: Error) => {
@@ -569,7 +575,7 @@ export default function ProjectPage() {
                       onClick={handleClaimClick}
                       size="lg"
                       disabled={updateAssignmentMutation.isPending}
-                      className="cursor-pointer bg-green-500 hover:bg-green-600 text-white"
+                      className="cursor-pointer bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-500 dark:hover:bg-blue-600 hover:text-white dark:hover:text-white"
                     >
                       <Check className="w-5 h-5 mr-2" />
                       Claim Project
@@ -627,7 +633,7 @@ export default function ProjectPage() {
               onClaim={handleClaimForTranslator}
               onRefuse={handleRefuseForTranslator}
               onDone={handleDoneForTranslator}
-              onMarkComplete={() => markCompleteMutation.mutate()}
+              onMarkComplete={() => setShowCompleteConfirm(true)}
               canMarkComplete={
                 canManageAssignments() &&
                 project.translators.length > 0 &&
@@ -650,12 +656,12 @@ export default function ProjectPage() {
       {canManageAssignments() && (
         <>
           {showAddTranslatorModal && project && (
-            <AddTranslatorModal
+            <AddTranslatorDialog
               open={showAddTranslatorModal}
+              onOpenChange={setShowAddTranslatorModal}
               projectId={project.id}
               projectName={project.name}
               assignedTranslatorIds={project.translators.map((t) => t.id)}
-              onClose={() => setShowAddTranslatorModal(false)}
               onAddTranslators={handleAddTranslators}
               isAdding={addTranslatorsMutation.isPending}
             />
@@ -671,33 +677,41 @@ export default function ProjectPage() {
             onSendDefault={handleSendDefaultReminder}
             isSending={sendReminderMutation.isPending}
           />
+
+          <ConfirmationDialog
+            open={showCompleteConfirm}
+            onOpenChange={setShowCompleteConfirm}
+            title="Mark Project Complete"
+            description="Are you sure you want to mark this project as complete? This action indicates the project is finished."
+            confirmText="Mark Complete"
+            onConfirm={() => markCompleteMutation.mutate()}
+            onCancel={() => {}}
+            isLoading={markCompleteMutation.isPending}
+            variant="success"
+          />
         </>
       )}
 
       {/* Translator Dialogs */}
-      {isTranslator() && (
-        <>
-          <RefusalDialog
-            open={refusalDialog.open}
-            projectName={refusalDialog.projectName}
-            onConfirm={handleConfirmRefuse}
-            onCancel={handleCancelRefuse}
-          />
-          <DoneDialog
-            open={doneDialog.open}
-            projectName={doneDialog.projectName}
-            onConfirm={handleConfirmDone}
-            onCancel={handleCancelDone}
-          />
-          <InitialMessageDialog
-            open={initialMessageDialog.open}
-            projectName={initialMessageDialog.projectName}
-            message={initialMessageDialog.message}
-            onClose={handleCloseInitialMessage}
-            onClaim={handleClaimProject}
-          />
-        </>
-      )}
+      <RefusalDialog
+        open={refusalDialog.open}
+        projectName={refusalDialog.projectName}
+        onConfirm={handleConfirmRefuse}
+        onCancel={handleCancelRefuse}
+      />
+      <DoneDialog
+        open={doneDialog.open}
+        projectName={doneDialog.projectName}
+        onConfirm={handleConfirmDone}
+        onCancel={handleCancelDone}
+      />
+      <InitialMessageDialog
+        open={initialMessageDialog.open}
+        projectName={initialMessageDialog.projectName}
+        message={initialMessageDialog.message}
+        onClose={handleCloseInitialMessage}
+        onClaim={handleClaimProject}
+      />
     </div>
   );
 }

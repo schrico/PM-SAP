@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Save, Loader2, Users, UserPlus, X } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
-import { AddTranslatorModal } from "@/components/management/AddTranslatorModal";
+import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +34,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
+import { queryKeys } from "@/lib/queryKeys";
 
 const projectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
@@ -191,8 +192,8 @@ export default function EditProjectPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       toast.success("Project updated successfully");
       router.push(`/project/${projectId}`);
     },
@@ -226,7 +227,7 @@ export default function EditProjectPage() {
       if (error) throw new Error(`Failed to add translators: ${error.message}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Translators added successfully");
       setShowAddTranslatorModal(false);
     },
@@ -255,7 +256,7 @@ export default function EditProjectPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Translator removed successfully");
       setTranslatorToRemove(null);
     },
@@ -815,12 +816,12 @@ export default function EditProjectPage() {
 
       {/* Add Translator Modal */}
       {showAddTranslatorModal && project && (
-        <AddTranslatorModal
+        <AddTranslatorDialog
           open={showAddTranslatorModal}
+          onOpenChange={setShowAddTranslatorModal}
           projectId={project.id}
           projectName={project.name}
           assignedTranslatorIds={project.translators.map((t) => t.id)}
-          onClose={() => setShowAddTranslatorModal(false)}
           onAddTranslators={handleAddTranslators}
           isAdding={addTranslatorsMutation.isPending}
         />

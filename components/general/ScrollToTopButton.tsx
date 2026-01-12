@@ -1,10 +1,28 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { ChevronUp } from "lucide-react";
-import { useScrollPosition } from "@/hooks/useScrollPosition";
 
 export function ScrollToTopButton() {
-  const isScrolled = useScrollPosition(300);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      setIsScrolled(scrollY > 300);
+    };
+
+    // Check initial scroll position
+    handleScroll();
+
+    // Add scroll event listener
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   const scrollToTop = () => {
     window.scrollTo({

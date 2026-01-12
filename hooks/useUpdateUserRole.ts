@@ -1,10 +1,11 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import type { UserRole } from "@/types/user";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface UpdateUserRoleData {
   userId: string;
@@ -12,16 +13,7 @@ interface UpdateUserRoleData {
 }
 
 export function useUpdateUserRole() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -121,12 +113,12 @@ export function useUpdateUserRole() {
     },
     onSuccess: (result) => {
       // Invalidate queries to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["user"] });
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.user() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userProfile() });
       
       // Force refetch to ensure UI updates immediately
-      queryClient.refetchQueries({ queryKey: ["users"] });
+      queryClient.refetchQueries({ queryKey: queryKeys.users() });
 
       toast.success(
         `${result.userName || "User"}'s role updated to ${result.newRole} successfully!`

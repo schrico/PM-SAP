@@ -12,13 +12,15 @@ import { ScrollToTopButton } from "@/components/general/ScrollToTopButton";
 import { ManagementTabs } from "@/components/management/ManagementTabs";
 import { ManagementTable } from "@/components/management/ManagementTable";
 import { ManagementCard } from "@/components/management/ManagementCard";
-import { AddTranslatorModal } from "@/components/management/AddTranslatorModal";
-import { RemoveTranslatorModal } from "@/components/management/RemoveTranslatorModal";
+import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
+import { RemoveTranslatorDialog } from "@/components/management/RemoveTranslatorDialog";
+import { ConfirmationDialog } from "@/components/management/ConfirmationDialog";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import {
@@ -75,6 +77,12 @@ function ProjectManagementContent() {
       assignment_status: string;
     }>;
   }>({ open: false, projectId: 0, projectName: "", translators: [] });
+
+  const [completeConfirmModal, setCompleteConfirmModal] = useState<{
+    open: boolean;
+    projectId: number;
+    projectName: string;
+  }>({ open: false, projectId: 0, projectName: "" });
 
   // State for editing project words/lines
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
@@ -290,12 +298,13 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects-with-translators"],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Project marked as complete");
       setOpenMenu(null);
     },
-    onError: (error: Error) => toast.error(getUserFriendlyError(error, "project management")),
+    onError: (error: Error) =>
+      toast.error(getUserFriendlyError(error, "project management")),
   });
 
   const addTranslatorsMutation = useMutation({
@@ -322,7 +331,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects-with-translators"],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Translators added successfully");
       setAddTranslatorModal({
@@ -332,7 +341,8 @@ function ProjectManagementContent() {
         assignedTranslatorIds: [],
       });
     },
-    onError: (error: Error) => toast.error(getUserFriendlyError(error, "project management")),
+    onError: (error: Error) =>
+      toast.error(getUserFriendlyError(error, "project management")),
   });
 
   const removeTranslatorMutation = useMutation({
@@ -441,7 +451,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects-with-translators"],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Translator removed successfully");
       setRemoveTranslatorModal({
@@ -452,7 +462,8 @@ function ProjectManagementContent() {
       });
       setOpenMenu(null);
     },
-    onError: (error: Error) => toast.error(getUserFriendlyError(error, "project management")),
+    onError: (error: Error) =>
+      toast.error(getUserFriendlyError(error, "project management")),
   });
 
   // Mutation to update project words/lines
@@ -477,12 +488,13 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects-with-translators"],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Words/Lines updated successfully");
       setEditingProjectId(null);
     },
-    onError: (error: Error) => toast.error(getUserFriendlyError(error, "project management")),
+    onError: (error: Error) =>
+      toast.error(getUserFriendlyError(error, "project management")),
   });
 
   // Handlers for words/lines editing
@@ -546,7 +558,15 @@ function ProjectManagementContent() {
   };
 
   const handleCompleteProject = (projectId: number) => {
-    markCompleteMutation.mutate(projectId);
+    const project = allProjects.find((p) => p.id === projectId);
+    if (project) {
+      setCompleteConfirmModal({
+        open: true,
+        projectId,
+        projectName: project.name,
+      });
+      setOpenMenu(null);
+    }
   };
 
   const clearAllFilters = () => {
@@ -750,42 +770,69 @@ function ProjectManagementContent() {
       }
 
       {/* Modals */}
-      <AddTranslatorModal
+      <AddTranslatorDialog
         open={addTranslatorModal.open}
+        onOpenChange={(open) =>
+          setAddTranslatorModal({
+            open,
+            projectId: addTranslatorModal.projectId,
+            projectName: addTranslatorModal.projectName,
+            assignedTranslatorIds: addTranslatorModal.assignedTranslatorIds,
+          })
+        }
         projectId={addTranslatorModal.projectId}
         projectName={addTranslatorModal.projectName}
         assignedTranslatorIds={addTranslatorModal.assignedTranslatorIds}
-        onClose={() =>
-          setAddTranslatorModal({
-            open: false,
-            projectId: 0,
-            projectName: "",
-            assignedTranslatorIds: [],
-          })
-        }
         onAddTranslators={(projectId, userIds, messages) =>
           addTranslatorsMutation.mutate({ projectId, userIds, messages })
         }
         isAdding={addTranslatorsMutation.isPending}
       />
 
-      <RemoveTranslatorModal
+      <RemoveTranslatorDialog
         open={removeTranslatorModal.open}
+        onOpenChange={(open) =>
+          setRemoveTranslatorModal({
+            open,
+            projectId: removeTranslatorModal.projectId,
+            projectName: removeTranslatorModal.projectName,
+            translators: removeTranslatorModal.translators,
+          })
+        }
         projectId={removeTranslatorModal.projectId}
         projectName={removeTranslatorModal.projectName}
         translators={removeTranslatorModal.translators}
-        onClose={() =>
-          setRemoveTranslatorModal({
-            open: false,
-            projectId: 0,
-            projectName: "",
-            translators: [],
-          })
-        }
         onRemoveTranslator={(projectId, userId) =>
           removeTranslatorMutation.mutate({ projectId, userId })
         }
         isRemoving={removeTranslatorMutation.isPending}
+      />
+
+      <ConfirmationDialog
+        open={completeConfirmModal.open}
+        onOpenChange={(open) =>
+          setCompleteConfirmModal({
+            open,
+            projectId: completeConfirmModal.projectId,
+            projectName: completeConfirmModal.projectName,
+          })
+        }
+        title="Mark Project Complete"
+        description={
+          <>
+            Are you sure you want to mark{" "}
+            <span className="font-medium">
+              {completeConfirmModal.projectName}
+            </span>{" "}
+            as complete? This action indicates the project is finished.
+          </>
+        }
+        confirmText="Mark Complete"
+        onConfirm={() =>
+          markCompleteMutation.mutate(completeConfirmModal.projectId)
+        }
+        onCancel={() => {}}
+        isLoading={markCompleteMutation.isPending}
       />
 
       {/* Scroll to Top Button */}

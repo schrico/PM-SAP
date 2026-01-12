@@ -1,43 +1,60 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Save, Loader2, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import { useUser } from "@/hooks/useUser";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { ProfileFormField } from "./ProfileFormField";
 import { ProfileStatus } from "./ProfileStatus";
 import { AvatarSelectionModal } from "./AvatarSelectionModal";
 import { Loader2 as LoaderIcon } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
-interface ProfileFormData {
-  name: string;
-  short_name: string;
-  email: string;
-  C_user: string;
-  TE_user: string;
-  role: string;
-}
+const profileSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  short_name: z.string().optional(),
+  email: z.string().email("Invalid email address"),
+  C_user: z.string().optional(),
+  TE_user: z.string().optional(),
+  role: z.string(), // Read-only, but included in schema
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function ProfilePageContent() {
-  const { data: user, isLoading: userLoading } = useUserProfile();
+  const { user, loading: userLoading } = useUser();
   const updateProfile = useUpdateProfile();
-  const [formData, setFormData] = useState<ProfileFormData>({
-    name: "",
-    short_name: "",
-    email: "",
-    C_user: "",
-    TE_user: "",
-    role: "",
-  });
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: "",
+      short_name: "",
+      email: "",
+      C_user: "",
+      TE_user: "",
+      role: "",
+    },
+  });
 
   // Initialize form data when user loads
   useEffect(() => {
     if (user) {
-      setFormData({
+      form.reset({
         name: user.name || "",
         short_name: user.short_name || "",
         email: user.email || "",
@@ -49,10 +66,10 @@ export function ProfilePageContent() {
           : "Translator",
       });
     }
-  }, [user]);
+  }, [user, form]);
 
   const initialData = useMemo(() => {
-    if (!user) return formData;
+    if (!user) return form.getValues();
     return {
       name: user.name || "",
       short_name: user.short_name || "",
@@ -67,25 +84,21 @@ export function ProfilePageContent() {
   }, [user]);
 
   const hasChanges = useMemo(() => {
-    return JSON.stringify(formData) !== JSON.stringify(initialData);
-  }, [formData, initialData]);
+    const currentValues = form.getValues();
+    return JSON.stringify(currentValues) !== JSON.stringify(initialData);
+  }, [form, initialData]);
 
-  const handleChange = (field: keyof ProfileFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async () => {
+  const onSubmit = async (data: ProfileFormValues) => {
     if (!hasChanges) return;
 
     try {
       await updateProfile.mutateAsync({
-        name: formData.name,
-        short_name: formData.short_name, // Hook will convert empty string to null
-        C_user: formData.C_user || "",
-        TE_user: formData.TE_user || "",
-        email: formData.email,
+        name: data.name,
+        short_name: data.short_name || null, // Hook will convert empty string to null
+        C_user: data.C_user || "",
+        TE_user: data.TE_user || "",
+        email: data.email,
       });
-      setLastSavedAt(new Date());
     } catch (error) {
       // Error is handled by the mutation
     }
@@ -109,6 +122,8 @@ export function ProfilePageContent() {
     );
   }
 
+  const formValues = form.watch();
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
@@ -127,143 +142,194 @@ export function ProfilePageContent() {
         <div className="p-8 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-6">
             <ProfileAvatar
-              name={formData.name}
+              name={formValues.name}
               avatar={user?.avatar}
               onAvatarClick={() => setAvatarModalOpen(true)}
             />
             <div>
               <h2 className="text-gray-900 dark:text-white mb-1 text-lg font-semibold">
-                {formData.name}
+                {formValues.name}
               </h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm">
-                {formData.email}
+                {formValues.email}
               </p>
             </div>
           </div>
 
-          <ProfileStatus hasChanges={hasChanges} lastSavedAt={lastSavedAt} />
+          <ProfileStatus hasChanges={hasChanges} lastSavedAt={updateProfile.isSuccess ? new Date() : null} />
         </div>
 
         {/* Form Section */}
-        <div className="p-8 space-y-8">
-          {/* Personal info */}
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Personal information
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                This will be visible to project managers and colleagues.
-              </p>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="p-8 space-y-8">
+              {/* Personal info */}
+              <section className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Personal information
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    This will be visible to project managers and colleagues.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Name */}
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Short Name */}
+                  <FormField
+                    control={form.control}
+                    name="short_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preferred Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="This is how your name will appear in project views."
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Email */}
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="email"
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Role (Read-only) */}
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled
+                            className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </section>
+
+              <hr className="border-gray-200 dark:border-gray-700" />
+
+              {/* Account details */}
+              <section className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Account details
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Integration usernames for your CAT tools.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* C User */}
+                  <FormField
+                    control={form.control}
+                    name="C_user"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>C Username</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* TE User */}
+                  <FormField
+                    control={form.control}
+                    name="TE_user"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>TE Username</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </section>
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-4">
+                <button
+                  type="submit"
+                  disabled={!hasChanges || updateProfile.isPending}
+                  className={`px-6 py-3 cursor-pointer rounded-lg transition-colors flex items-center gap-2 shadow-sm text-sm font-medium ${
+                    !hasChanges || updateProfile.isPending ?
+                      "bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
+                    : "bg-blue-500 hover:bg-blue-600 text-white"
+                  }`}
+                >
+                  {updateProfile.isPending ?
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  : <>
+                      <Save className="w-4 h-4" />
+                      Save Changes
+                    </>
+                  }
+                </button>
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Name */}
-              <ProfileFormField label="Full Name" required>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </ProfileFormField>
-
-              {/* Short Name */}
-              <ProfileFormField
-                label="Preferred Name"
-                description="This is how your name will appear in project views."
-              >
-                <input
-                  type="text"
-                  value={formData.short_name}
-                  onChange={(e) => handleChange("short_name", e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </ProfileFormField>
-
-              {/* Email */}
-              <ProfileFormField label="Email Address">
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </ProfileFormField>
-
-              {/* Role (Read-only) */}
-              <ProfileFormField label="Role">
-                <input
-                  type="text"
-                  value={formData.role}
-                  disabled
-                  className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                />
-              </ProfileFormField>
-            </div>
-          </section>
-
-          <hr className="border-gray-200 dark:border-gray-700" />
-
-          {/* Account details */}
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Account details
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Integration usernames for your CAT tools.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* C User */}
-              <ProfileFormField label="C Username">
-                <input
-                  type="text"
-                  value={formData.C_user}
-                  onChange={(e) => handleChange("C_user", e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </ProfileFormField>
-
-              {/* TE User */}
-              <ProfileFormField label="TE Username">
-                <input
-                  type="text"
-                  value={formData.TE_user}
-                  onChange={(e) => handleChange("TE_user", e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </ProfileFormField>
-            </div>
-          </section>
-
-          {/* Save Button */}
-          <div className="flex justify-end pt-4">
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || updateProfile.isPending}
-              className={`px-6 py-3 cursor-pointer rounded-lg transition-colors flex items-center gap-2 shadow-sm text-sm font-medium ${
-                !hasChanges || updateProfile.isPending ?
-                  "bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-              }`}
-              type="button"
-            >
-              {updateProfile.isPending ?
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              : <>
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </>
-              }
-            </button>
-          </div>
-        </div>
+          </form>
+        </Form>
       </div>
 
       {/* Link to Settings for notifications */}

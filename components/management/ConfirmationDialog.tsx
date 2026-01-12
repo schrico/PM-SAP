@@ -15,13 +15,13 @@ interface ConfirmationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
+  description: string | React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   onConfirm: () => void;
   onCancel: () => void;
   isLoading?: boolean;
-  variant?: "default" | "destructive";
+  variant?: "default" | "destructive" | "success";
 }
 
 export function ConfirmationDialog({
@@ -65,6 +65,11 @@ export function ConfirmationDialog({
             onClick={handleConfirm}
             disabled={isLoading}
             variant={variant === "destructive" ? "destructive" : "default"}
+            className={
+              variant === "success" ?
+                "bg-green-500 hover:bg-green-600 text-white"
+              : undefined
+            }
           >
             {isLoading ? "Processing..." : confirmText}
           </Button>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
+import { queryKeys } from "@/lib/queryKeys";
 
 // Custom error class for avatar-specific errors
 export class AvatarAlreadyTakenError extends Error {
@@ -19,16 +20,7 @@ interface UpdateAvatarResult {
 }
 
 export function useUpdateAvatar() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -116,10 +108,10 @@ export function useUpdateAvatar() {
     },
     onSuccess: () => {
       // Invalidate all relevant queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["user"] });
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["available-avatars"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userProfile() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.user() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.availableAvatars() });
 
       toast.success("Avatar updated successfully!");
     },

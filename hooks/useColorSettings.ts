@@ -1,23 +1,15 @@
 "use client";
 
 import { useQuery } from '@tanstack/react-query';
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
 import { getBgClass, getTextClass, getColorPreview } from "@/utils/tailwindColors";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useColorSettings() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
 
   const { data: settings = [], isLoading: loading, error } = useQuery({
-    queryKey: ['color-settings'],
+    queryKey: queryKeys.colorSettings(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("color_settings")

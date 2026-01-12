@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Circle, Clock, CheckCircle2, XCircle, Check } from "lucide-react";
+import { Check, XCircle } from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
+import { getSystemColorStyle, getLanguageColorStyle, getStatusIcon } from "@/utils/projectTableHelpers";
 import { ProjectActionsMenu } from "./ProjectActionsMenu";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
@@ -81,23 +82,11 @@ export function ManagementCard({
   const router = useRouter();
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
 
-  // Get system color style using preview hex for the color indicator
-  const getSystemColorStyle = (system: string) => {
-    const color = getSystemColorPreview(system);
-    if (color === "transparent" || !color) {
-      return { backgroundColor: "transparent" };
-    }
-    return { backgroundColor: color };
-  };
-
-  // Get language color for underline using preview hex
-  const getLanguageColorStyle = (langIn: string, langOut: string) => {
-    const color = getLanguageColorPreview(langIn || "", langOut || "");
-    if (color === "transparent" || !color) {
-      return { backgroundColor: "transparent" };
-    }
-    return { backgroundColor: color };
-  };
+  // Use shared utility functions for color styles
+  const getSystemColorStyleLocal = (system: string) =>
+    getSystemColorStyle(system, getSystemColorPreview);
+  const getLanguageColorStyleLocal = (langIn: string, langOut: string) =>
+    getLanguageColorStyle(langIn, langOut, getLanguageColorPreview);
 
   const handleCardClick = (id: number, e: React.MouseEvent) => {
     // Don't navigate if clicking on a button or menu
@@ -107,35 +96,8 @@ export function ManagementCard({
     router.push(`/project/${id}`);
   };
 
-  // Get status icon and label for translator assignment
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "claimed":
-        return {
-          icon: Clock,
-          color: "text-blue-500",
-          label: "In Progress",
-        };
-      case "done":
-        return {
-          icon: CheckCircle2,
-          color: "text-green-500",
-          label: "Done",
-        };
-      case "rejected":
-        return {
-          icon: XCircle,
-          color: "text-red-500",
-          label: "Rejected",
-        };
-      default: // unclaimed
-        return {
-          icon: Circle,
-          color: "text-gray-400",
-          label: "Unclaimed",
-        };
-    }
-  };
+  // Use shared utility function for status icon
+  const getStatusIconLocal = getStatusIcon;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -151,11 +113,11 @@ export function ManagementCard({
                 <div className="flex flex-col items-center mr-2">
                   <div
                     className="w-3 h-3 rounded"
-                    style={getSystemColorStyle(project.system)}
+                    style={getSystemColorStyleLocal(project.system)}
                   />
                   <div
                     className="w-3 h-0.5 mt-0.5"
-                    style={getLanguageColorStyle(
+                    style={getLanguageColorStyleLocal(
                       project.language_in || "",
                       project.language_out || ""
                     )}
@@ -237,7 +199,7 @@ export function ManagementCard({
                 <TooltipProvider>
                   <div className="flex flex-wrap gap-2">
                     {project.translators.map((translator) => {
-                      const statusInfo = getStatusIcon(translator.assignment_status);
+                      const statusInfo = getStatusIconLocal(translator.assignment_status);
                       const StatusIcon = statusInfo.icon;
                       return (
                         <div

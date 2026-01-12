@@ -5,6 +5,7 @@ import { Loader2, Shield, AlertCircle } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { useUpdateUserRole } from "@/hooks/useUpdateUserRole";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import type { UserRole } from "@/types/user";
 import {
@@ -74,13 +75,13 @@ export function UserRoleManagement() {
           // Remove from pending set
           pendingMutations.current.delete(mutationKey);
           // Refetch to ensure we have the latest data
-          queryClient.invalidateQueries({ queryKey: ["users"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.users() });
         },
         onError: () => {
           // Remove from pending set
           pendingMutations.current.delete(mutationKey);
           // Revert optimistic update on error
-          queryClient.invalidateQueries({ queryKey: ["users"] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.users() });
         },
       }
     );

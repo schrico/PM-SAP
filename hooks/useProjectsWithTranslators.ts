@@ -1,23 +1,15 @@
 "use client";
 
 import { useQuery } from '@tanstack/react-query';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabase } from "./useSupabase";
 import type { ProjectWithTranslators, ProjectTranslator } from '@/types/project';
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useProjectsWithTranslators(showPast: boolean = false, showAll: boolean = false) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ['projects-with-translators', showPast, showAll],
+    queryKey: queryKeys.projectsWithTranslators(showPast, showAll),
     queryFn: async (): Promise<ProjectWithTranslators[]> => {
       // First, get all projects
       const { data: projects, error: projectsError } = await supabase

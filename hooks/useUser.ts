@@ -1,42 +1,37 @@
 "use client";
 
 import { useQuery } from '@tanstack/react-query';
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
+import { queryKeys } from "@/lib/queryKeys";
+import type { User } from '@/types/user';
 
 export function useUser() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
 
   const { data: user, isLoading: loading, error } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
-
-      if (!authUser) {
+    queryKey: queryKeys.user(),
+    queryFn: async (): Promise<(User & { email: string; theme_preference?: string | null }) | null> => {
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData.user) {
         return null;
       }
 
-      const { data: profile, error } = await supabase
-        .from("users")
-        .select("id, name, email, role, C_user, TE_user, short_name, avatar, custom_avatar, theme_preference")
-        .eq("id", authUser.id)
+      const { data: userProfile, error } = await supabase
+        .from('users')
+        .select('id, name, email, role, C_user, TE_user, short_name, avatar, custom_avatar, theme_preference')
+        .eq('id', userData.user.id)
         .single();
 
       if (error) {
         throw new Error(`Failed to fetch user profile: ${error.message}`);
       }
 
-      return profile;
+      // Get email from auth user (it's the source of truth)
+      return {
+        ...userProfile,
+        email: userData.user.email || userProfile.email || '',
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false, // Don't retry if user is not authenticated

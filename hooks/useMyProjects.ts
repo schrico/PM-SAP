@@ -1,21 +1,13 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
 import { toast } from "sonner";
 import type { ProjectAssignment } from "@/types/project-assignment";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useMyProjects(userId: string | null) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
   const queryClient = useQueryClient();
 
   const {
@@ -23,15 +15,10 @@ export function useMyProjects(userId: string | null) {
     isLoading: loading,
     error,
   } = useQuery({
-    queryKey: ['my-projects', userId],
+    queryKey: queryKeys.myProjects(userId),
     queryFn: async (): Promise<{ unclaimed: ProjectAssignment[]; claimed: ProjectAssignment[] }> => {
       if (!userId) {
         return { unclaimed: [], claimed: [] };
-      }
-
-      // Verify Supabase connection
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error("Missing Supabase environment variables. Please check your .env.local file.");
       }
 
       const { data, error } = await supabase
@@ -127,7 +114,7 @@ export function useMyProjects(userId: string | null) {
       toast.success(messages[status]);
 
       // Invalidate and refetch the projects query
-      queryClient.invalidateQueries({ queryKey: ['my-projects', userId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
     },
     onError: (error: any, { status }) => {
       const action = status === "claimed"
@@ -182,7 +169,7 @@ export function useMyProjects(userId: string | null) {
   };
 
   const refreshProjects = () => {
-    queryClient.invalidateQueries({ queryKey: ['my-projects', userId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
   };
 
   return {

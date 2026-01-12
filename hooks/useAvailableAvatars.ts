@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "./useSupabase";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Avatar {
   filename: string;
@@ -17,19 +18,10 @@ function isCustomAvatar(avatar: string | null | undefined): boolean {
 }
 
 export function useAvailableAvatars() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ["available-avatars"],
+    queryKey: queryKeys.availableAvatars(),
     queryFn: async (): Promise<Avatar[]> => {
       // Get all avatars
       const { data: allAvatars, error: avatarsError } = await supabase

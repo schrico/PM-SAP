@@ -1,6 +1,3 @@
----
-alwaysApply: true
----
 
 # Technology Stack Rules
 
@@ -15,7 +12,7 @@ This project follows a specific technology stack. Always use these technologies 
 - Use Supabase client for all database operations
 - Implement proper authentication flows with Supabase Auth
 
-### Database Schema
+## Database Schema
 The project uses the following Supabase tables:
 
 -- WARNING: This schema is for context only and is not meant to be run.
@@ -212,6 +209,7 @@ Assume these work as provided by Supabase.
 
 When in doubt: make it simpler.
 
+
 ### Database Guidelines
 - Always use proper TypeScript types that match the database schema
 - Use Zod schemas for validating data from Supabase
@@ -269,6 +267,3 @@ When in doubt: make it simpler.
 - Use Tailwind for styling with shadcn/ui components
 - Implement proper authentication flows with Supabase
 - Follow consistent file structure and naming conventions
-
-## Always do before finishing response
- Always run "npm run build"
