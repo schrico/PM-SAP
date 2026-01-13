@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { useUserWorkload } from "@/hooks/useUserWorkload";
 import type { User } from "@/types/user";
@@ -28,7 +28,10 @@ interface AddTranslatorDialogProps {
   onOpenChange: (open: boolean) => void;
   projectId: number;
   projectName: string;
+  /** The assigned translator IDs when the dialog was opened (stored in state) */
   assignedTranslatorIds?: string[];
+  /** Live assigned translator IDs from the current query (for detecting changes) */
+  liveAssignedTranslatorIds?: string[];
   onAddTranslators: (
     projectId: number,
     userIds: string[],
@@ -43,6 +46,7 @@ export function AddTranslatorDialog({
   projectId,
   projectName,
   assignedTranslatorIds = [],
+  liveAssignedTranslatorIds,
   onAddTranslators,
   isAdding,
 }: AddTranslatorDialogProps) {
@@ -54,6 +58,23 @@ export function AddTranslatorDialog({
   const [translatorMessages, setTranslatorMessages] = useState<
     Record<string, string>
   >({});
+
+  // Detect if the assignment data has changed since the dialog was opened
+  const isDataStale = useMemo(() => {
+    if (!liveAssignedTranslatorIds) return false;
+
+    // Check if the sets are different
+    const originalSet = new Set(assignedTranslatorIds);
+    const liveSet = new Set(liveAssignedTranslatorIds);
+
+    if (originalSet.size !== liveSet.size) return true;
+
+    for (const id of originalSet) {
+      if (!liveSet.has(id)) return true;
+    }
+
+    return false;
+  }, [assignedTranslatorIds, liveAssignedTranslatorIds]);
 
   // Filter out already assigned translators
   const availableUsers =
@@ -96,26 +117,41 @@ export function AddTranslatorDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
-          <DialogTitle>Add Translator</DialogTitle>
-          <DialogDescription>
-            Select translators to add to{" "}
-            <span className="font-medium">{projectName}</span>
-          </DialogDescription>
-        </DialogHeader>
+        {/* Show stale data warning if assignments changed */}
+        {isDataStale ?
+          <div className="flex flex-col items-center justify-center py-16 px-6">
+            <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Project Updated
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 text-center">
+              The translator assignments for this project have been modified by another user.
+            </p>
+            <Button onClick={handleClose} className="px-6">
+              Go Back to Selection
+            </Button>
+          </div>
+        : <>
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+            <DialogTitle>Add Translator</DialogTitle>
+            <DialogDescription>
+              Select translators to add to{" "}
+              <span className="font-medium">{projectName}</span>
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto px-6 min-h-0">
-          {/* Translator Cards */}
-          {usersLoading || workloadsLoading ?
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              Loading users...
-            </div>
-          : availableUsers.length === 0 ?
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              All available translators are already assigned to this project.
-            </div>
-          : <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto px-6 min-h-0">
+            {/* Translator Cards */}
+            {usersLoading || workloadsLoading ?
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                Loading users...
+              </div>
+            : availableUsers.length === 0 ?
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                All available translators are already assigned to this project.
+              </div>
+            : <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
             {availableUsers.map((user: User) => {
               const isSelected = selectedTranslators.has(user.id);
               const userWorkload = workloads.get(user.id);
@@ -272,33 +308,35 @@ export function AddTranslatorDialog({
                 </div>
               );
             })}
-          </div>
-          }
-        </div>
-
-        {/* Fixed Footer at bottom */}
-        <DialogFooter className="flex-shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4 shadow-lg">
-          <div className="flex justify-between items-center w-full">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              {selectedTranslators.size} translator
-              {selectedTranslators.size !== 1 ? "s" : ""} selected
-            </p>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleClose} disabled={isAdding}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAssignTranslators}
-                disabled={selectedTranslators.size === 0 || isAdding}
-              >
-                {isAdding ?
-                  "Adding..."
-                : `Assign ${selectedTranslators.size} translator${selectedTranslators.size !== 1 ? "s" : ""}`
-                }
-              </Button>
             </div>
+            }
           </div>
-        </DialogFooter>
+
+          {/* Fixed Footer at bottom */}
+          <DialogFooter className="flex-shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4 shadow-lg">
+            <div className="flex justify-between items-center w-full">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                {selectedTranslators.size} translator
+                {selectedTranslators.size !== 1 ? "s" : ""} selected
+              </p>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleClose} disabled={isAdding}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAssignTranslators}
+                  disabled={selectedTranslators.size === 0 || isAdding}
+                >
+                  {isAdding ?
+                    "Adding..."
+                  : `Assign ${selectedTranslators.size} translator${selectedTranslators.size !== 1 ? "s" : ""}`
+                  }
+                </Button>
+              </div>
+            </div>
+          </DialogFooter>
+        </>
+        }
       </DialogContent>
     </Dialog>
   );

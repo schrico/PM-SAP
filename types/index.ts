@@ -15,6 +15,12 @@ export type { ProjectAssignment } from './project-assignment';
 
 export type { UserRole, User } from './user';
 
+export type {
+  FieldChange,
+  ConflictResult,
+  ConcurrencySafeMutationOptions,
+} from './concurrency';
+
 
 
 

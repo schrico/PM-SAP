@@ -37,7 +37,12 @@ export default function ProjectPage() {
     canManageAssignments,
   } = useRoleAccess();
 
-  const [showAddTranslatorModal, setShowAddTranslatorModal] = useState(false);
+  const [addTranslatorModal, setAddTranslatorModal] = useState<{
+    open: boolean;
+    projectId: number;
+    projectName: string;
+    assignedTranslatorIds: string[];
+  }>({ open: false, projectId: 0, projectName: "", assignedTranslatorIds: [] });
   const [showReminderModal, setShowReminderModal] = useState<{
     open: boolean;
     userId: string;
@@ -134,7 +139,12 @@ export default function ProjectPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Translators added successfully");
-      setShowAddTranslatorModal(false);
+      setAddTranslatorModal({
+        open: false,
+        projectId: 0,
+        projectName: "",
+        assignedTranslatorIds: [],
+      });
     },
     onError: (error: Error) => {
       toast.error(getUserFriendlyError(error, "translator management"));
@@ -296,7 +306,13 @@ export default function ProjectPage() {
   };
 
   const handleAddTranslator = () => {
-    setShowAddTranslatorModal(true);
+    if (!project) return;
+    setAddTranslatorModal({
+      open: true,
+      projectId: project.id,
+      projectName: project.name,
+      assignedTranslatorIds: project.translators.map((t) => t.id),
+    });
   };
 
   const handleRemoveTranslator = (userId: string) => {
@@ -575,7 +591,7 @@ export default function ProjectPage() {
                       onClick={handleClaimClick}
                       size="lg"
                       disabled={updateAssignmentMutation.isPending}
-                      className="cursor-pointer bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-500 dark:hover:bg-blue-600 hover:text-white dark:hover:text-white"
+                      className="cursor-pointer bg-green-500 hover:bg-green-600 text-white"
                     >
                       <Check className="w-5 h-5 mr-2" />
                       Claim Project
@@ -655,17 +671,23 @@ export default function ProjectPage() {
       {/* PM/Admin Modals */}
       {canManageAssignments() && (
         <>
-          {showAddTranslatorModal && project && (
-            <AddTranslatorDialog
-              open={showAddTranslatorModal}
-              onOpenChange={setShowAddTranslatorModal}
-              projectId={project.id}
-              projectName={project.name}
-              assignedTranslatorIds={project.translators.map((t) => t.id)}
-              onAddTranslators={handleAddTranslators}
-              isAdding={addTranslatorsMutation.isPending}
-            />
-          )}
+          <AddTranslatorDialog
+            open={addTranslatorModal.open}
+            onOpenChange={(open) =>
+              setAddTranslatorModal({
+                open,
+                projectId: addTranslatorModal.projectId,
+                projectName: addTranslatorModal.projectName,
+                assignedTranslatorIds: addTranslatorModal.assignedTranslatorIds,
+              })
+            }
+            projectId={addTranslatorModal.projectId}
+            projectName={addTranslatorModal.projectName}
+            assignedTranslatorIds={addTranslatorModal.assignedTranslatorIds}
+            liveAssignedTranslatorIds={project?.translators.map((t) => t.id)}
+            onAddTranslators={handleAddTranslators}
+            isAdding={addTranslatorsMutation.isPending}
+          />
 
           <ReminderModal
             open={showReminderModal.open}
@@ -687,31 +709,34 @@ export default function ProjectPage() {
             onConfirm={() => markCompleteMutation.mutate()}
             onCancel={() => {}}
             isLoading={markCompleteMutation.isPending}
-            variant="success"
           />
         </>
       )}
 
       {/* Translator Dialogs */}
-      <RefusalDialog
-        open={refusalDialog.open}
-        projectName={refusalDialog.projectName}
-        onConfirm={handleConfirmRefuse}
-        onCancel={handleCancelRefuse}
-      />
-      <DoneDialog
-        open={doneDialog.open}
-        projectName={doneDialog.projectName}
-        onConfirm={handleConfirmDone}
-        onCancel={handleCancelDone}
-      />
-      <InitialMessageDialog
-        open={initialMessageDialog.open}
-        projectName={initialMessageDialog.projectName}
-        message={initialMessageDialog.message}
-        onClose={handleCloseInitialMessage}
-        onClaim={handleClaimProject}
-      />
+      {isTranslator() && (
+        <>
+          <RefusalDialog
+            open={refusalDialog.open}
+            projectName={refusalDialog.projectName}
+            onConfirm={handleConfirmRefuse}
+            onCancel={handleCancelRefuse}
+          />
+          <DoneDialog
+            open={doneDialog.open}
+            projectName={doneDialog.projectName}
+            onConfirm={handleConfirmDone}
+            onCancel={handleCancelDone}
+          />
+          <InitialMessageDialog
+            open={initialMessageDialog.open}
+            projectName={initialMessageDialog.projectName}
+            message={initialMessageDialog.message}
+            onClose={handleCloseInitialMessage}
+            onClaim={handleClaimProject}
+          />
+        </>
+      )}
     </div>
   );
 }

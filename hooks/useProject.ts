@@ -4,9 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useSupabase } from "./useSupabase";
 import type { ProjectWithTranslatorDetails } from '@/types/project';
 import { queryKeys } from "@/lib/queryKeys";
+import { useOriginalRecordStore } from "@/lib/stores/useOriginalRecordStore";
 
 export function useProject(projectId: number | string | null) {
   const supabase = useSupabase();
+  const setOriginal = useOriginalRecordStore((s) => s.setOriginal);
 
   return useQuery({
     queryKey: queryKeys.project(projectId),
@@ -63,6 +65,9 @@ export function useProject(projectId: number | string | null) {
         done_message: assignment.done_message || null,
         avatar: assignment.users?.avatar || null,
       })).filter((t: any) => t.id); // Filter out any invalid entries
+
+      // Store original project record for concurrency conflict detection
+      setOriginal('projects', { id: project.id }, project);
 
       return {
         ...project,

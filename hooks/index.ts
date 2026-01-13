@@ -21,6 +21,11 @@ export { useUserWorkload } from './useUserWorkload';
 export { useProject } from './useProject';
 export { useMyProjects } from './useMyProjects';
 export { useProjectsWithTranslators } from './useProjectsWithTranslators';
+export { useUpdateProject } from './useUpdateProject';
+export { useUpdateAssignment } from './useUpdateAssignment';
+
+// Concurrency hooks
+export { useConcurrencySafeMutation } from './useConcurrencySafeMutation';
 
 // UI hooks
 export { useColorSettings } from './useColorSettings';

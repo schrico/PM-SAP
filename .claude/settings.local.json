@@ -9,7 +9,14 @@
       "Bash(claude mcp add:*)",
       "Bash(npx supabase:*)",
       "mcp__supabase__search_docs",
-      "mcp__supabase__list_tables"
+      "mcp__supabase__list_tables",
+      "Bash(powershell -Command \"Get-Content ''mcp-supabase-search_docs-1768315847995.txt'' | ConvertFrom-Json | ForEach-Object { $_text } | Select-Object -First 1\")",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__execute_sql",
+      "Bash(npm run build:*)",
+      "mcp__supabase__get_advisors",
+      "mcp__ide__getDiagnostics"
     ]
   },
   "enabledMcpjsonServers": [

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Save, Loader2, Users, UserPlus, X } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
+import { EditConflictModal, FieldConflict } from "@/components/ui/EditConflictModal";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,6 +36,8 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { queryKeys } from "@/lib/queryKeys";
+import { useLayoutStore } from "@/lib/stores/useLayoutStore";
+import type { ProjectWithTranslatorDetails } from "@/types/project";
 
 const projectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
@@ -58,6 +61,43 @@ type ProjectFormValues = z.infer<typeof projectSchema>;
 // Common systems - can be extended
 const BASE_SYSTEMS = ["B0X", "XTM", "SSE", "STM", "LAT"];
 
+/** Human-readable labels for project fields */
+const FIELD_LABELS: Record<string, string> = {
+  name: "Project Name",
+  system: "System",
+  status: "Status",
+  words: "Word Count",
+  lines: "Line Count",
+  language_in: "Source Language",
+  language_out: "Target Language",
+  initial_deadline: "Initial Deadline",
+  interim_deadline: "Interim Deadline",
+  final_deadline: "Final Deadline",
+  instructions: "Instructions",
+  paid: "Paid",
+  invoiced: "Invoiced",
+  short: "Short Project",
+  translators: "Assigned Translators",
+};
+
+/** Fields to monitor for conflicts */
+const MONITORED_FIELDS = [
+  "name",
+  "system",
+  "status",
+  "words",
+  "lines",
+  "language_in",
+  "language_out",
+  "initial_deadline",
+  "interim_deadline",
+  "final_deadline",
+  "instructions",
+  "paid",
+  "invoiced",
+  "short",
+];
+
 export default function EditProjectPage() {
   const params = useParams();
   const router = useRouter();
@@ -65,13 +105,25 @@ export default function EditProjectPage() {
   const projectId = params.id ? Number(params.id) : null;
 
   const { data: project, isLoading, error } = useProject(projectId);
+  const collapsed = useLayoutStore((state) => state.collapsed);
 
   // State for translator management
-  const [showAddTranslatorModal, setShowAddTranslatorModal] = useState(false);
+  const [addTranslatorModal, setAddTranslatorModal] = useState<{
+    open: boolean;
+    projectId: number;
+    projectName: string;
+    assignedTranslatorIds: string[];
+  }>({ open: false, projectId: 0, projectName: "", assignedTranslatorIds: [] });
   const [translatorToRemove, setTranslatorToRemove] = useState<{
     id: string;
     name: string;
   } | null>(null);
+
+  // Conflict detection state
+  const [originalProject, setOriginalProject] = useState<ProjectWithTranslatorDetails | null>(null);
+  const [conflicts, setConflicts] = useState<FieldConflict[]>([]);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const hasStoredOriginal = useRef(false);
 
   // Include project's current system in the list if it's not already there
   const SYSTEMS = React.useMemo(() => {
@@ -149,6 +201,143 @@ export default function EditProjectPage() {
       form.reset(formValues);
     }
   }, [form, formValues, project?.id]);
+
+  // Store the original project data when first loaded
+  useEffect(() => {
+    if (project && !hasStoredOriginal.current) {
+      setOriginalProject(project);
+      hasStoredOriginal.current = true;
+    }
+  }, [project]);
+
+  // Detect conflicts when project data changes (via realtime updates)
+  const detectConflicts = useCallback(() => {
+    if (!originalProject || !project) return [];
+
+    const detectedConflicts: FieldConflict[] = [];
+
+    // Check project fields
+    for (const field of MONITORED_FIELDS) {
+      const originalValue = (originalProject as unknown as Record<string, unknown>)[field];
+      const currentValue = (project as unknown as Record<string, unknown>)[field];
+
+      // Normalize values for comparison
+      const normalizedOriginal = originalValue === "" ? null : originalValue;
+      const normalizedCurrent = currentValue === "" ? null : currentValue;
+
+      if (JSON.stringify(normalizedOriginal) !== JSON.stringify(normalizedCurrent)) {
+        detectedConflicts.push({
+          field,
+          label: FIELD_LABELS[field] || field,
+          originalValue: normalizedOriginal,
+          currentValue: normalizedCurrent,
+        });
+      }
+    }
+
+    // Check translator assignments
+    const originalTranslatorIds = new Set(originalProject.translators?.map((t) => t.id) || []);
+    const currentTranslatorIds = new Set(project.translators?.map((t) => t.id) || []);
+
+    const addedTranslators = project.translators?.filter((t) => !originalTranslatorIds.has(t.id)) || [];
+    const removedTranslators = originalProject.translators?.filter((t) => !currentTranslatorIds.has(t.id)) || [];
+
+    if (addedTranslators.length > 0 || removedTranslators.length > 0) {
+      const originalNames = originalProject.translators?.map((t) => t.name).join(", ") || "None";
+      const currentNames = project.translators?.map((t) => t.name).join(", ") || "None";
+
+      detectedConflicts.push({
+        field: "translators",
+        label: FIELD_LABELS.translators,
+        originalValue: originalNames,
+        currentValue: currentNames,
+      });
+    }
+
+    return detectedConflicts;
+  }, [originalProject, project]);
+
+  // Check for conflicts when project updates
+  useEffect(() => {
+    if (!hasStoredOriginal.current || !originalProject || !project) return;
+
+    const detectedConflicts = detectConflicts();
+    if (detectedConflicts.length > 0 && !showConflictModal) {
+      setConflicts(detectedConflicts);
+      setShowConflictModal(true);
+    }
+  }, [project, detectConflicts, originalProject, showConflictModal]);
+
+  // Handle "Continue Editing" - merge changes
+  const handleContinueEditing = useCallback(() => {
+    if (!project || !originalProject) return;
+
+    // Get current form values (user's edits)
+    const currentFormValues = form.getValues();
+
+    // Determine which fields changed in the database
+    const dbChangedFields = new Set<string>();
+    for (const field of MONITORED_FIELDS) {
+      const originalValue = (originalProject as unknown as Record<string, unknown>)[field];
+      const currentDbValue = (project as unknown as Record<string, unknown>)[field];
+      const normalizedOriginal = originalValue === "" ? null : originalValue;
+      const normalizedCurrent = currentDbValue === "" ? null : currentDbValue;
+      if (JSON.stringify(normalizedOriginal) !== JSON.stringify(normalizedCurrent)) {
+        dbChangedFields.add(field);
+      }
+    }
+
+    // Merge strategy:
+    // - Fields changed in database → Use database value (database wins)
+    // - Fields NOT changed in database → Keep user's current form value
+    const mergedValues: ProjectFormValues = {
+      name: dbChangedFields.has("name") ? project.name || "" : currentFormValues.name,
+      system: dbChangedFields.has("system") ? project.system || "" : currentFormValues.system,
+      status: dbChangedFields.has("status")
+        ? (project.status as "active" | "complete" | "cancelled") || "active"
+        : currentFormValues.status,
+      words: dbChangedFields.has("words") ? project.words ?? null : currentFormValues.words,
+      lines: dbChangedFields.has("lines") ? project.lines ?? null : currentFormValues.lines,
+      language_in: dbChangedFields.has("language_in")
+        ? project.language_in || null
+        : currentFormValues.language_in,
+      language_out: dbChangedFields.has("language_out")
+        ? project.language_out || null
+        : currentFormValues.language_out,
+      initial_deadline: dbChangedFields.has("initial_deadline")
+        ? formatDateForInput(project.initial_deadline)
+        : currentFormValues.initial_deadline,
+      interim_deadline: dbChangedFields.has("interim_deadline")
+        ? formatDateForInput(project.interim_deadline)
+        : currentFormValues.interim_deadline,
+      final_deadline: dbChangedFields.has("final_deadline")
+        ? formatDateForInput(project.final_deadline)
+        : currentFormValues.final_deadline,
+      instructions: dbChangedFields.has("instructions")
+        ? project.instructions || null
+        : currentFormValues.instructions,
+      paid: dbChangedFields.has("paid") ? project.paid ?? false : currentFormValues.paid,
+      invoiced: dbChangedFields.has("invoiced")
+        ? project.invoiced ?? false
+        : currentFormValues.invoiced,
+      short: dbChangedFields.has("short") ? project.short ?? false : currentFormValues.short,
+    };
+
+    // Reset form with merged values
+    form.reset(mergedValues);
+
+    // Update original project to current state
+    setOriginalProject(project);
+    setShowConflictModal(false);
+    setConflicts([]);
+  }, [form, project, originalProject]);
+
+  // Handle "Stop Editing" - discard changes and go back
+  const handleDiscardChanges = useCallback(() => {
+    setShowConflictModal(false);
+    setConflicts([]);
+    router.back();
+  }, [router]);
 
   const updateProjectMutation = useMutation({
     mutationFn: async (values: ProjectFormValues) => {
@@ -229,7 +418,16 @@ export default function EditProjectPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Translators added successfully");
-      setShowAddTranslatorModal(false);
+      setAddTranslatorModal({
+        open: false,
+        projectId: 0,
+        projectName: "",
+        assignedTranslatorIds: [],
+      });
+      // Update original project to include new translators (avoid conflict modal for our own changes)
+      if (project) {
+        setOriginalProject(project);
+      }
     },
     onError: (error: Error) => {
       toast.error(getUserFriendlyError(error, "project update"));
@@ -259,6 +457,10 @@ export default function EditProjectPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       toast.success("Translator removed successfully");
       setTranslatorToRemove(null);
+      // Update original project to reflect removal (avoid conflict modal for our own changes)
+      if (project) {
+        setOriginalProject(project);
+      }
     },
     onError: (error: Error) => {
       toast.error(getUserFriendlyError(error, "project update"));
@@ -701,7 +903,15 @@ export default function EditProjectPage() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => setShowAddTranslatorModal(true)}
+                  onClick={() => {
+                    if (!project) return;
+                    setAddTranslatorModal({
+                      open: true,
+                      projectId: project.id,
+                      projectName: project.name,
+                      assignedTranslatorIds: project.translators.map((t) => t.id),
+                    });
+                  }}
                   size="sm"
                   className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
                 >
@@ -781,51 +991,81 @@ export default function EditProjectPage() {
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={updateProjectMutation.isPending || !isDirty}
-              className={
-                !isDirty && !updateProjectMutation.isPending ?
-                  "opacity-50 cursor-not-allowed"
-                : ""
-              }
-            >
-              {updateProjectMutation.isPending ?
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              : <>
-                  <Save className="w-5 h-5 mr-2" />
-                  Save Changes
-                </>
-              }
-            </Button>
-          </div>
+          {/* Spacer to prevent content from being hidden behind fixed button */}
+          {isDirty && <div className="h-24" />}
         </form>
       </Form>
 
-      {/* Add Translator Modal */}
-      {showAddTranslatorModal && project && (
-        <AddTranslatorDialog
-          open={showAddTranslatorModal}
-          onOpenChange={setShowAddTranslatorModal}
-          projectId={project.id}
-          projectName={project.name}
-          assignedTranslatorIds={project.translators.map((t) => t.id)}
-          onAddTranslators={handleAddTranslators}
-          isAdding={addTranslatorsMutation.isPending}
-        />
+      {/* Fixed Bottom Bar for Unsaved Changes */}
+      {isDirty && (
+        <div
+          className={`fixed bottom-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 transition-all duration-300 ${
+            collapsed ? "left-20" : "left-52"
+          }`}
+        >
+          <div className="max-w-5xl mx-auto px-8 py-4 flex items-center justify-between">
+            <div className="text-gray-900 dark:text-white">
+              You have unsaved changes
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  form.reset();
+                }}
+                disabled={updateProjectMutation.isPending}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={updateProjectMutation.isPending}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                {updateProjectMutation.isPending ?
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                : <>
+                    <Save className="w-5 h-5 mr-2" />
+                    Save Changes
+                  </>
+                }
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
+
+      {/* Add Translator Modal */}
+      <AddTranslatorDialog
+        open={addTranslatorModal.open}
+        onOpenChange={(open) =>
+          setAddTranslatorModal({
+            open,
+            projectId: addTranslatorModal.projectId,
+            projectName: addTranslatorModal.projectName,
+            assignedTranslatorIds: addTranslatorModal.assignedTranslatorIds,
+          })
+        }
+        projectId={addTranslatorModal.projectId}
+        projectName={addTranslatorModal.projectName}
+        assignedTranslatorIds={addTranslatorModal.assignedTranslatorIds}
+        liveAssignedTranslatorIds={project?.translators.map((t) => t.id)}
+        onAddTranslators={handleAddTranslators}
+        isAdding={addTranslatorsMutation.isPending}
+      />
+
+      {/* Edit Conflict Modal */}
+      <EditConflictModal
+        open={showConflictModal}
+        conflicts={conflicts}
+        onContinueEditing={handleContinueEditing}
+        onDiscardChanges={handleDiscardChanges}
+      />
 
       {/* Remove Translator Confirmation Modal */}
       {translatorToRemove && (

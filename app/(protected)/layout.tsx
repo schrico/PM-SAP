@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RealtimeProvider } from "@/components/providers/RealtimeProvider";
 
 interface AuthenticatedLayoutProps {
   children: ReactNode;
@@ -10,5 +11,9 @@ interface AuthenticatedLayoutProps {
 export default function AuthenticatedLayout({
   children,
 }: AuthenticatedLayoutProps) {
-  return <AppShell>{children}</AppShell>;
+  return (
+    <RealtimeProvider>
+      <AppShell>{children}</AppShell>
+    </RealtimeProvider>
+  );
 }

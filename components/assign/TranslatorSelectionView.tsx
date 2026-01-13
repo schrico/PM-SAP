@@ -5,6 +5,7 @@ import { X, Clock, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from
 import { formatNumber } from "@/utils/formatters";
 import { useUsers } from "@/hooks/useUsers";
 import { useUserWorkload } from "@/hooks/useUserWorkload";
+import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import type { Project } from "@/types/project";
 import type { User } from "@/types/user";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
@@ -44,6 +45,7 @@ export function TranslatorSelectionView({
 }: TranslatorSelectionViewProps) {
   const { data: users = [], isLoading } = useUsers();
   const { workloads, isLoading: workloadsLoading } = useUserWorkload();
+  const collapsed = useLayoutStore((state) => state.collapsed);
   
   // Track current project index for sequential selection
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
@@ -53,9 +55,11 @@ export function TranslatorSelectionView({
     () => new Map()
   );
 
-  const currentProject = selectedProjects[currentProjectIndex];
-  const isLastProject = currentProjectIndex === selectedProjects.length - 1;
-  const isFirstProject = currentProjectIndex === 0;
+  // Clamp currentProjectIndex to valid range if selectedProjects changed
+  const safeIndex = Math.min(currentProjectIndex, Math.max(0, selectedProjects.length - 1));
+  const currentProject = selectedProjects[safeIndex];
+  const isLastProject = safeIndex === selectedProjects.length - 1;
+  const isFirstProject = safeIndex === 0;
 
   // Get current project's selection state
   const currentAssignment = projectAssignments.get(currentProject?.id) || {
@@ -159,6 +163,30 @@ export function TranslatorSelectionView({
     });
     return count;
   }, [projectAssignments]);
+
+  // Handle case where selectedProjects became empty (e.g., due to realtime update)
+  // This check MUST be after all hooks to avoid "Rendered fewer hooks" error
+  if (!currentProject || selectedProjects.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-50 flex items-center justify-center">
+        <div className="text-center p-8">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Projects Updated
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            The selected projects have been modified by another user.
+          </p>
+          <button
+            onClick={onCancel}
+            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Go Back to Selection
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || workloadsLoading) {
     return (
@@ -421,55 +449,61 @@ export function TranslatorSelectionView({
         })}
       </div>
 
-      {/* Navigation and Assign Buttons - Fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
-        <div className="max-w-7xl mx-auto px-8 py-4">
-          <div className="flex items-center justify-between">
-            {/* Left: Previous button */}
-            <div>
-              {!isFirstProject && (
-                <button
-                  onClick={handlePreviousProject}
-                  className="px-6 py-3 cursor-pointer bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors flex items-center gap-2 border border-gray-200 dark:border-gray-600"
-                  type="button"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                  Previous Project
-                </button>
-              )}
-            </div>
+      {/* Navigation and Assign Buttons - Fixed at bottom, only show when at least one translator is selected */}
+      {totalAssignments > 0 && (
+        <div
+          className={`fixed bottom-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 transition-all duration-300 ${
+            collapsed ? "left-20" : "left-52"
+          }`}
+        >
+          <div className="max-w-7xl mx-auto px-8 py-4">
+            <div className="flex items-center justify-between">
+              {/* Left: Previous button */}
+              <div>
+                {!isFirstProject && (
+                  <button
+                    onClick={handlePreviousProject}
+                    className="px-6 py-3 cursor-pointer bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors flex items-center gap-2 border border-gray-200 dark:border-gray-600"
+                    type="button"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                    Previous Project
+                  </button>
+                )}
+              </div>
 
-            {/* Center: Summary info */}
-            <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
-              {projectsWithAssignments} of {selectedProjects.length} projects have translators assigned
-            </div>
+              {/* Center: Summary info */}
+              <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
+                {projectsWithAssignments} of {selectedProjects.length} projects have translators assigned
+              </div>
 
-            {/* Right: Next or Assign button */}
-            <div>
-              {isLastProject ? (
-                <button
-                  onClick={handleAssignAll}
-                  disabled={totalAssignments === 0}
-                  className="px-8 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center gap-2"
-                  type="button"
-                >
-                  <CheckCircle2 className="w-5 h-5" />
-                  Assign {totalUniqueTranslators} translator{totalUniqueTranslators !== 1 ? "s" : ""} ({totalAssignments} assignment{totalAssignments !== 1 ? "s" : ""})
-                </button>
-              ) : (
-                <button
-                  onClick={handleNextProject}
-                  className="px-6 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors flex items-center gap-2 shadow-lg"
-                  type="button"
-                >
-                  Next Project
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              )}
+              {/* Right: Next or Assign button */}
+              <div>
+                {isLastProject ? (
+                  <button
+                    onClick={handleAssignAll}
+                    disabled={totalAssignments === 0}
+                    className="px-8 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center gap-2"
+                    type="button"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    Assign {totalUniqueTranslators} translator{totalUniqueTranslators !== 1 ? "s" : ""} ({totalAssignments} assignment{totalAssignments !== 1 ? "s" : ""})
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleNextProject}
+                    className="px-6 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors flex items-center gap-2 shadow-lg"
+                    type="button"
+                  >
+                    Next Project
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
       
       {/* Spacer to prevent content from being hidden behind fixed button */}
       <div className="h-24" />

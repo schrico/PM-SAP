@@ -783,6 +783,11 @@ function ProjectManagementContent() {
         projectId={addTranslatorModal.projectId}
         projectName={addTranslatorModal.projectName}
         assignedTranslatorIds={addTranslatorModal.assignedTranslatorIds}
+        liveAssignedTranslatorIds={
+          allProjects
+            .find((p) => p.id === addTranslatorModal.projectId)
+            ?.translators.map((t) => t.id) || []
+        }
         onAddTranslators={(projectId, userIds, messages) =>
           addTranslatorsMutation.mutate({ projectId, userIds, messages })
         }
