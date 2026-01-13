@@ -5,7 +5,14 @@
       "Bash(cat:*)",
       "Bash(head:*)",
       "Bash(ls:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(npx supabase:*)",
+      "mcp__supabase__search_docs",
+      "mcp__supabase__list_tables"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }
