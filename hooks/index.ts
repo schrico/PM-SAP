@@ -24,6 +24,14 @@ export { useProjectsWithTranslators } from './useProjectsWithTranslators';
 export { useUpdateProject } from './useUpdateProject';
 export { useUpdateAssignment } from './useUpdateAssignment';
 
+// SAP integration hooks
+export { useSapProjects } from './useSapProjects';
+export type { SapProject, SapSubProject } from './useSapProjects';
+export { useSapSubProjectDetails } from './useSapSubProjectDetails';
+export type { SapSubProjectDetails, SapStep, SapVolume, SapEnvironment } from './useSapSubProjectDetails';
+export { useSyncSapProjects } from './useSyncSapProjects';
+export type { SyncSapProjectsRequest, SyncSapProjectsResponse } from './useSyncSapProjects';
+
 // Concurrency hooks
 export { useConcurrencySafeMutation } from './useConcurrencySafeMutation';
 

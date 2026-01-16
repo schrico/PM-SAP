@@ -26,4 +26,9 @@ export const queryKeys = {
   // Settings and configuration
   colorSettings: () => ['color-settings'] as const,
   availableAvatars: () => ['available-avatars'] as const,
+
+  // SAP integration queries
+  sapProjects: () => ['sap-projects'] as const,
+  sapSubProject: (projectId: number | null, subProjectId: string | null) =>
+    ['sap-subproject', projectId, subProjectId] as const,
 } as const;
