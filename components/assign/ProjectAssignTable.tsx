@@ -137,7 +137,7 @@ export function ProjectAssignTable({
       header: "Instructions",
       className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs overflow-hidden text-ellipsis",
       render: (project: ProjectWithTranslators) => (
-        project.instructions || "-"
+        (project as any).custom_instructions || project.instructions || "-"
       ),
     },
   ];

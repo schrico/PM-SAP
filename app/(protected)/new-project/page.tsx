@@ -81,7 +81,7 @@ function NewProjectPageContent() {
         words: sourceProject.words || 0,
         lines: sourceProject.lines || 0,
         dueDate: getClosestDeadline(sourceProject),
-        instructions: sourceProject.instructions || "",
+        instructions: (sourceProject as any).custom_instructions || sourceProject.instructions || "",
         sourceLanguage: sourceProject.language_in || "",
         targetLanguage: sourceProject.language_out || "",
       };
@@ -109,7 +109,7 @@ function NewProjectPageContent() {
         words: sourceProject.words || 0,
         lines: sourceProject.lines || 0,
         dueDate: getClosestDeadline(sourceProject),
-        instructions: sourceProject.instructions || "",
+        instructions: (sourceProject as any).custom_instructions || sourceProject.instructions || "",
         sourceLanguage: sourceProject.language_in || "",
         targetLanguage: sourceProject.language_out || "",
       });
@@ -127,7 +127,7 @@ function NewProjectPageContent() {
       formData.words !== (sourceProject.words || 0) ||
       formData.lines !== (sourceProject.lines || 0) ||
       formData.dueDate !== sourceDeadline ||
-      formData.instructions !== (sourceProject.instructions || "") ||
+      formData.instructions !== ((sourceProject as any).custom_instructions || sourceProject.instructions || "") ||
       formData.sourceLanguage !== (sourceProject.language_in || "") ||
       formData.targetLanguage !== (sourceProject.language_out || "")
     );
@@ -146,7 +146,7 @@ function NewProjectPageContent() {
         words: data.words || null,
         lines: data.lines || null,
         final_deadline: deadline,
-        instructions: data.instructions || null,
+        custom_instructions: data.instructions || null,
         language_in: data.sourceLanguage || null,
         language_out: data.targetLanguage || null,
         status: "active" as const,

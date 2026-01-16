@@ -180,7 +180,7 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
       header: "Instructions",
       className: "break-words max-w-[600px]",
       render: (project: ProjectWithTranslators) => (
-        project.instructions || "-"
+        (project as any).custom_instructions || project.instructions || "-"
       ),
     },
   ];

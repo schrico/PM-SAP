@@ -273,7 +273,7 @@ export function ManagementTable({
       header: "Instructions",
       className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate",
       render: (project: ProjectWithTranslators) => (
-        project.instructions || "No instructions"
+        (project as any).custom_instructions || project.instructions || "No instructions"
       ),
     },
     {

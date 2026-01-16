@@ -136,7 +136,7 @@ export function MyProjectsTable({
       header: "Instructions",
       className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate",
       render: (assignment: ProjectAssignment) => (
-        assignment.projects.instructions || "-"
+        (assignment.projects as any).custom_instructions || assignment.projects.instructions || "-"
       ),
     },
     {

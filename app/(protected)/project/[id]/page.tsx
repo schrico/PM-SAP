@@ -634,7 +634,10 @@ export default function ProjectPage() {
           className={`${canManageAssignments() ? "lg:col-span-2" : ""} space-y-6`}
         >
           <ProjectDetailsCard project={project} />
-          <ProjectInstructionsCard instructions={project.instructions} />
+          <ProjectInstructionsCard
+            customInstructions={(project as any).custom_instructions ?? project.instructions}
+            sapInstructions={(project as any).sap_instructions}
+          />
         </div>
 
         {/* Right Column - Translators (PM/Admin only) */}

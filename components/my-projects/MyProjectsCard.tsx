@@ -105,7 +105,7 @@ export function MyProjectsCard({
               />
             </div>
             <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate mb-4">
-              {project.instructions || "-"}
+              {(project as any).custom_instructions || project.instructions || "-"}
             </p>
             {activeTab === "unclaimed" ?
               <div className="flex gap-2 group-hover:scale-110 group-hover:opacity-100 opacity-90 transition-all duration-200">

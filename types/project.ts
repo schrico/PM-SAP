@@ -3,6 +3,8 @@ export type ProjectStatus = "complete" | "active" | "cancelled" /* | "pending" *
 
 export type AssignmentStatus = "unclaimed" | "claimed" | "done" | "rejected";
 
+export type ApiSource = 'manual' | 'TPM_sap_api' | 'XTM_sap_api';
+
 export interface Project {
   id: number;
   name: string;
@@ -16,12 +18,24 @@ export interface Project {
   status: ProjectStatus;
   language_in: string;
   language_out: string;
+  /** @deprecated Use custom_instructions instead */
   instructions?: string | null;
+  /** User-editable custom instructions */
+  custom_instructions?: string | null;
+  /** SAP instructions from SAP API (read-only) */
+  sap_instructions?: string | null;
   paid?: boolean | null;
   invoiced?: boolean | null;
   created_at?: string;
   updated_at?: string;
   short?: boolean;
+  // SAP integration fields
+  sap_subproject_id?: string | null;
+  sap_parent_id?: string | null;
+  sap_parent_name?: string | null;
+  sap_account?: string | null;
+  api_source?: ApiSource;
+  last_synced_at?: string | null;
 }
 
 /** Translator info for project lists */

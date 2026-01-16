@@ -50,7 +50,7 @@ const projectSchema = z.object({
   initial_deadline: z.string().nullable().optional(),
   interim_deadline: z.string().nullable().optional(),
   final_deadline: z.string().nullable().optional(),
-  instructions: z.string().nullable().optional(),
+  custom_instructions: z.string().nullable().optional(),
   paid: z.boolean().nullable().optional(),
   invoiced: z.boolean().nullable().optional(),
   short: z.boolean().nullable().optional(),
@@ -73,7 +73,7 @@ const FIELD_LABELS: Record<string, string> = {
   initial_deadline: "Initial Deadline",
   interim_deadline: "Interim Deadline",
   final_deadline: "Final Deadline",
-  instructions: "Instructions",
+  custom_instructions: "Custom Instructions",
   paid: "Paid",
   invoiced: "Invoiced",
   short: "Short Project",
@@ -92,7 +92,7 @@ const MONITORED_FIELDS = [
   "initial_deadline",
   "interim_deadline",
   "final_deadline",
-  "instructions",
+  "custom_instructions",
   "paid",
   "invoiced",
   "short",
@@ -156,6 +156,8 @@ export default function EditProjectPage() {
   // Build form values from project data
   const formValues: ProjectFormValues | undefined = React.useMemo(() => {
     if (!project) return undefined;
+    // Support both old 'instructions' field and new 'custom_instructions' field
+    const customInstructions = (project as any).custom_instructions ?? project.instructions ?? null;
     return {
       name: project.name || "",
       system: project.system || "",
@@ -168,7 +170,7 @@ export default function EditProjectPage() {
       initial_deadline: formatDateForInput(project.initial_deadline),
       interim_deadline: formatDateForInput(project.interim_deadline),
       final_deadline: formatDateForInput(project.final_deadline),
-      instructions: project.instructions || null,
+      custom_instructions: customInstructions,
       paid: project.paid ?? false,
       invoiced: project.invoiced ?? false,
       short: project.short ?? false,
@@ -188,7 +190,7 @@ export default function EditProjectPage() {
       initial_deadline: null,
       interim_deadline: null,
       final_deadline: null,
-      instructions: null,
+      custom_instructions: null,
       paid: false,
       invoiced: false,
       short: false,
@@ -313,9 +315,9 @@ export default function EditProjectPage() {
       final_deadline: dbChangedFields.has("final_deadline")
         ? formatDateForInput(project.final_deadline)
         : currentFormValues.final_deadline,
-      instructions: dbChangedFields.has("instructions")
-        ? project.instructions || null
-        : currentFormValues.instructions,
+      custom_instructions: dbChangedFields.has("custom_instructions")
+        ? (project as any).custom_instructions || null
+        : currentFormValues.custom_instructions,
       paid: dbChangedFields.has("paid") ? project.paid ?? false : currentFormValues.paid,
       invoiced: dbChangedFields.has("invoiced")
         ? project.invoiced ?? false
@@ -364,7 +366,7 @@ export default function EditProjectPage() {
         initial_deadline: formatDateForDB(values.initial_deadline),
         interim_deadline: formatDateForDB(values.interim_deadline),
         final_deadline: formatDateForDB(values.final_deadline),
-        instructions: values.instructions || null,
+        custom_instructions: values.custom_instructions || null,
         paid: values.paid ?? false,
         invoiced: values.invoiced ?? false,
         short: values.short ?? false,
@@ -869,16 +871,16 @@ export default function EditProjectPage() {
                 )}
               />
 
-              {/* Instructions */}
+              {/* Custom Instructions */}
               <FormField
                 control={form.control}
-                name="instructions"
+                name="custom_instructions"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Instructions</FormLabel>
+                    <FormLabel>Custom Instructions</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter project instructions..."
+                        placeholder="Enter custom project instructions..."
                         className="min-h-32"
                         {...field}
                         value={field.value ?? ""}
