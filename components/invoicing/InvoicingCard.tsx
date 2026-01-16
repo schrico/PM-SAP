@@ -125,7 +125,7 @@ export function InvoicingCard({
 
             <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
               <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-2">
-                {project.instructions || "No instructions"}
+                {(project as any).custom_instructions || project.instructions || "No instructions"}
               </p>
             </div>
           </div>

@@ -144,7 +144,7 @@ export function ProjectAssignCard({
 
             <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
               <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm max-h-12 overflow-hidden text-ellipsis">
-                {project.instructions || "-"}
+                {(project as any).custom_instructions || project.instructions || "-"}
               </p>
             </div>
           </div>

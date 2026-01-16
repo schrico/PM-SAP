@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { X, Loader2, AlertCircle } from "lucide-react";
+import { X, Loader2, AlertCircle, Download } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
 import { FilterDropdown } from "@/components/general/FilterDropdown";
@@ -15,7 +15,9 @@ import { ManagementCard } from "@/components/management/ManagementCard";
 import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
 import { RemoveTranslatorDialog } from "@/components/management/RemoveTranslatorDialog";
 import { ConfirmationDialog } from "@/components/management/ConfirmationDialog";
+import { SapImportDialog } from "@/components/sap/SapImportDialog";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { Button } from "@/components/ui/button";
 import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
@@ -84,6 +86,9 @@ function ProjectManagementContent() {
     projectName: string;
   }>({ open: false, projectId: 0, projectName: "" });
 
+  // SAP Import dialog state
+  const [sapImportDialogOpen, setSapImportDialogOpen] = useState(false);
+
   // State for editing project words/lines
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
   const [editWords, setEditWords] = useState<string>("");
@@ -143,6 +148,18 @@ function ProjectManagementContent() {
     });
     return Array.from(langs).sort();
   }, [allProjects]);
+
+  // Get existing SAP subproject IDs for import dialog
+  const existingSapSubProjectIds = useMemo(() => {
+    const ids = new Set<string>();
+    allProjectsRaw.forEach((p) => {
+      // Projects imported from SAP have a sap_subproject_id field
+      if ((p as any).sap_subproject_id) {
+        ids.add((p as any).sap_subproject_id);
+      }
+    });
+    return ids;
+  }, [allProjectsRaw]);
 
   // Categorize projects
   const categorizedProjects = useMemo(() => {
@@ -626,11 +643,20 @@ function ProjectManagementContent() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-gray-900 dark:text-white mb-2">Manage Projects</h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          Complete oversight of all translation projects and their status
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-gray-900 dark:text-white mb-2">Manage Projects</h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Complete oversight of all translation projects and their status
+          </p>
+        </div>
+        <Button
+          onClick={() => setSapImportDialogOpen(true)}
+          className="bg-blue-500 hover:bg-blue-600 text-white"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Import from SAP
+        </Button>
       </div>
 
       {/* Tabs + View Toggle + Search + Filters - Sticky Header */}
@@ -838,6 +864,13 @@ function ProjectManagementContent() {
         }
         onCancel={() => {}}
         isLoading={markCompleteMutation.isPending}
+      />
+
+      {/* SAP Import Dialog */}
+      <SapImportDialog
+        open={sapImportDialogOpen}
+        onOpenChange={setSapImportDialogOpen}
+        existingSubProjectIds={existingSapSubProjectIds}
       />
 
       {/* Scroll to Top Button */}
