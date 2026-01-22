@@ -1,7 +1,7 @@
 // /app/api/sap/projects/[projectId]/route.ts
 // GET: Get SAP project details
 
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -37,10 +37,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const supabase = createRouteHandlerClient(
-      { cookies },
-      { supabaseUrl, supabaseKey }
-    );
+    const cookieStore = await cookies();
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    });
 
     // Verify user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser();

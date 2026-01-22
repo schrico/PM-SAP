@@ -1,11 +1,11 @@
 // /app/api/sap/projects/route.ts
 // GET: List all SAP projects and subprojects
 
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getSapClient } from '@/lib/sap/client';
-import { RateLimitError, createErrorResponse } from '@/lib/sap/errors';
+import { createErrorResponse } from '@/lib/sap/errors';
 import type { SapProjectListItem, SapSubProjectListItem } from '@/types/sap';
 
 const RATE_LIMIT_MINUTES = 5;
@@ -25,10 +25,19 @@ export async function GET() {
       );
     }
 
-    const supabase = createRouteHandlerClient(
-      { cookies },
-      { supabaseUrl, supabaseKey }
-    );
+    const cookieStore = await cookies();
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    });
 
     // Verify user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser();

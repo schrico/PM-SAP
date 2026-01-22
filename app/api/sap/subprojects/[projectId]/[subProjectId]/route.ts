@@ -1,14 +1,13 @@
 // /app/api/sap/subprojects/[projectId]/[subProjectId]/route.ts
 // GET: Get SAP subproject details with instructions
 
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSapClient } from '@/lib/sap/client';
 import { createErrorResponse } from '@/lib/sap/errors';
 import { mapSapToSubProjectDetails } from '@/lib/sap/mappers';
-import type { SapSubProject } from '@/types/sap';
 
 interface RouteParams {
   params: Promise<{ projectId: string; subProjectId: string }>;
@@ -46,10 +45,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const supabase = createRouteHandlerClient(
-      { cookies },
-      { supabaseUrl, supabaseKey }
-    );
+    const cookieStore = await cookies();
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    });
 
     // Verify user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser();
