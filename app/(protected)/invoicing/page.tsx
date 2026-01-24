@@ -80,7 +80,7 @@ function InvoicingContent() {
     data: projectsData = [],
     isLoading: projectsLoading,
     error: projectsError,
-  } = useProjectsWithTranslators(false, true);
+  } = useProjectsWithTranslators(false, true, true);
 
   // Filter to only show complete projects in invoicing
   const allProjectsRaw = useMemo(

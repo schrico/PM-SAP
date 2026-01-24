@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Save, Loader2, SlidersHorizontal } from "lucide-react";
+import { Save, Loader2, SlidersHorizontal, Pencil, X, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/hooks/useUser";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
@@ -13,6 +13,7 @@ import { Loader2 as LoaderIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -38,6 +39,7 @@ export function ProfilePageContent() {
   const { user, loading: userLoading } = useUser();
   const updateProfile = useUpdateProfile();
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -99,9 +101,15 @@ export function ProfilePageContent() {
         TE_user: data.TE_user || "",
         email: data.email,
       });
+      setIsEditing(false);
     } catch (error) {
       // Error is handled by the mutation
     }
+  };
+
+  const handleCancel = () => {
+    form.reset(initialData);
+    setIsEditing(false);
   };
 
   if (userLoading) {
@@ -156,7 +164,7 @@ export function ProfilePageContent() {
             </div>
           </div>
 
-          <ProfileStatus hasChanges={hasChanges} lastSavedAt={updateProfile.isSuccess ? new Date() : null} />
+          <ProfileStatus hasChanges={hasChanges} lastSavedAt={updateProfile.isSuccess ? new Date() : null} isEditing={isEditing} />
         </div>
 
         {/* Form Section */}
@@ -185,7 +193,12 @@ export function ProfilePageContent() {
                         <FormControl>
                           <Input
                             {...field}
-                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={!isEditing}
+                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              isEditing
+                                ? "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                            }`}
                           />
                         </FormControl>
                         <FormMessage />
@@ -203,8 +216,13 @@ export function ProfilePageContent() {
                         <FormControl>
                           <Input
                             {...field}
+                            disabled={!isEditing}
                             placeholder="This is how your name will appear in project views."
-                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              isEditing
+                                ? "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                            }`}
                           />
                         </FormControl>
                         <FormMessage />
@@ -223,9 +241,20 @@ export function ProfilePageContent() {
                           <Input
                             {...field}
                             type="email"
-                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={!isEditing}
+                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 ${
+                              isEditing
+                                ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-gray-900 dark:text-white focus:ring-amber-500"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                            }`}
                           />
                         </FormControl>
+                        {isEditing && (
+                          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            Changing email requires confirmation. A verification email will be sent to the new address.
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -276,7 +305,12 @@ export function ProfilePageContent() {
                         <FormControl>
                           <Input
                             {...field}
-                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={!isEditing}
+                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              isEditing
+                                ? "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                            }`}
                           />
                         </FormControl>
                         <FormMessage />
@@ -294,7 +328,12 @@ export function ProfilePageContent() {
                         <FormControl>
                           <Input
                             {...field}
-                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={!isEditing}
+                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              isEditing
+                                ? "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                            }`}
                           />
                         </FormControl>
                         <FormMessage />
@@ -304,28 +343,48 @@ export function ProfilePageContent() {
                 </div>
               </section>
 
-              {/* Save Button */}
-              <div className="flex justify-end pt-4">
-                <button
-                  type="submit"
-                  disabled={!hasChanges || updateProfile.isPending}
-                  className={`px-6 py-3 cursor-pointer rounded-lg transition-colors flex items-center gap-2 shadow-sm text-sm font-medium ${
-                    !hasChanges || updateProfile.isPending ?
-                      "bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
-                    : "bg-blue-500 hover:bg-blue-600 text-white"
-                  }`}
-                >
-                  {updateProfile.isPending ?
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  : <>
-                      <Save className="w-4 h-4" />
-                      Save Changes
-                    </>
-                  }
-                </button>
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4">
+                {!isEditing ? (
+                  <Button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancel}
+                      disabled={updateProfile.isPending}
+                      className="px-6 py-3"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={!hasChanges || updateProfile.isPending}
+                      className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {updateProfile.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </form>
@@ -349,14 +408,15 @@ export function ProfilePageContent() {
         </Link>
       </div>
 
-      {/* Additional Info Card */}
-      <div className="mt-6 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
-        <p className="text-blue-900 dark:text-blue-200 text-sm">
-          <span>💡 </span>
-          Your role is assigned by project managers and cannot be changed here.
-          Contact your PM if you believe your role needs updating.
-        </p>
-      </div>
+      {/* Additional Info Card - Only for employees */}
+      {user.role === "employee" && (
+        <div className="mt-6 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
+          <p className="text-blue-900 dark:text-blue-200 text-sm">
+            Your role is assigned by administrators and cannot be changed here.
+            Contact an admin if you believe your role needs updating.
+          </p>
+        </div>
+      )}
 
       {/* Avatar Selection Modal */}
       <AvatarSelectionModal

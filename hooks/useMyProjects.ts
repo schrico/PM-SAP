@@ -104,7 +104,7 @@ export function useMyProjects(userId: string | null) {
 
       return { projectId, status, projectName };
     },
-    onSuccess: ({ status, projectName }) => {
+    onSuccess: ({ status, projectName, projectId }) => {
       const messages = {
         claimed: `Project "${projectName}" claimed successfully`,
         rejected: `Project "${projectName}" has been rejected`,
@@ -113,8 +113,9 @@ export function useMyProjects(userId: string | null) {
 
       toast.success(messages[status]);
 
-      // Invalidate and refetch the projects query
+      // Invalidate and refetch the projects queries
       queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
     },
     onError: (error: any, { status }) => {
       const action = status === "claimed"

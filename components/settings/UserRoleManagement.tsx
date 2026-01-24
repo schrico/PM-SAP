@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Loader2, Shield, AlertCircle } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
+import { useUser } from "@/hooks/useUser";
 import { useUpdateUserRole } from "@/hooks/useUpdateUserRole";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
@@ -16,6 +17,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "admin", label: "Admin" },
@@ -23,12 +33,21 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "employee", label: "Employee" },
 ];
 
+interface PendingRoleChange {
+  userId: string;
+  userName: string;
+  currentRole: UserRole;
+  newRole: UserRole;
+}
+
 export function UserRoleManagement() {
   const { data: users = [], isLoading } = useUsers();
+  const { user: currentUser } = useUser();
   const updateUserRole = useUpdateUserRole();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [pendingRoleChange, setPendingRoleChange] = useState<PendingRoleChange | null>(null);
   const pendingMutations = useRef<Set<string>>(new Set());
 
   // Filter users based on search term (name, email, or short_name)
@@ -41,24 +60,39 @@ export function UserRoleManagement() {
     );
   });
 
-  const handleRoleChange = (userId: string, newRole: UserRole, currentRole: UserRole) => {
+  const handleRoleSelect = (userId: string, userName: string, newRole: UserRole, currentRole: UserRole) => {
     // Prevent update if role hasn't actually changed
     if (newRole === currentRole) {
       console.log("Role unchanged, skipping update");
       return;
     }
-    
+
+    // Show confirmation modal
+    setPendingRoleChange({
+      userId,
+      userName,
+      currentRole,
+      newRole,
+    });
+  };
+
+  const confirmRoleChange = () => {
+    if (!pendingRoleChange) return;
+
+    const { userId, newRole } = pendingRoleChange;
+
     // Prevent duplicate mutations for the same user
     const mutationKey = `${userId}-${newRole}`;
     if (pendingMutations.current.has(mutationKey)) {
       console.log("Mutation already in progress, skipping duplicate call");
       return;
     }
-    
+
     // Mark mutation as pending
     pendingMutations.current.add(mutationKey);
     setUpdatingUserId(userId);
-    
+    setPendingRoleChange(null);
+
     // Optimistic update
     queryClient.setQueryData(["users"], (oldUsers: typeof users) => {
       if (!oldUsers) return oldUsers;
@@ -66,7 +100,7 @@ export function UserRoleManagement() {
         user.id === userId ? { ...user, role: newRole } : user
       );
     });
-    
+
     updateUserRole.mutate(
       { userId, newRole },
       {
@@ -85,6 +119,10 @@ export function UserRoleManagement() {
         },
       }
     );
+  };
+
+  const getRoleLabel = (role: UserRole): string => {
+    return ROLE_OPTIONS.find(opt => opt.value === role)?.label || role;
   };
 
   if (isLoading) {
@@ -126,59 +164,71 @@ export function UserRoleManagement() {
             {searchTerm ? "No users found matching your search." : "No users found."}
           </div>
         ) : (
-          filteredUsers.map((user) => (
-            <div
-              key={user.id}
-              className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3">
-                  <ProfileAvatar
-                    name={user.name || "User"}
-                    avatar={user.avatar}
-                    size="sm"
-                    showEditButton={false}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-white truncate">
-                      {user.name}
-                      {user.short_name && (
-                        <span className="text-muted-foreground ml-2">
-                          ({user.short_name})
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {user.email}
-                    </p>
+          filteredUsers.map((user) => {
+            const isCurrentUser = currentUser?.id === user.id;
+            return (
+              <div
+                key={user.id}
+                className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                  isCurrentUser
+                    ? "border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20"
+                    : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <ProfileAvatar
+                      name={user.name || "User"}
+                      avatar={user.avatar}
+                      size="sm"
+                      showEditButton={false}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">
+                        {user.name}
+                        {user.short_name && (
+                          <span className="text-muted-foreground ml-2">
+                            ({user.short_name})
+                          </span>
+                        )}
+                        {isCurrentUser && (
+                          <span className="text-blue-600 dark:text-blue-400 ml-2 text-sm font-normal">
+                            (You)
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+                  <Select
+                    value={user.role}
+                    onValueChange={(value) =>
+                      handleRoleSelect(user.id, user.name || "User", value as UserRole, user.role)
+                    }
+                    disabled={isCurrentUser || updateUserRole.isPending || updatingUserId === user.id}
+                  >
+                    <SelectTrigger className={`w-[180px] ${isCurrentUser ? "opacity-60 cursor-not-allowed" : ""}`}>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {updatingUserId === user.id && (
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
               </div>
-              <div className="ml-4 flex-shrink-0">
-                <Select
-                  value={user.role}
-                  onValueChange={(value) =>
-                    handleRoleChange(user.id, value as UserRole, user.role)
-                  }
-                  disabled={updateUserRole.isPending || updatingUserId === user.id}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {updatingUserId === user.id && (
-                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground mt-1 ml-2 inline-block" />
-                )}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -192,6 +242,28 @@ export function UserRoleManagement() {
           </span>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <Dialog open={!!pendingRoleChange} onOpenChange={(open) => !open && setPendingRoleChange(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Role Change</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to change <span className="font-medium text-gray-900 dark:text-white">{pendingRoleChange?.userName}</span>&apos;s role from{" "}
+              <span className="font-medium text-gray-900 dark:text-white">{pendingRoleChange && getRoleLabel(pendingRoleChange.currentRole)}</span> to{" "}
+              <span className="font-medium text-gray-900 dark:text-white">{pendingRoleChange && getRoleLabel(pendingRoleChange.newRole)}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setPendingRoleChange(null)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmRoleChange}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

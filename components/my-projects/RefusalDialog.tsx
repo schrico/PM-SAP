@@ -27,7 +27,7 @@ export function RefusalDialog({
   const [error, setError] = useState("");
 
   const handleConfirm = () => {
-    if (message.trim().length <= 20) {
+    if (message.trim().length <= 10) {
       setError("Please provide a reason with more than 10 characters");
       return;
     }

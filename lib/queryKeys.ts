@@ -14,8 +14,8 @@ export const queryKeys = {
   // Project-related queries
   project: (id: number | string | null) => ['project', id] as const,
   projects: () => ['projects'] as const,
-  projectsWithTranslators: (showPast?: boolean, showAll?: boolean) =>
-    ['projects-with-translators', showPast, showAll] as const,
+  projectsWithTranslators: (showPast?: boolean, showAll?: boolean, includeAllStatuses?: boolean) =>
+    ['projects-with-translators', showPast, showAll, includeAllStatuses] as const,
   myProjects: (userId: string | null) => ['my-projects', userId] as const,
 
   // Home page counts

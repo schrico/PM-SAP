@@ -66,6 +66,7 @@ export function ProjectAssignCard({
                 onChange={() => onToggleProject(project.id)}
                 onClick={(e) => e.stopPropagation()}
                 className="outline-style w-4 h-4 mt-1 rounded cursor-pointer"
+                aria-label={`Select project ${project.name}`}
               />
               <div className="flex flex-col items-center shrink-0 mt-1">
                 <div

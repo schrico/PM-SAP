@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useProject } from "@/hooks/useProject";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { useMyProjects } from "@/hooks/useMyProjects";
 import { ProjectDetailsCard } from "@/components/project/ProjectDetailsCard";
 import { ProjectInstructionsCard } from "@/components/project/ProjectInstructionsCard";
 import { TranslatorsList } from "@/components/project/TranslatorsList";
@@ -36,6 +37,9 @@ export default function ProjectPage() {
     isTranslator,
     canManageAssignments,
   } = useRoleAccess();
+
+  // Use the same hook as my-projects for claim/reject/done functionality
+  const { claimProject, rejectProject, markAsDone, isUpdating } = useMyProjects(user?.id || null);
 
   const [addTranslatorModal, setAddTranslatorModal] = useState<{
     open: boolean;
@@ -213,67 +217,6 @@ export default function ProjectPage() {
     },
   });
 
-  // Translator assignment status mutation (claim/reject/done)
-  const updateAssignmentMutation = useMutation({
-    mutationFn: async ({
-      projectId,
-      userId,
-      status,
-      message,
-    }: {
-      projectId: number;
-      userId: string;
-      status: "claimed" | "rejected" | "done";
-      message?: string | null;
-    }) => {
-      const updateData: {
-        assignment_status: string;
-        refusal_message?: string | null;
-        done_message?: string | null;
-      } = { assignment_status: status };
-
-      if (status === "rejected" && message) {
-        updateData.refusal_message = message;
-      }
-      if (status === "done" && message) {
-        updateData.done_message = message;
-      }
-
-      const { error } = await supabase
-        .from("projects_assignment")
-        .update(updateData)
-        .eq("project_id", projectId)
-        .eq("user_id", userId);
-
-      if (error) throw error;
-
-      return { projectId, status };
-    },
-    onSuccess: ({ status }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.myProjects(user?.id || null),
-      });
-
-      const messages = {
-        claimed: "Project claimed successfully",
-        rejected: "Project has been rejected",
-        done: "Project marked as done",
-      };
-
-      toast.success(messages[status]);
-    },
-    onError: (error: Error, { status }) => {
-      toast.error(
-        `Failed to ${
-          status === "claimed" ? "claim"
-          : status === "rejected" ? "reject"
-          : "mark as done"
-        } project`
-      );
-    },
-  });
-
   // Mark complete mutation (PM/Admin only)
   const markCompleteMutation = useMutation({
     mutationFn: async () => {
@@ -351,21 +294,17 @@ export default function ProjectPage() {
 
   // Wrapper handlers for TranslatorsList (for PM/Admin when assigned as translators)
   const handleClaimForTranslator = (projectId: number) => {
-    if (!user?.id) return;
-    const translator = project?.translators.find((t) => t.id === user.id);
+    if (!user?.id || !project) return;
+    const translator = project.translators.find((t) => t.id === user.id);
     if (translator?.initial_message) {
       setInitialMessageDialog({
         open: true,
         projectId,
-        projectName: project?.name || "",
+        projectName: project.name,
         message: translator.initial_message,
       });
     } else {
-      updateAssignmentMutation.mutate({
-        projectId,
-        userId: user.id,
-        status: "claimed",
-      });
+      claimProject(projectId, project.name);
     }
   };
 
@@ -405,12 +344,8 @@ export default function ProjectPage() {
   };
 
   const handleClaimProject = () => {
-    if (!projectId || !user?.id) return;
-    updateAssignmentMutation.mutate({
-      projectId,
-      userId: user.id,
-      status: "claimed",
-    });
+    if (!projectId || !user?.id || !project) return;
+    claimProject(projectId, project.name);
     setInitialMessageDialog({
       open: false,
       projectId: null,
@@ -430,12 +365,7 @@ export default function ProjectPage() {
 
   const handleConfirmRefuse = (message: string) => {
     if (!refusalDialog.projectId || !user?.id) return;
-    updateAssignmentMutation.mutate({
-      projectId: refusalDialog.projectId,
-      userId: user.id,
-      status: "rejected",
-      message,
-    });
+    rejectProject(refusalDialog.projectId, refusalDialog.projectName, message);
     setRefusalDialog({ open: false, projectId: null, projectName: "" });
   };
 
@@ -454,12 +384,7 @@ export default function ProjectPage() {
 
   const handleConfirmDone = (message: string | null) => {
     if (!doneDialog.projectId || !user?.id) return;
-    updateAssignmentMutation.mutate({
-      projectId: doneDialog.projectId,
-      userId: user.id,
-      status: "done",
-      message,
-    });
+    markAsDone(doneDialog.projectId, doneDialog.projectName, message);
     setDoneDialog({ open: false, projectId: null, projectName: "" });
   };
 
@@ -587,37 +512,36 @@ export default function ProjectPage() {
               <>
                 {assignmentStatus === "unclaimed" && (
                   <div className="flex gap-2">
-                    <Button
+                    <button
                       onClick={handleClaimClick}
-                      size="lg"
-                      disabled={updateAssignmentMutation.isPending}
-                      className="cursor-pointer bg-green-500 hover:bg-green-600 text-white"
+                      disabled={isUpdating}
+                      className="inline-flex cursor-pointer items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all hover:bg-blue-500 dark:hover:bg-blue-600 hover:text-white dark:hover:text-white hover:shadow-lg hover:scale-105 border border-gray-200 dark:border-gray-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      type="button"
                     >
-                      <Check className="w-5 h-5 mr-2" />
+                      <Check className="w-5 h-5" />
                       Claim Project
-                    </Button>
-                    <Button
+                    </button>
+                    <button
                       onClick={handleRefuseClick}
-                      size="lg"
-                      variant="outline"
-                      disabled={updateAssignmentMutation.isPending}
-                      className="cursor-pointer border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                      disabled={isUpdating}
+                      className="inline-flex cursor-pointer items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all hover:bg-red-500 dark:hover:bg-red-600 hover:text-white dark:hover:text-white hover:shadow-lg hover:scale-105 border border-gray-200 dark:border-gray-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      type="button"
                     >
-                      <X className="w-5 h-5 mr-2" />
+                      <X className="w-5 h-5" />
                       Refuse
-                    </Button>
+                    </button>
                   </div>
                 )}
                 {assignmentStatus === "claimed" && (
-                  <Button
+                  <button
                     onClick={handleDoneClick}
-                    size="lg"
-                    disabled={updateAssignmentMutation.isPending}
-                    className="cursor-pointer bg-green-500 hover:bg-green-600 text-white"
+                    disabled={isUpdating}
+                    className="inline-flex cursor-pointer items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all hover:bg-green-500 dark:hover:bg-green-600 hover:text-white dark:hover:text-white hover:shadow-lg hover:scale-105 border border-gray-200 dark:border-gray-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    type="button"
                   >
-                    <Check className="w-5 h-5 mr-2" />
+                    <Check className="w-5 h-5" />
                     Mark as Done
-                  </Button>
+                  </button>
                 )}
               </>
             )}
@@ -662,7 +586,7 @@ export default function ProjectPage() {
                 project.status !== "complete"
               }
               isUpdating={
-                updateAssignmentMutation.isPending ||
+                isUpdating ||
                 markCompleteMutation.isPending
               }
               projectStatus={project.status}
@@ -716,8 +640,8 @@ export default function ProjectPage() {
         </>
       )}
 
-      {/* Translator Dialogs */}
-      {isTranslator() && (
+      {/* Translator Dialogs - show for translators OR PM/Admin assigned to project */}
+      {(isTranslator() || (canManageAssignments() && project?.translators?.some(t => t.id === user?.id))) && (
         <>
           <RefusalDialog
             open={refusalDialog.open}

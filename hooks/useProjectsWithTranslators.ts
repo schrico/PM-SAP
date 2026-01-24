@@ -5,17 +5,29 @@ import { useSupabase } from "./useSupabase";
 import type { ProjectWithTranslators, ProjectTranslator } from '@/types/project';
 import { queryKeys } from "@/lib/queryKeys";
 
-export function useProjectsWithTranslators(showPast: boolean = false, showAll: boolean = false) {
+export function useProjectsWithTranslators(
+  showPast: boolean = false,
+  showAll: boolean = false,
+  includeAllStatuses: boolean = false
+) {
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: queryKeys.projectsWithTranslators(showPast, showAll),
+    queryKey: queryKeys.projectsWithTranslators(showPast, showAll, includeAllStatuses),
     queryFn: async (): Promise<ProjectWithTranslators[]> => {
-      // First, get all projects
-      const { data: projects, error: projectsError } = await supabase
+      // Build the query
+      let query = supabase
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Only filter by active status unless includeAllStatuses is true
+      // (invoicing page needs complete projects)
+      if (!includeAllStatuses) {
+        query = query.eq('status', 'active');
+      }
+
+      const { data: projects, error: projectsError } = await query;
 
       if (projectsError) {
         throw new Error(`Failed to fetch projects: ${projectsError.message}`);

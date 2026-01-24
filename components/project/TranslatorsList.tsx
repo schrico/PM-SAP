@@ -320,6 +320,7 @@ export function TranslatorsList({
                 onClick={handleCancelRemove}
                 className="p-1 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors"
                 type="button"
+                aria-label="Close dialog"
               >
                 <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>

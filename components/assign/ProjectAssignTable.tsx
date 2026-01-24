@@ -159,6 +159,7 @@ export function ProjectAssignTable({
           onChange={() => onToggleProject(project.id)}
           onClick={(e) => e.stopPropagation()}
           className="outline-style w-4 h-4 rounded cursor-pointer"
+          aria-label={`Select project ${project.name}`}
         />
       )}
     />
