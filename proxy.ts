@@ -1,10 +1,10 @@
 // middleware.ts
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function proxy(req: NextRequest) {
-  const res = NextResponse.next();
+  let res = NextResponse.next();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
@@ -16,11 +16,25 @@ export async function proxy(req: NextRequest) {
     return res;
   }
 
-  // Create a Supabase client bound to the request/response
-  const supabase = createMiddlewareClient(
-    { req, res },
-    { supabaseUrl, supabaseKey }
-  );
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        // First set on the request (for downstream server components)
+        cookiesToSet.forEach(({ name, value }) => {
+          req.cookies.set(name, value);
+        });
+        // Re-create response to pick up request cookie changes
+        res = NextResponse.next({ request: req });
+        // Then set on the response (for the browser)
+        cookiesToSet.forEach(({ name, value, options }) => {
+          res.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
 
   // Get current session
   const {
@@ -33,7 +47,7 @@ export async function proxy(req: NextRequest) {
   const publicRoutes = ["/login"];
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
-  // ✅ Redirect unauthenticated users trying to access private routes
+  // Redirect unauthenticated users trying to access private routes
   if (!session && !isPublic) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = "/login";
@@ -43,7 +57,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(redirectUrl, { headers: res.headers });
   }
 
-  // ✅ Redirect authenticated users away from /login
+  // Redirect authenticated users away from /login
   if (session && pathname === "/login") {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = "/";
@@ -52,7 +66,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(redirectUrl, { headers: res.headers });
   }
 
-  // ✅ Always return `res` (the modified one)
+  // Always return `res` (the modified one)
   return res;
 }
 

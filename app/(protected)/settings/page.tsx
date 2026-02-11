@@ -9,7 +9,7 @@ import { ColorSettings } from "@/components/settings/ColorSettings";
 import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { UserRoleManagement } from "@/components/settings/UserRoleManagement";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -29,7 +29,7 @@ export default function SettingsPage() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   const handleLogout = async () => {
     setLoggingOut(true);

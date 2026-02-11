@@ -1,11 +1,11 @@
 "use client";
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 /**
- * Shared hook for creating Supabase client component client.
+ * Shared hook for creating Supabase browser client.
  * Centralizes Supabase client creation logic used across all hooks.
- * 
+ *
  * @returns Supabase client instance
  * @throws Error if required environment variables are missing
  */
@@ -19,5 +19,5 @@ export function useSupabase() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  return createClientComponentClient({ supabaseUrl, supabaseKey });
+  return createBrowserClient(supabaseUrl, supabaseKey);
 }

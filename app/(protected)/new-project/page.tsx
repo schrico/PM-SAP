@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo, Suspense } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
@@ -27,7 +27,7 @@ function NewProjectPageContent() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   // Fetch source project if duplicating
   const { data: sourceProject, isLoading: loadingSource } = useQuery({
@@ -263,10 +263,11 @@ function NewProjectPageContent() {
 
           {/* System */}
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="system-select" className="block text-gray-700 dark:text-gray-300 mb-2">
               System
             </label>
             <select
+              id="system-select"
               value={formData.system}
               onChange={(e) =>
                 setFormData({ ...formData, system: e.target.value })
@@ -357,10 +358,11 @@ function NewProjectPageContent() {
 
           {/* Due Date */}
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="due-date" className="block text-gray-700 dark:text-gray-300 mb-2">
               Due Date
             </label>
             <input
+              id="due-date"
               type="date"
               value={formData.dueDate}
               onChange={(e) =>

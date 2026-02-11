@@ -19,7 +19,7 @@ import { ConfirmationDialog } from "@/components/management/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 
@@ -84,7 +84,7 @@ export default function ProjectPage() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   // Check if translator is assigned to this project
   const translatorAssignment =

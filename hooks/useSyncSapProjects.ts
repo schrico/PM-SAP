@@ -25,10 +25,20 @@ export interface SyncSapProjectsResponse {
 }
 
 /**
+ * Rate limit error response from the sync API
+ */
+interface RateLimitResponse {
+  error: "rate_limited";
+  waitMinutes: number;
+  retryAt: string;
+}
+
+/**
  * Hook for importing/syncing SAP projects to the local database
  *
  * Features:
- * - Batch import - imports multiple subprojects at once
+ * - Batch import — imports multiple subprojects at once
+ * - Rate limit handling — 10-minute cooldown between imports with toast feedback
  * - Invalidates project queries on success
  * - Shows summary toast with import results
  */
@@ -45,9 +55,27 @@ export function useSyncSapProjects() {
         body: JSON.stringify({ projects }),
       });
 
+      // Handle rate limit
+      if (response.status === 429) {
+        const data = (await response.json().catch(() => null)) as RateLimitResponse | null;
+        if (data?.error === "rate_limited") {
+          const retryTime = new Date(data.retryAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          toast.info(
+            `Import is on cooldown. Available again at ${retryTime} (~${data.waitMinutes} min).`,
+            { duration: 6000 }
+          );
+        }
+        throw new Error("Rate limited");
+      }
+
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || "Failed to import projects from SAP");
+        const error = await response.json().catch(() => null);
+        const message =
+          error?.error || error?.message || "Failed to import projects from SAP";
+        throw new Error(message);
       }
 
       return response.json();
@@ -75,6 +103,8 @@ export function useSyncSapProjects() {
       }
     },
     onError: (error: Error) => {
+      // Rate limit errors already show a toast in mutationFn
+      if (error.message === "Rate limited") return;
       toast.error(error.message || "Failed to import projects from SAP");
     },
   });

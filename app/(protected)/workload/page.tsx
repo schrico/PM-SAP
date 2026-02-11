@@ -65,7 +65,7 @@ function countWorkingDays(startDate: Date, endDate: Date): number {
 }
 
 const HOURS_PER_WORKDAY = 8;
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
@@ -95,7 +95,7 @@ function WorkloadContent() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>("byDate");

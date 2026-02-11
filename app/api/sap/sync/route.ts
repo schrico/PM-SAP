@@ -10,6 +10,8 @@ import { createErrorResponse } from '@/lib/sap/errors';
 import { mapSapToProjectImport, sanitizeImportData } from '@/lib/sap/mappers';
 import type { SapSyncRequest, SapSyncResponse } from '@/types/sap';
 
+const RATE_LIMIT_MINUTES = 10;
+
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
@@ -57,6 +59,28 @@ export async function POST(request: NextRequest) {
         { error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    // Check rate limit — cooldown only applies to actual imports
+    const { data: rateLimit } = await supabase
+      .from('sap_api_rate_limits')
+      .select('last_fetch_at')
+      .eq('user_id', user.id)
+      .single();
+
+    if (rateLimit?.last_fetch_at) {
+      const lastImport = new Date(rateLimit.last_fetch_at);
+      const cooldownMs = RATE_LIMIT_MINUTES * 60 * 1000;
+      const elapsed = Date.now() - lastImport.getTime();
+
+      if (elapsed < cooldownMs) {
+        const waitMinutes = Math.ceil((cooldownMs - elapsed) / 60000);
+        const retryAt = new Date(lastImport.getTime() + cooldownMs).toISOString();
+        return NextResponse.json(
+          { error: 'rate_limited', waitMinutes, retryAt },
+          { status: 429 }
+        );
+      }
     }
 
     const sapClient = getSapClient();
@@ -166,6 +190,16 @@ export async function POST(request: NextRequest) {
     // Clean up empty errors array
     if (results.errors?.length === 0) {
       delete results.errors;
+    }
+
+    // Update rate limit only if something was actually imported/updated
+    if (results.imported > 0 || results.updated > 0) {
+      await supabase
+        .from('sap_api_rate_limits')
+        .upsert({
+          user_id: user.id,
+          last_fetch_at: new Date().toISOString(),
+        });
     }
 
     return NextResponse.json(results);

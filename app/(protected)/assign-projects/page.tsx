@@ -19,7 +19,7 @@ import {
   matchesDueDateFilter,
   matchesLengthFilter,
 } from "@/utils/filterHelpers";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
@@ -77,7 +77,7 @@ function AssignProjectsContent() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   const loading = projectsLoading;
 

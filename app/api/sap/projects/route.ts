@@ -8,8 +8,6 @@ import { getSapClient } from '@/lib/sap/client';
 import { createErrorResponse } from '@/lib/sap/errors';
 import type { SapProjectListItem, SapSubProjectListItem } from '@/types/sap';
 
-const RATE_LIMIT_MINUTES = 5;
-
 export async function GET() {
   try {
     // Get Supabase client and verify auth
@@ -49,27 +47,6 @@ export async function GET() {
       );
     }
 
-    // Check rate limit
-    const { data: rateLimit } = await supabase
-      .from('sap_api_rate_limits')
-      .select('last_fetch_at')
-      .eq('user_id', user.id)
-      .single();
-
-    if (rateLimit?.last_fetch_at) {
-      const lastFetch = new Date(rateLimit.last_fetch_at);
-      const cooldownMs = RATE_LIMIT_MINUTES * 60 * 1000;
-      const elapsed = Date.now() - lastFetch.getTime();
-
-      if (elapsed < cooldownMs) {
-        const waitMinutes = Math.ceil((cooldownMs - elapsed) / 60000);
-        return NextResponse.json(
-          { error: 'rate_limited', waitMinutes },
-          { status: 429 }
-        );
-      }
-    }
-
     // Fetch SAP projects
     const sapClient = getSapClient();
     const sapData = await sapClient.getProjects();
@@ -99,18 +76,10 @@ export async function GET() {
           projectType: sub.projectType,
           existsLocally: !!existing,
           localProjectId: existing?.id,
-          needsUpdate: existing ? true : false, // TODO: Compare dates for actual update detection
+          needsUpdate: existing ? true : false,
         } satisfies SapSubProjectListItem;
       }),
     }));
-
-    // Update rate limit (upsert)
-    await supabase
-      .from('sap_api_rate_limits')
-      .upsert({
-        user_id: user.id,
-        last_fetch_at: new Date().toISOString(),
-      });
 
     return NextResponse.json({ projects });
   } catch (error) {

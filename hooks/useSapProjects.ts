@@ -33,20 +33,9 @@ interface SapProjectsResponse {
 }
 
 /**
- * Rate limit error response
- */
-interface RateLimitError {
-  error: "rate_limited";
-  waitMinutes: number;
-}
-
-/**
- * Hook to fetch SAP projects from the API
- *
- * Features:
- * - Handles rate limiting (5-minute cooldown per user)
- * - Shows toast notifications for success/errors
- * - Caches data for 5 minutes to match rate limit
+ * Hook to fetch SAP projects from the API.
+ * This only fetches the project list — no rate limit on fetching.
+ * Rate limiting is enforced on the import/sync endpoint instead.
  */
 export function useSapProjects() {
   return useQuery({
@@ -55,24 +44,16 @@ export function useSapProjects() {
       const response = await fetch("/api/sap/projects");
       const data = await response.json();
 
-      // Handle rate limit response
-      if (data.error === "rate_limited") {
-        const rateLimitData = data as RateLimitError;
-        toast.info(
-          `SAP data was fetched less than 5 minutes ago.\nPlease wait ${rateLimitData.waitMinutes} minute(s) before fetching again.`
-        );
-        throw new Error("Rate limited");
-      }
-
       if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch SAP projects");
+        const errorMessage =
+          data.error || data.message || "Failed to fetch SAP projects";
+        toast.error(`SAP Error: ${errorMessage}`);
+        throw new Error(errorMessage);
       }
 
-      toast.success("SAP projects loaded successfully");
       return data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes (matches rate limit)
-    retry: false, // Don't retry rate-limited requests
+    retry: false,
     enabled: false, // Manual fetch - user triggers via refetch
   });
 }

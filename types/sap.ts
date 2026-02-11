@@ -36,30 +36,50 @@ export interface SapSubProjectInfo {
   subProjectSteps: SapStep[];
 }
 
-/** Environment info for sub-project */
+/** Environment info for sub-project (matches OpenAPI EnvironmentModel) */
 export interface SapEnvironment {
+  contentId: string;
   environmentName: string;
-  environmentValue: string;
+  toolType: string;
+  toolTypeDescription: string;
+  projectUrl: string;
+  graphId: string[];
+  lxeProject: string[];
+  translationArea: string[];
+  worklist: string[];
+  is_xtm: boolean;
+  content_name: string;
+  external_project_id: string;
+  external_system: string;
 }
 
-/** Step within a sub-project (contains dates, volumes, language info) */
+/** Step within a sub-project (matches OpenAPI SubProjectStepsModel) */
 export interface SapStep {
   contentId: string;
   serviceStep: string;
   stepText: string;
   slsLang: string;       // Target language
   sourceLang: string;    // Source language
+  tGroup: string;
   startDate: string;     // ISO date string
   endDate: string;       // ISO date string
   hasInstructions: boolean;
-  toolType: string;      // Maps to system field (XTM, LXE, SSE, STM, etc.)
+  instructionsLastChangedAt: string;
+  subProjectFiles: string;
   volume: SapVolume[];
+  stepStatusId: string;
+  stepStatusDescription: string;
+  // toolType is on EnvironmentModel per OpenAPI spec, not on steps.
+  // Kept optional for backwards compat — extractSystem falls back to environment.
+  toolType?: string;
 }
 
-/** Volume info within a step */
+/** Volume info within a step (matches OpenAPI VolumeModel) */
 export interface SapVolume {
   volumeQuantity: number;
   volumeUnit: string;    // "Words", "Lines", etc.
+  ceBillQuantity: number;
+  ceBillUnit: string;
   activityText: string;
 }
 
@@ -68,20 +88,51 @@ export interface SapInstructionDTO {
   instructions: SapInstruction[];
 }
 
-/** Individual instruction entry */
+/** Individual instruction entry (matches OpenAPI InstructionModel) */
 export interface SapInstruction {
-  instructionType: string;
+  subProjectId: string;
+  contentId: string;
+  serviceStep: string;
+  slsLang: string;
+  lastChangedAt: string;
   instructionShort: string;
   instructionLong: string;
+  isTemplate: boolean;
+  deleted: boolean;
 }
 
-/** Error response from SAP API */
-export interface SapErrorDTO {
-  error: string;
+/** Detail entry within SAP error response */
+export interface SapErrorDetail {
   message: string;
-  status: number;
-  timestamp: string;
-  path: string;
+}
+
+/** Nested error body inside SAP error responses (matches OpenAPI ErrorDto) */
+export interface SapErrorBody {
+  status: string;       // e.g. "404 NOT_FOUND", "401 UNAUTHORIZED"
+  message: string;
+  target: string;
+  timestamp: string;    // ISO 8601 date-time
+  details: SapErrorDetail[];
+}
+
+/** Top-level error response from SAP API */
+export interface SapErrorDTO {
+  error: SapErrorBody;
+}
+
+// ============================================================================
+// OAuth Token Response
+// ============================================================================
+
+/** OAuth token response from SAP UAA */
+export interface SapTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  scope?: string;
+  jti?: string;
+  id_token?: string;
+  refresh_token?: string;
 }
 
 // ============================================================================

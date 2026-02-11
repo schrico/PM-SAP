@@ -32,7 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { queryKeys } from "@/lib/queryKeys";
@@ -142,7 +142,7 @@ export default function EditProjectPage() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   const formatDateForInput = (date: string | null | undefined) => {
     if (!date) return "";
@@ -813,9 +813,11 @@ export default function EditProjectPage() {
                       </div>
                       <FormControl>
                         <input
+                          id="paid-checkbox"
                           type="checkbox"
                           checked={field.value ?? false}
                           onChange={field.onChange}
+                          aria-label="Paid"
                           className="h-4 w-4 rounded border-gray-300"
                         />
                       </FormControl>
@@ -836,9 +838,11 @@ export default function EditProjectPage() {
                       </div>
                       <FormControl>
                         <input
+                          id="invoiced-checkbox"
                           type="checkbox"
                           checked={field.value ?? false}
                           onChange={field.onChange}
+                          aria-label="Invoiced"
                           className="h-4 w-4 rounded border-gray-300"
                         />
                       </FormControl>
@@ -861,9 +865,11 @@ export default function EditProjectPage() {
                     </div>
                     <FormControl>
                       <input
+                        id="short-checkbox"
                         type="checkbox"
                         checked={field.value ?? false}
                         onChange={field.onChange}
+                        aria-label="Short Project"
                         className="h-4 w-4 rounded border-gray-300"
                       />
                     </FormControl>
@@ -1087,6 +1093,7 @@ export default function EditProjectPage() {
                 onClick={() => setTranslatorToRemove(null)}
                 className="p-1 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors"
                 type="button"
+                aria-label="Close"
               >
                 <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>

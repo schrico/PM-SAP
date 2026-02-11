@@ -5,12 +5,11 @@ import type {
   SapProject,
   SapSubProject,
   SapSubProjectInfo,
+  SapEnvironment,
   SapInstruction,
   SapStep,
   SapProjectForImport,
   SapSubProjectDetails,
-  TOOL_TYPE_TO_SYSTEM,
-  DEFAULT_SYSTEM,
 } from '@/types/sap';
 
 // Re-export constants for use in this module
@@ -95,11 +94,16 @@ export function extractLanguages(steps: SapStep[]): {
 }
 
 /**
- * Extract system/tool type from steps (first step with toolType)
+ * Extract system/tool type from steps, falling back to environment.
+ * Per OpenAPI spec, toolType lives on EnvironmentModel, not SubProjectStepsModel.
  */
-export function extractSystem(steps: SapStep[]): string {
+export function extractSystem(steps: SapStep[], environment?: SapEnvironment[]): string {
+  // Try steps first (backwards compat if API does return it on steps)
   const stepWithTool = steps.find(s => s.toolType);
-  return mapToolTypeToSystem(stepWithTool?.toolType);
+  if (stepWithTool?.toolType) return mapToolTypeToSystem(stepWithTool.toolType);
+  // Fall back to environment (where toolType actually lives per spec)
+  const envWithTool = environment?.find(e => e.toolType);
+  return mapToolTypeToSystem(envWithTool?.toolType);
 }
 
 /**
@@ -140,7 +144,7 @@ export function mapSapToProjectImport(
 ): SapProjectForImport {
   const dates = extractDateRange(details.subProjectSteps);
   const languages = extractLanguages(details.subProjectSteps);
-  const system = extractSystem(details.subProjectSteps);
+  const system = extractSystem(details.subProjectSteps, details.environment);
   const sapInstructions = buildSapInstructions(subProject.dmName, instructions);
 
   return {
@@ -170,7 +174,7 @@ export function mapSapToSubProjectDetails(
 ): SapSubProjectDetails {
   const dates = extractDateRange(details.subProjectSteps);
   const languages = extractLanguages(details.subProjectSteps);
-  const system = extractSystem(details.subProjectSteps);
+  const system = extractSystem(details.subProjectSteps, details.environment);
   const sapInstructions = buildSapInstructions(subProject.dmName, instructions);
 
   // Calculate volumes for display (not imported per client requirement)

@@ -40,8 +40,8 @@ export class SapApiError extends Error {
     if (this.isNotFound) {
       return 'SAP resource not found. The project may have been removed.';
     }
-    if (this.sapError?.message) {
-      return `SAP Error: ${this.sapError.message}`;
+    if (this.sapError?.error?.message) {
+      return `SAP Error: ${this.sapError.error.message}`;
     }
     return `Failed to communicate with SAP (${this.status})`;
   }
@@ -96,14 +96,15 @@ export async function parseSapError(response: Response): Promise<SapApiError> {
 
   try {
     const data = await response.json();
-    if (data.error || data.message) {
+    // SAP API returns { error: { status, message, target, timestamp, details } }
+    if (data.error && typeof data.error === 'object') {
       sapError = data as SapErrorDTO;
     }
   } catch {
     // Response body is not JSON, ignore
   }
 
-  const message = sapError?.message || `SAP API error: ${response.status} ${response.statusText}`;
+  const message = sapError?.error?.message || `SAP API error: ${response.status} ${response.statusText}`;
   return new SapApiError(message, response.status, sapError);
 }
 

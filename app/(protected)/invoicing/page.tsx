@@ -13,7 +13,7 @@ import { InvoicingCard } from "@/components/invoicing/InvoicingCard";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
@@ -49,7 +49,7 @@ function InvoicingContent() {
     throw new Error("Missing Supabase environment variables.");
   }
 
-  const supabase = createClientComponentClient({ supabaseUrl, supabaseKey });
+  const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   // State
   const [activeTab, setActiveTab] = useState<TabType>("all");
