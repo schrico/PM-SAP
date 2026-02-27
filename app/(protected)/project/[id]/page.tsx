@@ -464,20 +464,10 @@ export default function ProjectPage() {
                 {project.name}
               </h1>
               <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm">
+                <span className="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-base">
                   {project.system}
                 </span>
-                <span
-                  className={`inline-flex items-center px-3 py-1 rounded-lg text-sm capitalize ${
-                    project.status === "active" ?
-                      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                    : project.status === "complete" ?
-                      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  {project.status}
-                </span>
+                
               </div>
             </div>
           </div>
