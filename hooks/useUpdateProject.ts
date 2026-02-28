@@ -19,10 +19,9 @@ const PROJECT_FIELD_LABELS: Record<string, string> = {
   initial_deadline: "Initial Deadline",
   interim_deadline: "Interim Deadline",
   final_deadline: "Final Deadline",
-  custom_instructions: "Custom Instructions",
+  instructions: "Instructions",
   paid: "Paid",
   invoiced: "Invoiced",
-  short: "Short Project",
 };
 
 /**

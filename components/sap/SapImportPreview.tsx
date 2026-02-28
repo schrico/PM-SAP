@@ -91,6 +91,68 @@ export function SapImportPreview({ selection }: SapImportPreviewProps) {
       {/* Details */}
       {details && (
         <>
+          {/* Extracted Fields */}
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            {details.terminologyKey && details.terminologyKey.length > 0 && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                  Terminology Keys
+                </span>
+                <p className="text-gray-900 dark:text-white">
+                  {details.terminologyKey.join(", ")}
+                </p>
+              </div>
+            )}
+            {details.dmName && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                  SAP PM
+                </span>
+                <p className="text-gray-900 dark:text-white">
+                  {details.dmName}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Volume Summary */}
+          {details.subProjectSteps && details.subProjectSteps.length > 0 && (() => {
+            let totalWords = 0;
+            let totalLines = 0;
+            let totalHours = 0;
+            details.subProjectSteps.forEach((step) => {
+              step.volume?.forEach((v) => {
+                if (v.volumeUnit === "Words") totalWords += v.volumeQuantity;
+                if (v.volumeUnit === "Lines") totalLines += v.volumeQuantity;
+                if (v.volumeUnit === "Hours") totalHours += v.volumeQuantity;
+              });
+            });
+            const hasVolume = totalWords > 0 || totalLines > 0 || totalHours > 0;
+            if (!hasVolume) return null;
+            return (
+              <div className="flex flex-wrap gap-3 text-sm">
+                {totalWords > 0 && (
+                  <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded">
+                    <span className="text-gray-500 dark:text-gray-400 text-xs">Words: </span>
+                    <span className="text-gray-900 dark:text-white font-medium">{totalWords.toLocaleString("de-DE")}</span>
+                  </div>
+                )}
+                {totalLines > 0 && (
+                  <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded">
+                    <span className="text-gray-500 dark:text-gray-400 text-xs">Lines: </span>
+                    <span className="text-gray-900 dark:text-white font-medium">{totalLines.toLocaleString("de-DE")}</span>
+                  </div>
+                )}
+                {totalHours > 0 && (
+                  <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded">
+                    <span className="text-gray-500 dark:text-gray-400 text-xs">Hours: </span>
+                    <span className="text-gray-900 dark:text-white font-medium">{totalHours}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Steps Summary */}
           {details.subProjectSteps && details.subProjectSteps.length > 0 && (
             <div>

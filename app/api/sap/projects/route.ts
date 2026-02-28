@@ -52,14 +52,21 @@ export async function GET() {
     const sapData = await sapClient.getProjects();
 
     // Get existing SAP projects from database for comparison
+    // Fetch all SAP-sourced projects with composite matching fields
     const { data: existingProjects } = await supabase
       .from('projects')
-      .select('id, sap_subproject_id, last_synced_at')
+      .select('id, sap_subproject_id, language_in, language_out, translation_area, system, last_synced_at')
       .not('sap_subproject_id', 'is', null);
 
-    const existingMap = new Map(
-      (existingProjects || []).map(p => [p.sap_subproject_id, p])
-    );
+    // Group existing projects by sap_subproject_id (one subproject can map to multiple local projects)
+    const existingBySubId = new Map<string, typeof existingProjects>();
+    for (const p of existingProjects || []) {
+      const key = p.sap_subproject_id;
+      if (!existingBySubId.has(key)) {
+        existingBySubId.set(key, []);
+      }
+      existingBySubId.get(key)!.push(p);
+    }
 
     // Transform to frontend format with local status
     const projects: SapProjectListItem[] = sapData.projects.map(project => ({
@@ -67,16 +74,17 @@ export async function GET() {
       projectName: project.projectName,
       account: project.account,
       subProjects: project.subProjects.map(sub => {
-        const existing = existingMap.get(sub.subProjectId);
+        const existingList = existingBySubId.get(sub.subProjectId) || [];
+        const hasLocal = existingList.length > 0;
         return {
           subProjectId: sub.subProjectId,
           subProjectName: sub.subProjectName,
           dmName: sub.dmName,
           pmName: sub.pmName,
           projectType: sub.projectType,
-          existsLocally: !!existing,
-          localProjectId: existing?.id,
-          needsUpdate: existing ? true : false,
+          existsLocally: hasLocal,
+          localProjectId: hasLocal ? existingList[0].id : undefined,
+          needsUpdate: hasLocal,
         } satisfies SapSubProjectListItem;
       }),
     }));

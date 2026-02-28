@@ -84,7 +84,7 @@ export function useSyncSapProjects() {
       // Invalidate all project-related queries
       queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
 
       // Show summary toast

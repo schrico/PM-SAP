@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Check, XCircle } from "lucide-react";
-import { formatNumber } from "@/utils/formatters";
+import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle, getStatusIcon } from "@/utils/projectTableHelpers";
 import { ProjectActionsMenu } from "./ProjectActionsMenu";
@@ -33,6 +33,7 @@ interface ProjectWithTranslators {
   interim_deadline: string | null;
   final_deadline: string | null;
   instructions?: string | null;
+  sap_instructions?: import("@/types/project").SapInstructionEntry[] | null;
   status: "complete" | "active" | "cancelled";
   language_in: string;
   language_out: string;
@@ -58,6 +59,7 @@ interface ManagementCardProps {
   onSaveWordsLines: (projectId: number) => void;
   onCancelWordsLinesEdit: () => void;
   isUpdatingWordsLines: boolean;
+  onInstructionsClick?: (project: ProjectWithTranslators) => void;
 }
 
 export function ManagementCard({
@@ -78,6 +80,7 @@ export function ManagementCard({
   onSaveWordsLines,
   onCancelWordsLinesEdit,
   isUpdatingWordsLines,
+  onInstructionsClick,
 }: ManagementCardProps) {
   const router = useRouter();
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
@@ -144,8 +147,8 @@ export function ManagementCard({
               />
             </div>
 
-            <h3 className="text-gray-900 dark:text-white text-sm font-bold mt-2">
-              {project.name}
+            <h3 className="text-gray-900 dark:text-white text-sm font-bold mt-2 break-words line-clamp-2">
+              {formatProjectName(project.name)}
             </h3>
             <div className="text-gray-500 dark:text-gray-400 text-xs mt-1" onClick={(e) => e.stopPropagation()}>
               {editingProjectId === project.id ? (
@@ -240,8 +243,16 @@ export function ManagementCard({
                 finalDeadline={project.final_deadline}
               />
             </div>
-            <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate mt-1">
-              Instructions: {(project as any).custom_instructions || project.instructions || "No instructions"}
+            <p
+              className={`text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate mt-1 ${onInstructionsClick ? "cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors" : ""}`}
+              onClick={(e) => {
+                if (onInstructionsClick) {
+                  e.stopPropagation();
+                  onInstructionsClick(project);
+                }
+              }}
+            >
+              Instructions: {project.instructions || "No instructions"}
             </p>
           </div>
         );

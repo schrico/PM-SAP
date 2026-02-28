@@ -38,14 +38,16 @@ export function matchesDueDateFilter(
   }
 }
 
-export function matchesLengthFilter(words: number | null, filter: string | null): boolean {
-  if (!filter || words === null) return true;
+export function matchesLengthFilter(words: number | null, lines: number | null, filter: string | null): boolean {
+  if (!filter) return true;
 
   switch (filter) {
     case "Short":
-      return words < 2000;
+      // "Short" = has lines (lines is not null and not 0)
+      return lines !== null && lines !== 0;
     case "Long":
-      return words >= 2000;
+      // "Long" = has words (words is not null and not 0), or both are 0/null (default)
+      return (words !== null && words !== 0) || (!lines || lines === 0);
     default:
       return true;
   }

@@ -15,7 +15,6 @@ import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { createBrowserClient } from "@supabase/ssr";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
@@ -231,7 +230,7 @@ function InvoicingContent() {
     // Length filter
     if (lengthFilter) {
       projects = projects.filter((p) =>
-        matchesLengthFilter(p.words, lengthFilter)
+        matchesLengthFilter(p.words, p.lines, lengthFilter)
       );
     }
 
@@ -287,7 +286,7 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
       toast.success("Projects marked as invoiced");
       setSelectedProjects(new Set());
@@ -308,7 +307,7 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
       toast.success("Projects marked as paid");
       setSelectedProjects(new Set());
@@ -331,7 +330,7 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
       toast.success("Projects marked as paid & invoiced");
       setSelectedProjects(new Set());
@@ -403,7 +402,7 @@ function InvoicingContent() {
   // Loading state
   if (userLoading || projectsLoading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-screen-2xl mx-auto">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex items-center gap-2">
             <Loader2 className="w-6 h-6 animate-spin" />
@@ -417,7 +416,7 @@ function InvoicingContent() {
   // Error state
   if (projectsError) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-screen-2xl mx-auto">
         <Card>
           <CardContent className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -437,7 +436,7 @@ function InvoicingContent() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-screen-2xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-gray-900 dark:text-white mb-2">
@@ -601,7 +600,7 @@ function InvoicingContent() {
             collapsed ? "left-20" : "left-52"
           }`}
         >
-          <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
+          <div className="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="text-gray-900 dark:text-white">
                 <span className="font-semibold">{selectedProjects.size}</span>{" "}

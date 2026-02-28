@@ -1,6 +1,6 @@
 "use client";
 
-import { formatNumber } from "@/utils/formatters";
+import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
@@ -81,9 +81,11 @@ export function ProjectAssignTable({
       ),
     },
     {
-      header: "Project",
+      header: "Project Name",
       render: (project: ProjectWithTranslators) => (
-        <span className="text-gray-900 dark:text-white">{project.name}</span>
+        <span className="text-gray-900 dark:text-white max-w-[280px] block break-words line-clamp-2">
+          {formatProjectName(project.name)}
+        </span>
       ),
     },
     {
@@ -137,7 +139,7 @@ export function ProjectAssignTable({
       header: "Instructions",
       className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs overflow-hidden text-ellipsis",
       render: (project: ProjectWithTranslators) => (
-        (project as any).custom_instructions || project.instructions || "-"
+        project.instructions || "-"
       ),
     },
   ];

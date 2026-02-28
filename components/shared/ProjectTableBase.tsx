@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { usePagination } from "@/hooks/usePagination";
 import { EmptyState } from "./EmptyState";
 import { Pagination } from "@/components/ui/pagination";
@@ -25,6 +25,10 @@ interface ProjectTableBaseProps<T> {
   leadingColumn?: (item: T) => ReactNode;
   getRowStyle?: (item: T) => React.CSSProperties;
   stickyHeader?: boolean;
+  /** External page control — when provided, overrides internal pagination state */
+  page?: number;
+  /** External page change handler */
+  onPageChange?: (page: number) => void;
 }
 
 /**
@@ -45,8 +49,12 @@ export function ProjectTableBase<T>({
   leadingColumn,
   getRowStyle,
   stickyHeader = false,
+  page: externalPage,
+  onPageChange: externalOnPageChange,
 }: ProjectTableBaseProps<T>) {
-  const { currentPage, totalPages, paginatedItems, setCurrentPage } = usePagination(
+  const previousItemsRef = useRef(items);
+
+  const internal = usePagination(
     items,
     {
       itemsPerPage: enablePagination ? itemsPerPage : items.length,
@@ -54,7 +62,37 @@ export function ProjectTableBase<T>({
     }
   );
 
+  // Use external page control when provided, otherwise fall back to internal
+  const isExternallyControlled = externalPage !== undefined && externalOnPageChange !== undefined;
+  const currentPage = isExternallyControlled ? externalPage : internal.currentPage;
+  const setCurrentPage = isExternallyControlled ? externalOnPageChange : internal.setCurrentPage;
+  const totalPages = Math.ceil(items.length / (enablePagination ? itemsPerPage : items.length));
+
+  // Calculate paginated items based on the active page
+  const paginatedItems = enablePagination
+    ? items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+    : items;
+
   const displayItems = enablePagination ? paginatedItems : items;
+
+  useEffect(() => {
+    if (!enablePagination || !isExternallyControlled) return;
+
+    // Reset to the first page whenever the filtered/sorted data set changes.
+    if (previousItemsRef.current !== items && currentPage !== 1) {
+      setCurrentPage(1);
+    }
+    previousItemsRef.current = items;
+  }, [items, enablePagination, isExternallyControlled, currentPage, setCurrentPage]);
+
+  useEffect(() => {
+    if (!enablePagination || !isExternallyControlled) return;
+
+    const safeTotalPages = Math.max(totalPages, 1);
+    if (currentPage > safeTotalPages) {
+      setCurrentPage(safeTotalPages);
+    }
+  }, [enablePagination, isExternallyControlled, currentPage, totalPages, setCurrentPage]);
 
   const handleRowClick = (item: T, e: React.MouseEvent) => {
     if (onRowClick) {

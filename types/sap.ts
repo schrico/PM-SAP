@@ -142,18 +142,41 @@ export interface SapTokenResponse {
 /** Data ready to be inserted/updated in the projects table */
 export interface SapProjectForImport {
   sap_subproject_id: string;
-  sap_parent_id: string;
-  sap_parent_name: string;
-  sap_account: string;
   name: string;
   language_in: string | null;
   language_out: string | null;
   initial_deadline: string | null;
   final_deadline: string | null;
-  sap_instructions: string | null;
+  interim_deadline?: string | null;
+  instructions: string | null;
+  sap_instructions: SapInstructionEntry[] | null;
   system: string;
   api_source: 'TPM_sap_api';
   last_synced_at: string;
+  sap_pm: string | null;
+  project_type: string | null;
+  terminology_key: string[] | null;
+  lxe_project: string[] | null;
+  translation_area: string[] | null;
+  work_list: string[] | null;
+  graph_id: string[] | null;
+  lxe_projects: string[] | null;
+  url: string | null;
+  hours: number | null;
+  words: number | null;
+  lines: number | null;
+}
+
+/** SAP instruction entry stored in sap_instructions JSONB column */
+export interface SapInstructionEntry {
+  /** Title/summary from SAP */
+  instructionShort: string;
+  /** Full body from SAP */
+  instructionLong: string;
+  slsLang?: string;
+  contentId?: string;
+  /** @deprecated Use instructionLong or instructionShort. Kept for backward compat with existing DB data. */
+  text?: string;
 }
 
 /** Request body for POST /api/sap/sync */
@@ -210,11 +233,14 @@ export interface SapSubProjectDetails {
   };
   system: string;
   instructions: string | null;
-  // Volume info (for display only - not imported per client requirement)
   volumes: {
     words: number;
     lines: number;
   };
+  projectType: string | null;
+  terminologyKey: string[];
+  translationArea: string[];
+  hours: number;
 }
 
 // ============================================================================
@@ -236,4 +262,4 @@ export const TOOL_TYPE_TO_SYSTEM: Record<string, string> = {
 };
 
 /** Default system when toolType is not recognized */
-export const DEFAULT_SYSTEM = 'B0X';
+export const DEFAULT_SYSTEM = 'Unknown';

@@ -11,38 +11,48 @@ export interface Project {
   interim_deadline: string | null;
   initial_deadline: string | null;
   final_deadline: string | null;
-  translator: string | null;
   system: string;
   words: number | null;
   lines: number | null;
   status: ProjectStatus;
   language_in: string;
   language_out: string;
-  /** @deprecated Use custom_instructions instead. Alias for backward compatibility */
   instructions?: string | null;
-  /** User-editable team notes (DB column: custom_instructions) */
-  custom_instructions?: string | null;
   paid?: boolean | null;
   invoiced?: boolean | null;
   created_at?: string;
   updated_at?: string;
-  short?: boolean;
 
   // SAP Integration Fields
-  /** Unique SAP subproject identifier (used for upsert) */
   sap_subproject_id?: string | null;
-  /** SAP parent project ID */
-  sap_parent_id?: string | null;
-  /** SAP parent project name */
-  sap_parent_name?: string | null;
-  /** SAP account/client name */
-  sap_account?: string | null;
-  /** Data source: manual, TPM_sap_api, or XTM_sap_api */
   api_source?: ApiSource;
-  /** Last time this project was synced from SAP */
   last_synced_at?: string | null;
-  /** Read-only instructions from SAP (includes DM name) */
-  sap_instructions?: string | null;
+  sap_instructions?: SapInstructionEntry[] | null;
+  sap_pm?: string | null;
+
+  // New fields
+  project_type?: string | null;
+  terminology_key?: string[] | null;
+  lxe_project?: string[] | null;
+  translation_area?: string[] | null;
+  work_list?: string[] | null;
+  graph_id?: string[] | null;
+  lxe_projects?: string[] | null;
+  url?: string | null;
+  hours?: number | null;
+  project_notes?: string | null;
+}
+
+/** SAP instruction entry stored in sap_instructions JSONB column */
+export interface SapInstructionEntry {
+  /** Title/summary from SAP */
+  instructionShort: string;
+  /** Full body from SAP */
+  instructionLong: string;
+  slsLang?: string;
+  contentId?: string;
+  /** @deprecated Use instructionLong or instructionShort. Kept for backward compat with existing DB data. */
+  text?: string;
 }
 
 /** Translator info for project lists */

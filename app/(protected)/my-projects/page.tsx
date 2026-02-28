@@ -140,7 +140,7 @@ export default function MyProjectsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-screen-2xl mx-auto">
         <div className="flex justify-center items-center py-12">
           <p className="text-gray-500 dark:text-gray-400">Loading...</p>
         </div>
@@ -150,7 +150,7 @@ export default function MyProjectsPage() {
 
   if (!user) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-screen-2xl mx-auto">
         <div className="flex justify-center items-center py-12">
           <p className="text-gray-500 dark:text-gray-400">
             Please log in to view your projects
@@ -164,7 +164,7 @@ export default function MyProjectsPage() {
     activeTab === "unclaimed" ? unclaimedProjects : claimedProjects;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-screen-2xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-gray-900 dark:text-white mb-2">My Projects</h1>

@@ -21,10 +21,12 @@ type PostgresChangeEvent = "INSERT" | "UPDATE" | "DELETE";
 
 interface RealtimeContextValue {
   isConnected: boolean;
+  onImportReport: (callback: () => void) => () => void;
 }
 
 const RealtimeContext = createContext<RealtimeContextValue>({
   isConnected: false,
+  onImportReport: () => () => {},
 });
 
 export function useRealtime() {
@@ -40,6 +42,25 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const importReportListenersRef = useRef<Set<() => void>>(new Set());
+
+  const onImportReport = useCallback((callback: () => void) => {
+    importReportListenersRef.current.add(callback);
+    return () => {
+      importReportListenersRef.current.delete(callback);
+    };
+  }, []);
+
+  // Handler for import_reports table inserts
+  const handleImportReportInsert = useCallback(
+    () => {
+      // Invalidate import reports query
+      queryClient.invalidateQueries({ queryKey: ["import-reports"] });
+      // Notify all listeners
+      importReportListenersRef.current.forEach((cb) => cb());
+    },
+    [queryClient]
+  );
 
   // Handler for projects table changes
   const handleProjectsChange = useCallback(
@@ -47,11 +68,6 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
       const eventType = payload.eventType as PostgresChangeEvent;
       const newRecord = payload.new as Record<string, unknown> | undefined;
       const oldRecord = payload.old as Record<string, unknown> | undefined;
-
-      console.log("[Realtime] projects change:", eventType, {
-        new: newRecord,
-        old: oldRecord,
-      });
 
       // Invalidate relevant queries based on event type
       if (eventType === "INSERT" || eventType === "DELETE") {
@@ -94,11 +110,6 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
       const eventType = payload.eventType as PostgresChangeEvent;
       const newRecord = payload.new as Record<string, unknown> | undefined;
       const oldRecord = payload.old as Record<string, unknown> | undefined;
-
-      console.log("[Realtime] projects_assignment change:", eventType, {
-        new: newRecord,
-        old: oldRecord,
-      });
 
       const projectId = (newRecord?.project_id ??
         oldRecord?.project_id) as number | undefined;
@@ -154,36 +165,33 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         },
         handleAssignmentChange
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "import_reports",
+        },
+        handleImportReportInsert
+      )
       .subscribe((status) => {
-        console.log("[Realtime] Subscription status:", status);
         setIsConnected(status === "SUBSCRIBED");
-
-        if (status === "SUBSCRIBED") {
-          console.log(
-            "[Realtime] Successfully subscribed to database changes"
-          );
-        } else if (status === "CHANNEL_ERROR") {
-          console.error(
-            "[Realtime] Channel error - check if tables are in supabase_realtime publication"
-          );
-        }
       });
 
     channelRef.current = channel;
 
     // Cleanup on unmount
     return () => {
-      console.log("[Realtime] Cleaning up subscription");
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
         setIsConnected(false);
       }
     };
-  }, [supabase, handleProjectsChange, handleAssignmentChange]);
+  }, [supabase, handleProjectsChange, handleAssignmentChange, handleImportReportInsert]);
 
   return (
-    <RealtimeContext.Provider value={{ isConnected }}>
+    <RealtimeContext.Provider value={{ isConnected, onImportReport }}>
       {children}
     </RealtimeContext.Provider>
   );

@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Edit, Loader2, Check, X, Copy } from "lucide-react";
+import { formatProjectName } from "@/utils/formatters";
 import { useEffect, useRef, useState } from "react";
 import { useProject } from "@/hooks/useProject";
 import { useColorSettings } from "@/hooks/useColorSettings";
@@ -9,6 +10,7 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useMyProjects } from "@/hooks/useMyProjects";
 import { ProjectDetailsCard } from "@/components/project/ProjectDetailsCard";
 import { ProjectInstructionsCard } from "@/components/project/ProjectInstructionsCard";
+import { ProjectNotesCard } from "@/components/project/ProjectNotesCard";
 import { TranslatorsList } from "@/components/project/TranslatorsList";
 import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
 import { ReminderModal } from "@/components/project/ReminderModal";
@@ -461,7 +463,7 @@ export default function ProjectPage() {
             <div className="w-4 h-4 rounded" style={systemColorStyle} />
             <div>
               <h1 className="text-gray-900 dark:text-white mb-2 text-3xl font-bold">
-                {project.name}
+                {formatProjectName(project.name)}
               </h1>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-base">
@@ -549,8 +551,8 @@ export default function ProjectPage() {
         >
           <ProjectDetailsCard project={project} />
           <ProjectInstructionsCard
-            customInstructions={(project as any).custom_instructions ?? project.instructions}
-            sapInstructions={(project as any).sap_instructions}
+            instructions={project.instructions}
+            sapInstructions={project.sap_instructions}
           />
         </div>
 
@@ -580,6 +582,11 @@ export default function ProjectPage() {
                 markCompleteMutation.isPending
               }
               projectStatus={project.status}
+            />
+            <ProjectNotesCard
+              projectId={project.id}
+              notes={project.project_notes}
+              canEdit={canManageAssignments()}
             />
           </div>
         )}

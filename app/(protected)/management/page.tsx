@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2, AlertCircle, Download } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
 import { FilterDropdown } from "@/components/general/FilterDropdown";
+import { MultiSelectFilterDropdown } from "@/components/general/MultiSelectFilterDropdown";
 import { ViewToggle } from "@/components/general/ViewToggle";
 import { SearchBar } from "@/components/general/SearchBar";
 import { ScrollToTopButton } from "@/components/general/ScrollToTopButton";
@@ -16,19 +17,22 @@ import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog
 import { RemoveTranslatorDialog } from "@/components/management/RemoveTranslatorDialog";
 import { ConfirmationDialog } from "@/components/management/ConfirmationDialog";
 import { SapImportDialog } from "@/components/sap/SapImportDialog";
+import { InstructionsDrawer } from "@/components/management/InstructionsDrawer";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
 import { createBrowserClient } from "@supabase/ssr";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import {
   matchesDueDateFilter,
   matchesLengthFilter,
 } from "@/utils/filterHelpers";
+import { useDefaultFilters } from "@/hooks/useDefaultFilters";
+import { useManagementPageStore } from "@/lib/stores/useManagementPageStore";
+import type { SapInstructionEntry } from "@/types/project";
 
 type ProjectStatus = "all" | "ready" | "inProgress" | "unclaimed";
 type ViewMode = "table" | "card";
@@ -57,11 +61,12 @@ function ProjectManagementContent() {
 
   const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
+  // Persisted state via Zustand store
+  const { activeTab, setActiveTab, viewMode, setViewMode, currentPage, setCurrentPage } = useManagementPageStore();
+
   // State
-  const [activeTab, setActiveTab] = useState<ProjectStatus>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [addTranslatorModal, setAddTranslatorModal] = useState<{
     open: boolean;
     projectId: number;
@@ -104,6 +109,25 @@ function ProjectManagementContent() {
   const [sourceLangFilter, setSourceLangFilter] = useState<string | null>(null);
   const [targetLangFilter, setTargetLangFilter] = useState<string | null>(null);
   const [lengthFilter, setLengthFilter] = useState<string | null>(null);
+  const [projectTypeFilter, setProjectTypeFilter] = useState<string[]>([]);
+
+  // Load default project type filter from user settings
+  const { getFilter: getDefaultFilter, isLoading: defaultFiltersLoading } =
+    useDefaultFilters(user?.id ?? null);
+
+  useEffect(() => {
+    if (defaultFiltersLoading) return;
+    const defaultPT = getDefaultFilter("project_type");
+    if (defaultPT?.included_values && defaultPT.included_values.length > 0) {
+      setProjectTypeFilter(defaultPT.included_values);
+    }
+  }, [defaultFiltersLoading, getDefaultFilter]);
+
+  // Instructions drawer state
+  const [instructionsDrawer, setInstructionsDrawer] = useState<{
+    open: boolean;
+    project: { name: string; instructions?: string | null; sap_instructions?: SapInstructionEntry[] | null } | null;
+  }>({ open: false, project: null });
 
   // Fetch all projects (showAll = true to show all projects for all users)
   const {
@@ -140,6 +164,14 @@ function ProjectManagementContent() {
     return Array.from(systems).sort();
   }, [allProjects]);
 
+  const uniqueProjectTypes = useMemo(() => {
+    const types = new Set<string>();
+    allProjects.forEach((p) => {
+      if (p.project_type) types.add(p.project_type);
+    });
+    return Array.from(types).sort();
+  }, [allProjects]);
+
   const uniqueLanguages = useMemo(() => {
     const langs = new Set<string>();
     allProjects.forEach((p) => {
@@ -149,17 +181,6 @@ function ProjectManagementContent() {
     return Array.from(langs).sort();
   }, [allProjects]);
 
-  // Get existing SAP subproject IDs for import dialog
-  const existingSapSubProjectIds = useMemo(() => {
-    const ids = new Set<string>();
-    allProjectsRaw.forEach((p) => {
-      // Projects imported from SAP have a sap_subproject_id field
-      if ((p as any).sap_subproject_id) {
-        ids.add((p as any).sap_subproject_id);
-      }
-    });
-    return ids;
-  }, [allProjectsRaw]);
 
   // Categorize projects
   const categorizedProjects = useMemo(() => {
@@ -274,7 +295,14 @@ function ProjectManagementContent() {
     // Length filter
     if (lengthFilter) {
       projects = projects.filter((p) =>
-        matchesLengthFilter(p.words, lengthFilter)
+        matchesLengthFilter(p.words, p.lines, lengthFilter)
+      );
+    }
+
+    // Project type filter
+    if (projectTypeFilter.length > 0) {
+      projects = projects.filter(
+        (p) => p.project_type && projectTypeFilter.includes(p.project_type)
       );
     }
 
@@ -282,7 +310,6 @@ function ProjectManagementContent() {
     return projects.sort((a, b) => {
       const dateA = new Date(a.final_deadline || "").getTime();
       const dateB = new Date(b.final_deadline || "").getTime();
-      // Handle projects without final_deadline - put them at the end
       if (!a.final_deadline && !b.final_deadline) return 0;
       if (!a.final_deadline) return 1;
       if (!b.final_deadline) return -1;
@@ -299,6 +326,7 @@ function ProjectManagementContent() {
     sourceLangFilter,
     targetLangFilter,
     lengthFilter,
+    projectTypeFilter,
     categorizedProjects,
   ]);
 
@@ -315,7 +343,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
       toast.success("Project marked as complete");
       setOpenMenu(null);
@@ -348,7 +376,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
       toast.success("Translators added successfully");
       setAddTranslatorModal({
@@ -468,7 +496,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
       toast.success("Translator removed successfully");
       setRemoveTranslatorModal({
@@ -505,7 +533,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
       toast.success("Words/Lines updated successfully");
       setEditingProjectId(null);
@@ -594,6 +622,7 @@ function ProjectManagementContent() {
     setSourceLangFilter(null);
     setTargetLangFilter(null);
     setLengthFilter(null);
+    setProjectTypeFilter([]);
   };
 
   const hasActiveFilters =
@@ -602,12 +631,13 @@ function ProjectManagementContent() {
     assignmentStatusFilter ||
     sourceLangFilter ||
     targetLangFilter ||
-    lengthFilter;
+    lengthFilter ||
+    projectTypeFilter.length > 0;
 
   // Loading state
   if (userLoading || projectsLoading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-screen-2xl mx-auto">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex items-center gap-2">
             <Loader2 className="w-6 h-6 animate-spin" />
@@ -621,7 +651,7 @@ function ProjectManagementContent() {
   // Error state
   if (projectsError) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-screen-2xl mx-auto">
         <Card>
           <CardContent className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -641,7 +671,7 @@ function ProjectManagementContent() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-screen-2xl mx-auto">
       {/* Header */}
       <div className="mb-8 flex items-start justify-between">
         <div>
@@ -734,6 +764,14 @@ function ProjectManagementContent() {
                 selected={lengthFilter}
                 onSelect={setLengthFilter}
               />
+              {uniqueProjectTypes.length > 0 && (
+                <MultiSelectFilterDropdown
+                  label="Project Type"
+                  options={uniqueProjectTypes}
+                  selected={projectTypeFilter}
+                  onSelect={setProjectTypeFilter}
+                />
+              )}
             </div>
 
             {/* Clear Filters Button */}
@@ -772,6 +810,11 @@ function ProjectManagementContent() {
           onSaveWordsLines={handleSaveWordsLines}
           onCancelWordsLinesEdit={handleCancelWordsLinesEdit}
           isUpdatingWordsLines={updateWordsLinesMutation.isPending}
+          onInstructionsClick={(project) =>
+            setInstructionsDrawer({ open: true, project: { name: project.name, instructions: project.instructions, sap_instructions: project.sap_instructions } })
+          }
+          page={currentPage}
+          onPageChange={setCurrentPage}
         />
       : <ManagementCard
           projects={filteredProjects}
@@ -792,6 +835,9 @@ function ProjectManagementContent() {
           onSaveWordsLines={handleSaveWordsLines}
           onCancelWordsLinesEdit={handleCancelWordsLinesEdit}
           isUpdatingWordsLines={updateWordsLinesMutation.isPending}
+          onInstructionsClick={(project) =>
+            setInstructionsDrawer({ open: true, project: { name: project.name, instructions: project.instructions, sap_instructions: project.sap_instructions } })
+          }
         />
       }
 
@@ -870,7 +916,15 @@ function ProjectManagementContent() {
       <SapImportDialog
         open={sapImportDialogOpen}
         onOpenChange={setSapImportDialogOpen}
-        existingSubProjectIds={existingSapSubProjectIds}
+      />
+
+      {/* Instructions Drawer */}
+      <InstructionsDrawer
+        open={instructionsDrawer.open}
+        onOpenChange={(open) =>
+          setInstructionsDrawer({ open, project: open ? instructionsDrawer.project : null })
+        }
+        project={instructionsDrawer.project}
       />
 
       {/* Scroll to Top Button */}

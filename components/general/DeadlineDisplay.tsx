@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { isAfter, isBefore, startOfDay } from "date-fns";
-import { formatDate } from "@/utils/formatters";
+import { isAfter, isBefore, startOfDay, isSameDay } from "date-fns";
+import { formatDateWithTime } from "@/utils/formatters";
 import {
   Tooltip,
   TooltipContent,
@@ -61,8 +61,13 @@ export function DeadlineDisplay({
     // Build array of all valid deadlines
     const allDeadlines: DeadlineInfo[] = [];
 
+    // Check if initial and final fall on the same calendar day — if so, skip initial
+    const initialDate = initialDeadline ? new Date(initialDeadline) : null;
+    const finalDate = finalDeadline ? new Date(finalDeadline) : null;
+    const initialSameAsFinal = initialDate && finalDate && isSameDay(initialDate, finalDate);
+
     if (!onlyShowFinal) {
-      if (initialDeadline) {
+      if (initialDeadline && !initialSameAsFinal) {
         const date = new Date(initialDeadline);
         if (!isNaN(date.getTime())) {
           allDeadlines.push({
@@ -147,7 +152,7 @@ export function DeadlineDisplay({
 
         {/* Formatted date */}
         <span className="text-gray-700 dark:text-gray-300">
-          {formatDate(nextDeadline.dateString)}
+          {formatDateWithTime(nextDeadline.dateString)}
         </span>
 
         {/* Expandable dropdown for remaining deadlines */}
@@ -176,7 +181,7 @@ export function DeadlineDisplay({
                           {deadline.label}
                         </span>
                         <span className="text-gray-700 dark:text-gray-300">
-                          {formatDate(deadline.dateString)}
+                          {formatDateWithTime(deadline.dateString)}
                         </span>
                       </div>
                     </TooltipTrigger>

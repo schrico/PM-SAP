@@ -2,6 +2,7 @@
 
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { getSystemColorStyle } from "@/utils/projectTableHelpers";
+import { formatProjectName } from "@/utils/formatters";
 import type { ProjectWithTranslators } from "@/types/project";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 
@@ -64,8 +65,8 @@ export function InvoicingCard({
               </div>
             </div>
 
-            <h3 className="text-gray-900 dark:text-white mb-4">
-              {project.name}
+            <h3 className="text-gray-900 dark:text-white mb-4 break-words line-clamp-2">
+              {formatProjectName(project.name)}
             </h3>
 
             <div className="space-y-3 mb-4">
@@ -125,7 +126,7 @@ export function InvoicingCard({
 
             <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
               <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-2">
-                {(project as any).custom_instructions || project.instructions || "No instructions"}
+                {project.instructions || "No instructions"}
               </p>
             </div>
           </div>

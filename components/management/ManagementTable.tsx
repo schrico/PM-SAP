@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Check, XCircle } from "lucide-react";
-import { formatNumber } from "@/utils/formatters";
+import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle, getStatusIcon } from "@/utils/projectTableHelpers";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
@@ -34,6 +34,7 @@ interface ProjectWithTranslators {
   interim_deadline: string | null;
   final_deadline: string | null;
   instructions?: string | null;
+  sap_instructions?: import("@/types/project").SapInstructionEntry[] | null;
   status: "complete" | "active" | "cancelled";
   language_in: string;
   language_out: string;
@@ -63,6 +64,9 @@ interface ManagementTableProps {
   onSaveWordsLines: (projectId: number) => void;
   onCancelWordsLinesEdit: () => void;
   isUpdatingWordsLines: boolean;
+  onInstructionsClick?: (project: ProjectWithTranslators) => void;
+  page?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function ManagementTable({
@@ -83,6 +87,9 @@ export function ManagementTable({
   onSaveWordsLines,
   onCancelWordsLinesEdit,
   isUpdatingWordsLines,
+  onInstructionsClick,
+  page,
+  onPageChange,
 }: ManagementTableProps) {
   const router = useRouter();
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
@@ -133,9 +140,11 @@ export function ManagementTable({
       ),
     },
     {
-      header: "Project",
+      header: "Project Name",
       render: (project: ProjectWithTranslators) => (
-        <span className="text-gray-900 dark:text-white">{project.name}</span>
+        <span className="text-gray-900 dark:text-white max-w-[280px] block break-words line-clamp-2">
+          {formatProjectName(project.name)}
+        </span>
       ),
     },
     {
@@ -271,9 +280,19 @@ export function ManagementTable({
     },
     {
       header: "Instructions",
-      className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate",
+      className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs",
       render: (project: ProjectWithTranslators) => (
-        (project as any).custom_instructions || project.instructions || "No instructions"
+        <span
+          className={`line-clamp-3 ${onInstructionsClick ? "cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors" : ""}`}
+          onClick={(e) => {
+            if (onInstructionsClick) {
+              e.stopPropagation();
+              onInstructionsClick(project);
+            }
+          }}
+        >
+          {project.instructions || "No instructions"}
+        </span>
       ),
     },
     {
@@ -310,6 +329,8 @@ export function ManagementTable({
       enablePagination={true}
       itemsPerPage={10}
       getRowKey={(project) => project.id}
+      page={page}
+      onPageChange={onPageChange}
     />
   );
 }

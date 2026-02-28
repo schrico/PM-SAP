@@ -1,7 +1,7 @@
 "use client";
 
 import { UserCircle } from "lucide-react";
-import { formatNumber } from "@/utils/formatters";
+import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
@@ -88,8 +88,8 @@ export function ProjectAssignCard({
               </div>
             </div>
 
-            <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">
-              {project.name}
+            <h3 className="mb-4 font-semibold text-gray-900 dark:text-white break-words line-clamp-2">
+              {formatProjectName(project.name)}
             </h3>
 
             <div className="space-y-3 mb-4">
@@ -145,7 +145,7 @@ export function ProjectAssignCard({
 
             <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
               <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm max-h-12 overflow-hidden text-ellipsis">
-                {(project as any).custom_instructions || project.instructions || "-"}
+                {project.instructions || "-"}
               </p>
             </div>
           </div>

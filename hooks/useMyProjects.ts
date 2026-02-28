@@ -49,7 +49,6 @@ export function useMyProjects(userId: string | null) {
         .in("assignment_status", ["unclaimed", "claimed"]);
 
       if (error) {
-        console.error("Supabase query error:", error);
         throw new Error(`Failed to fetch projects: ${error.message}`);
       }
 
@@ -124,7 +123,6 @@ export function useMyProjects(userId: string | null) {
         ? "reject"
         : "mark as done";
       
-      console.error(`Error updating project status to ${status}:`, error?.message || error);
       toast.error(`Failed to ${action} project. Please try again.`);
     },
   });

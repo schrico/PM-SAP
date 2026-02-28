@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
-import { formatNumber } from "@/utils/formatters";
+import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
@@ -87,8 +87,8 @@ export function MyProjectsCard({
                 {project.system}
               </span>
             </div>
-            <h3 className="text-gray-900 dark:text-white text-lg font-bold mb-2">
-              {project.name}
+            <h3 className="text-gray-900 dark:text-white text-lg font-bold mb-2 break-words line-clamp-2">
+              {formatProjectName(project.name)}
             </h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
               Words: {project.words ? formatNumber(project.words) : "-"}
@@ -105,7 +105,7 @@ export function MyProjectsCard({
               />
             </div>
             <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate mb-4">
-              {(project as any).custom_instructions || project.instructions || "-"}
+              {project.instructions || "-"}
             </p>
             {activeTab === "unclaimed" ?
               <div className="flex gap-2 group-hover:scale-110 group-hover:opacity-100 opacity-90 transition-all duration-200">

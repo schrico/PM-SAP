@@ -30,7 +30,7 @@ import {
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "admin", label: "Admin" },
   { value: "pm", label: "Project Manager" },
-  { value: "employee", label: "Employee" },
+  { value: "employee", label: "Collaborator" },
 ];
 
 interface PendingRoleChange {

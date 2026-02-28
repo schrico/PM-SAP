@@ -7,6 +7,7 @@ import { useProject } from "@/hooks/useProject";
 import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
 import { EditConflictModal, FieldConflict } from "@/components/ui/EditConflictModal";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { formatRoleDisplay } from "@/utils/formatters";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -50,10 +51,20 @@ const projectSchema = z.object({
   initial_deadline: z.string().nullable().optional(),
   interim_deadline: z.string().nullable().optional(),
   final_deadline: z.string().nullable().optional(),
-  custom_instructions: z.string().nullable().optional(),
+  instructions: z.string().nullable().optional(),
   paid: z.boolean().nullable().optional(),
   invoiced: z.boolean().nullable().optional(),
-  short: z.boolean().nullable().optional(),
+  project_type: z.string().nullable().optional(),
+  sap_pm: z.string().nullable().optional(),
+  hours: z.number().nullable().optional(),
+  url: z.string().nullable().optional(),
+  project_notes: z.string().nullable().optional(),
+  terminology_key: z.string().nullable().optional(),
+  translation_area: z.string().nullable().optional(),
+  work_list: z.string().nullable().optional(),
+  graph_id: z.string().nullable().optional(),
+  lxe_project: z.string().nullable().optional(),
+  lxe_projects: z.string().nullable().optional(),
 });
 
 type ProjectFormValues = z.infer<typeof projectSchema>;
@@ -73,10 +84,20 @@ const FIELD_LABELS: Record<string, string> = {
   initial_deadline: "Initial Deadline",
   interim_deadline: "Interim Deadline",
   final_deadline: "Final Deadline",
-  custom_instructions: "Custom Instructions",
+  instructions: "Instructions",
   paid: "Paid",
   invoiced: "Invoiced",
-  short: "Short Project",
+  project_type: "Project Type",
+  sap_pm: "SAP PM",
+  hours: "Hours",
+  url: "URL",
+  project_notes: "Project Notes",
+  terminology_key: "Terminology Key",
+  translation_area: "Translation Area",
+  work_list: "Work List",
+  graph_id: "Graph ID",
+  lxe_project: "LXE Project",
+  lxe_projects: "LXE Projects",
   translators: "Assigned Translators",
 };
 
@@ -92,10 +113,20 @@ const MONITORED_FIELDS = [
   "initial_deadline",
   "interim_deadline",
   "final_deadline",
-  "custom_instructions",
+  "instructions",
   "paid",
   "invoiced",
-  "short",
+  "project_type",
+  "sap_pm",
+  "hours",
+  "url",
+  "project_notes",
+  "terminology_key",
+  "translation_area",
+  "work_list",
+  "graph_id",
+  "lxe_project",
+  "lxe_projects",
 ];
 
 export default function EditProjectPage() {
@@ -156,8 +187,6 @@ export default function EditProjectPage() {
   // Build form values from project data
   const formValues: ProjectFormValues | undefined = React.useMemo(() => {
     if (!project) return undefined;
-    // Support both old 'instructions' field and new 'custom_instructions' field
-    const customInstructions = (project as any).custom_instructions ?? project.instructions ?? null;
     return {
       name: project.name || "",
       system: project.system || "",
@@ -170,10 +199,20 @@ export default function EditProjectPage() {
       initial_deadline: formatDateForInput(project.initial_deadline),
       interim_deadline: formatDateForInput(project.interim_deadline),
       final_deadline: formatDateForInput(project.final_deadline),
-      custom_instructions: customInstructions,
+      instructions: project.instructions ?? null,
       paid: project.paid ?? false,
       invoiced: project.invoiced ?? false,
-      short: project.short ?? false,
+      project_type: project.project_type ?? null,
+      sap_pm: project.sap_pm ?? null,
+      hours: project.hours ?? null,
+      url: project.url ?? null,
+      project_notes: project.project_notes ?? null,
+      terminology_key: project.terminology_key?.join(", ") ?? null,
+      translation_area: project.translation_area?.join(", ") ?? null,
+      work_list: project.work_list?.join(", ") ?? null,
+      graph_id: project.graph_id?.join(", ") ?? null,
+      lxe_project: project.lxe_project?.join(", ") ?? null,
+      lxe_projects: project.lxe_projects?.join(", ") ?? null,
     };
   }, [project]);
 
@@ -190,10 +229,20 @@ export default function EditProjectPage() {
       initial_deadline: null,
       interim_deadline: null,
       final_deadline: null,
-      custom_instructions: null,
+      instructions: null,
       paid: false,
       invoiced: false,
-      short: false,
+      project_type: null,
+      sap_pm: null,
+      hours: null,
+      url: null,
+      project_notes: null,
+      terminology_key: null,
+      translation_area: null,
+      work_list: null,
+      graph_id: null,
+      lxe_project: null,
+      lxe_projects: null,
     },
   });
 
@@ -315,14 +364,46 @@ export default function EditProjectPage() {
       final_deadline: dbChangedFields.has("final_deadline")
         ? formatDateForInput(project.final_deadline)
         : currentFormValues.final_deadline,
-      custom_instructions: dbChangedFields.has("custom_instructions")
-        ? (project as any).custom_instructions || null
-        : currentFormValues.custom_instructions,
+      instructions: dbChangedFields.has("instructions")
+        ? project.instructions || null
+        : currentFormValues.instructions,
       paid: dbChangedFields.has("paid") ? project.paid ?? false : currentFormValues.paid,
       invoiced: dbChangedFields.has("invoiced")
         ? project.invoiced ?? false
         : currentFormValues.invoiced,
-      short: dbChangedFields.has("short") ? project.short ?? false : currentFormValues.short,
+      project_type: dbChangedFields.has("project_type")
+        ? project.project_type ?? null
+        : currentFormValues.project_type,
+      sap_pm: dbChangedFields.has("sap_pm")
+        ? project.sap_pm ?? null
+        : currentFormValues.sap_pm,
+      hours: dbChangedFields.has("hours")
+        ? project.hours ?? null
+        : currentFormValues.hours,
+      url: dbChangedFields.has("url")
+        ? project.url ?? null
+        : currentFormValues.url,
+      project_notes: dbChangedFields.has("project_notes")
+        ? project.project_notes ?? null
+        : currentFormValues.project_notes,
+      terminology_key: dbChangedFields.has("terminology_key")
+        ? project.terminology_key?.join(", ") ?? null
+        : currentFormValues.terminology_key,
+      translation_area: dbChangedFields.has("translation_area")
+        ? project.translation_area?.join(", ") ?? null
+        : currentFormValues.translation_area,
+      work_list: dbChangedFields.has("work_list")
+        ? project.work_list?.join(", ") ?? null
+        : currentFormValues.work_list,
+      graph_id: dbChangedFields.has("graph_id")
+        ? project.graph_id?.join(", ") ?? null
+        : currentFormValues.graph_id,
+      lxe_project: dbChangedFields.has("lxe_project")
+        ? project.lxe_project?.join(", ") ?? null
+        : currentFormValues.lxe_project,
+      lxe_projects: dbChangedFields.has("lxe_projects")
+        ? project.lxe_projects?.join(", ") ?? null
+        : currentFormValues.lxe_projects,
     };
 
     // Reset form with merged values
@@ -355,6 +436,11 @@ export default function EditProjectPage() {
         }
       };
 
+      const parseArrayField = (val: string | null | undefined): string[] | null => {
+        if (!val || val.trim() === "") return null;
+        return val.split(",").map((s) => s.trim()).filter(Boolean);
+      };
+
       const updateData: any = {
         name: values.name,
         system: values.system,
@@ -366,10 +452,20 @@ export default function EditProjectPage() {
         initial_deadline: formatDateForDB(values.initial_deadline),
         interim_deadline: formatDateForDB(values.interim_deadline),
         final_deadline: formatDateForDB(values.final_deadline),
-        custom_instructions: values.custom_instructions || null,
+        instructions: values.instructions || null,
         paid: values.paid ?? false,
         invoiced: values.invoiced ?? false,
-        short: values.short ?? false,
+        project_type: values.project_type || null,
+        sap_pm: values.sap_pm || null,
+        hours: values.hours ?? null,
+        url: values.url || null,
+        project_notes: values.project_notes || null,
+        terminology_key: parseArrayField(values.terminology_key),
+        translation_area: parseArrayField(values.translation_area),
+        work_list: parseArrayField(values.work_list),
+        graph_id: parseArrayField(values.graph_id),
+        lxe_project: parseArrayField(values.lxe_project),
+        lxe_projects: parseArrayField(values.lxe_projects),
         updated_at: new Date().toISOString(),
       };
 
@@ -851,42 +947,16 @@ export default function EditProjectPage() {
                 />
               </div>
 
-              {/* Short Project */}
+              {/* Instructions */}
               <FormField
                 control={form.control}
-                name="short"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Short Project</FormLabel>
-                      <FormDescription>
-                        Mark if this is a short project
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <input
-                        id="short-checkbox"
-                        type="checkbox"
-                        checked={field.value ?? false}
-                        onChange={field.onChange}
-                        aria-label="Short Project"
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {/* Custom Instructions */}
-              <FormField
-                control={form.control}
-                name="custom_instructions"
+                name="instructions"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Custom Instructions</FormLabel>
+                    <FormLabel>Instructions</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter custom project instructions..."
+                        placeholder="Enter project instructions..."
                         className="min-h-32"
                         {...field}
                         value={field.value ?? ""}
@@ -896,6 +966,228 @@ export default function EditProjectPage() {
                   </FormItem>
                 )}
               />
+
+              {/* Project Notes */}
+              <FormField
+                control={form.control}
+                name="project_notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter project notes..."
+                        className="min-h-24"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Project Type, SAP PM, Hours */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                  control={form.control}
+                  name="project_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Type</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. Translation"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sap_pm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SAP PM</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="SAP Project Manager"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="hours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hours</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="0"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === "" ?
+                                null
+                              : parseFloat(e.target.value) || null
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* URL */}
+              <FormField
+                control={form.control}
+                name="url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://..."
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Array fields - comma separated */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="terminology_key"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Terminology Key</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Comma separated values"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Comma separated</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="translation_area"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Translation Area</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Comma separated values"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Comma separated</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="work_list"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Work List</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Comma separated values"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Comma separated</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="graph_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Graph ID</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Comma separated values"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Comma separated</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="lxe_project"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>LXE Project</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Comma separated values"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Comma separated</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="lxe_projects"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>LXE Projects</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Comma separated values"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Comma separated</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -955,7 +1247,7 @@ export default function EditProjectPage() {
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-gray-500 dark:text-gray-400 text-xs">
-                              {translator.role}
+                              {formatRoleDisplay(translator.role)}
                             </span>
                             <span
                               className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${getStatusColor(

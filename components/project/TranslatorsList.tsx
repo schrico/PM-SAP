@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ProjectWithTranslatorDetails } from "@/types/project";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { formatRoleDisplay } from "@/utils/formatters";
 
 interface TranslatorsListProps {
   project: ProjectWithTranslatorDetails;
@@ -154,7 +155,7 @@ export function TranslatorsList({
                     )}
                   </p>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    {translator.role}
+                    {formatRoleDisplay(translator.role)}
                   </p>
                 </div>
                 <DropdownMenu>

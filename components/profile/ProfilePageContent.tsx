@@ -65,7 +65,7 @@ export function ProfilePageContent() {
         role:
           user.role === "admin" ? "Administrator"
           : user.role === "pm" ? "Project Manager"
-          : "Translator",
+          : "Collaborator",
       });
     }
   }, [user, form]);

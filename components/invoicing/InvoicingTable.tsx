@@ -3,6 +3,7 @@
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { getSystemColorStyle } from "@/utils/projectTableHelpers";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
+import { formatProjectName } from "@/utils/formatters";
 import type { ProjectWithTranslators } from "@/types/project";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
@@ -50,9 +51,11 @@ export function InvoicingTable({
       ),
     },
     {
-      header: "Project",
+      header: "Project Name",
       render: (project: ProjectWithTranslators) => (
-        <span className="text-gray-900 dark:text-white">{project.name}</span>
+        <span className="text-gray-900 dark:text-white max-w-[280px] block break-words line-clamp-2">
+          {formatProjectName(project.name)}
+        </span>
       ),
     },
     {
@@ -125,7 +128,7 @@ export function InvoicingTable({
       header: "Instructions",
       className: "text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate",
       render: (project: ProjectWithTranslators) => (
-        (project as any).custom_instructions || project.instructions || "No instructions"
+        project.instructions || "No instructions"
       ),
     },
   ];

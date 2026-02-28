@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { ColorSettings } from "@/components/settings/ColorSettings";
 import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { UserRoleManagement } from "@/components/settings/UserRoleManagement";
+import { InstructionExclusionSettings } from "@/components/settings/InstructionExclusionSettings";
+import { DefaultFilterSettings } from "@/components/settings/DefaultFilterSettings";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { createBrowserClient } from "@supabase/ssr";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -30,6 +32,27 @@ export default function SettingsPage() {
   }
 
   const supabase = createBrowserClient(supabaseUrl, supabaseKey);
+
+  const isPmOrAdmin = user?.role === "admin" || user?.role === "pm";
+
+  const { data: projectTypes = [] } = useQuery({
+    queryKey: ["settings-project-types"],
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("project_type")
+        .not("project_type", "is", null);
+
+      if (error) throw new Error(error.message);
+
+      const unique = new Set<string>();
+      data?.forEach((row: { project_type: string | null }) => {
+        if (row.project_type) unique.add(row.project_type);
+      });
+      return Array.from(unique).sort();
+    },
+    enabled: isPmOrAdmin,
+  });
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -87,6 +110,19 @@ export default function SettingsPage() {
         <Card className="p-6 text-left">
           <UserRoleManagement />
         </Card>
+      )}
+
+      {/* Instruction Exclusions - PM/Admin only */}
+      {isPmOrAdmin && (
+        <InstructionExclusionSettings userId={user.id} />
+      )}
+
+      {/* Default Project Type Filter - PM/Admin only */}
+      {isPmOrAdmin && (
+        <DefaultFilterSettings
+          userId={user.id}
+          availableProjectTypes={projectTypes}
+        />
       )}
 
       {/* Logout Section */}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { X } from "lucide-react";
 import { SearchBar } from "@/components/general/SearchBar";
 import { FilterDropdown } from "@/components/general/FilterDropdown";
+import { MultiSelectFilterDropdown } from "@/components/general/MultiSelectFilterDropdown";
 import { ViewToggle } from "@/components/general/ViewToggle";
 import { ScrollToTopButton } from "@/components/general/ScrollToTopButton";
 import { ProjectAssignTable } from "@/components/assign/ProjectAssignTable";
@@ -25,6 +26,8 @@ import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
+import { useUser } from "@/hooks/useUser";
+import { useDefaultFilters } from "@/hooks/useDefaultFilters";
 import type { Project } from "@/types/project";
 
 interface ProjectWithTranslators extends Project {
@@ -48,6 +51,7 @@ function AssignProjectsContent() {
   const { data: allProjects = [], isLoading: projectsLoading } =
     useProjectsWithTranslators(false, true);
   const queryClient = useQueryClient();
+  const { user } = useUser();
   const collapsed = useLayoutStore((state) => state.collapsed);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,6 +71,19 @@ function AssignProjectsContent() {
   const [assignmentFilter, setAssignmentFilter] = useState<string | null>(
     "Unassigned"
   );
+  const [projectTypeFilter, setProjectTypeFilter] = useState<string[]>([]);
+
+  // Load default project type filter from user settings
+  const { getFilter: getDefaultFilter, isLoading: defaultFiltersLoading } =
+    useDefaultFilters(user?.id ?? null);
+
+  useEffect(() => {
+    if (defaultFiltersLoading) return;
+    const defaultPT = getDefaultFilter("project_type");
+    if (defaultPT?.included_values && defaultPT.included_values.length > 0) {
+      setProjectTypeFilter(defaultPT.included_values);
+    }
+  }, [defaultFiltersLoading, getDefaultFilter]);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
@@ -85,6 +102,14 @@ function AssignProjectsContent() {
   const uniqueSystems = useMemo(() => {
     const systems = new Set(allProjects.map((p) => p.system).filter(Boolean));
     return Array.from(systems).sort();
+  }, [allProjects]);
+
+  const uniqueProjectTypes = useMemo(() => {
+    const types = new Set<string>();
+    allProjects.forEach((p) => {
+      if (p.project_type) types.add(p.project_type);
+    });
+    return Array.from(types).sort();
   }, [allProjects]);
 
   const uniqueSourceLangs = useMemo(() => {
@@ -109,6 +134,7 @@ function AssignProjectsContent() {
     setSourceLangFilter(null);
     setTargetLangFilter(null);
     setLengthFilter(null);
+    setProjectTypeFilter([]);
   };
 
   const hasActiveFilters =
@@ -117,7 +143,8 @@ function AssignProjectsContent() {
     assignmentFilter ||
     sourceLangFilter ||
     targetLangFilter ||
-    lengthFilter;
+    lengthFilter ||
+    projectTypeFilter.length > 0;
 
   // Filtering logic
   const filteredProjects = useMemo(() => {
@@ -174,7 +201,12 @@ function AssignProjectsContent() {
         }
 
         // Length filter
-        if (lengthFilter && !matchesLengthFilter(p.words, lengthFilter)) {
+        if (lengthFilter && !matchesLengthFilter(p.words, p.lines, lengthFilter)) {
+          return false;
+        }
+
+        // Project type filter
+        if (projectTypeFilter.length > 0 && (!p.project_type || !projectTypeFilter.includes(p.project_type))) {
           return false;
         }
 
@@ -200,6 +232,7 @@ function AssignProjectsContent() {
     targetLangFilter,
     lengthFilter,
     assignmentFilter,
+    projectTypeFilter,
   ]);
 
   const handleSelection = (projectId: number) => {
@@ -238,7 +271,7 @@ function AssignProjectsContent() {
           dbAssignments.push({
             project_id: projectId,
             user_id: translatorId,
-            assignment_status: "unclaimed",
+            assignment_status: translatorId === user?.id ? "claimed" : "unclaimed",
             initial_message: data.messages[translatorId] || null,
           });
         });
@@ -263,7 +296,7 @@ function AssignProjectsContent() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+        queryKey: ['projects-with-translators'],
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       toast.success(
@@ -287,7 +320,7 @@ function AssignProjectsContent() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-screen-2xl mx-auto">
         <div className="flex justify-center items-center py-12">
           <p className="text-gray-500 dark:text-gray-400">Loading...</p>
         </div>
@@ -310,7 +343,7 @@ function AssignProjectsContent() {
 
   // --- PROJECT SELECTION VIEW ---
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-screen-2xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-gray-900 dark:text-white mb-2">Assign Projects</h1>
@@ -384,6 +417,14 @@ function AssignProjectsContent() {
               selected={lengthFilter}
               onSelect={setLengthFilter}
             />
+            {uniqueProjectTypes.length > 0 && (
+              <MultiSelectFilterDropdown
+                label="Project Type"
+                options={uniqueProjectTypes}
+                selected={projectTypeFilter}
+                onSelect={setProjectTypeFilter}
+              />
+            )}
           </div>
 
           {/* Clear Filters Button */}
@@ -422,7 +463,7 @@ function AssignProjectsContent() {
             collapsed ? "left-20" : "left-52"
           }`}
         >
-          <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
+          <div className="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="text-gray-900 dark:text-white">
                 <span className="font-semibold">{selectedProjects.size}</span>{" "}

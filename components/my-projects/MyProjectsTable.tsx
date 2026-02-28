@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
-import { formatNumber } from "@/utils/formatters";
+import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
@@ -94,10 +94,10 @@ export function MyProjectsTable({
       },
     },
     {
-      header: "Project",
+      header: "Project Name",
       render: (assignment: ProjectAssignment) => (
-        <span className="text-gray-900 dark:text-white">
-          {assignment.projects.name}
+        <span className="text-gray-900 dark:text-white max-w-[280px] block break-words line-clamp-2">
+          {formatProjectName(assignment.projects.name)}
         </span>
       ),
     },
@@ -136,7 +136,7 @@ export function MyProjectsTable({
       header: "Instructions",
       className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate",
       render: (assignment: ProjectAssignment) => (
-        (assignment.projects as any).custom_instructions || assignment.projects.instructions || "-"
+        assignment.projects.instructions || "-"
       ),
     },
     {

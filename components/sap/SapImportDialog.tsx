@@ -13,7 +13,6 @@ import {
   Loader2,
   Download,
   RefreshCw,
-  CheckCircle2,
   Package,
   Clock,
 } from "lucide-react";
@@ -23,17 +22,15 @@ import { useSyncSapProjects } from "@/hooks/useSyncSapProjects";
 interface SapImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  existingSubProjectIds: Set<string>;
 }
 
 /**
  * Dialog for importing SAP projects.
- * Shows new/updated project counts and a single "Import All" action.
+ * Shows total subprojects to process and a single "Import All" action.
  */
 export function SapImportDialog({
   open,
   onOpenChange,
-  existingSubProjectIds,
 }: SapImportDialogProps) {
   // Fetch SAP projects
   const {
@@ -54,40 +51,28 @@ export function SapImportDialog({
     }
   }, [open, fetchProjects]);
 
-  // Calculate new and updated project counts
-  const { newCount, updatedCount, allSubProjects } = useMemo(() => {
-    if (!sapData?.projects) {
-      return { newCount: 0, updatedCount: 0, allSubProjects: [] };
-    }
+  // Collect all subprojects for import
+  const allSubProjects = useMemo(() => {
+    if (!sapData?.projects) return [];
 
-    let newCount = 0;
-    let updatedCount = 0;
-    const allSubProjects: Array<{
+    const subProjects: Array<{
       projectId: number;
       subProjectId: string;
-      isNew: boolean;
     }> = [];
 
     sapData.projects.forEach((project) => {
       project.subProjects.forEach((subProject) => {
-        const isNew = !existingSubProjectIds.has(subProject.subProjectId);
-        allSubProjects.push({
+        subProjects.push({
           projectId: project.projectId,
           subProjectId: subProject.subProjectId,
-          isNew,
         });
-        if (isNew) {
-          newCount++;
-        } else {
-          updatedCount++;
-        }
       });
     });
 
-    return { newCount, updatedCount, allSubProjects };
-  }, [sapData, existingSubProjectIds]);
+    return subProjects;
+  }, [sapData]);
 
-  // Handle import all new and updated
+  // Handle import all
   const handleImportAll = () => {
     if (allSubProjects.length === 0) return;
 
@@ -152,34 +137,18 @@ export function SapImportDialog({
         {/* Content */}
         {!isLoading && !projectsError && sapData && (
           <div className="space-y-6 py-4">
-            {/* Stats */}
-            <div className="flex gap-4">
-              <div className="flex-1 bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
-                  <div>
-                    <p className="text-2xl font-bold text-green-700 dark:text-green-400">
-                      {newCount}
-                    </p>
-                    <p className="text-sm text-green-600 dark:text-green-500">
-                      New projects
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-3">
-                  <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                  <div>
-                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-                      {updatedCount}
-                    </p>
-                    <p className="text-sm text-blue-600 dark:text-blue-500">
-                      Existing (will update)
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* Subproject count */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 text-center">
+              <p className="text-3xl font-bold text-blue-700 dark:text-blue-400">
+                {allSubProjects.length}
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
+                subprojects to process
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                The actual number of projects created or updated may differ due
+                to language pairs, translation areas, and deadline filtering.
+              </p>
             </div>
 
             {/* Sync rate limit warning */}
