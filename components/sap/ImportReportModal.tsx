@@ -167,9 +167,9 @@ export function ImportReportModal({ reports, onDismiss }: ImportReportModalProps
                           New Projects:
                         </p>
                         <div className="space-y-1">
-                          {report.new_projects.map((p) => (
+                          {report.new_projects.map((p, index) => (
                             <div
-                              key={p.id}
+                              key={`${p.id}-${index}`}
                               className="text-xs text-gray-700 dark:text-gray-300 pl-3 py-0.5"
                             >
                               <span className="font-medium">{p.name}</span>
@@ -191,9 +191,9 @@ export function ImportReportModal({ reports, onDismiss }: ImportReportModalProps
                           Modified Projects:
                         </p>
                         <div className="space-y-1">
-                          {report.modified_projects.map((p) => (
+                          {report.modified_projects.map((p, index) => (
                             <div
-                              key={p.id}
+                              key={`${p.id}-${index}`}
                               className="text-xs pl-3 py-0.5"
                             >
                               <span className="font-medium text-gray-700 dark:text-gray-300">

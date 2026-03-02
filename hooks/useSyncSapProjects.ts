@@ -22,6 +22,9 @@ export interface SyncSapProjectsResponse {
   updated: number;
   failed: number;
   errors?: string[];
+  failureLogPath?: string;
+  reportCreated?: boolean;
+  reportCreationError?: string | null;
 }
 
 /**
@@ -31,6 +34,11 @@ interface RateLimitResponse {
   error: "rate_limited";
   waitMinutes: number;
   retryAt: string;
+}
+
+interface ImportInProgressResponse {
+  error: "import_in_progress";
+  startedAt: string | null;
 }
 
 /**
@@ -71,6 +79,27 @@ export function useSyncSapProjects() {
         throw new Error("Rate limited");
       }
 
+      if (response.status === 409) {
+        const data = (await response.json().catch(() => null)) as ImportInProgressResponse | null;
+        if (data?.error === "import_in_progress") {
+          const startedAt = data.startedAt ? new Date(data.startedAt) : null;
+          const startedText = startedAt
+            ? ` Started ${startedAt.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}.`
+            : "";
+
+          toast.info(
+            `An SAP import is already running. Please wait until it finishes.${startedText}`,
+            { duration: 6000 }
+          );
+          queryClient.invalidateQueries({ queryKey: queryKeys.sapImportStatus() });
+        }
+
+        throw new Error("Import in progress");
+      }
+
       if (!response.ok) {
         const error = await response.json().catch(() => null);
         const message =
@@ -86,6 +115,7 @@ export function useSyncSapProjects() {
       queryClient.invalidateQueries({
         queryKey: ['projects-with-translators'],
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sapImportStatus() });
 
       // Show summary toast
       if (data.failed === 0) {
@@ -100,11 +130,32 @@ export function useSyncSapProjects() {
         toast.warning(
           `Imported ${data.imported} new, updated ${data.updated}, but ${data.failed} failed.`
         );
+
+        if (data.failureLogPath) {
+          toast.info(
+            `Failure details were saved to ${data.failureLogPath}.`,
+            { duration: 8000 }
+          );
+        }
+      }
+
+      if (data.reportCreated === false) {
+        toast.error(
+          `The import finished, but the report could not be created, so the report modal will not appear. Reason: ${data.reportCreationError || "Unknown error"}`,
+          { duration: 8000 }
+        );
+
+        if (data.failureLogPath && data.failed === 0) {
+          toast.info(
+            `Additional details were saved to ${data.failureLogPath}.`,
+            { duration: 8000 }
+          );
+        }
       }
     },
     onError: (error: Error) => {
-      // Rate limit errors already show a toast in mutationFn
-      if (error.message === "Rate limited") return;
+      // Rate limit and in-progress errors already show a toast in mutationFn
+      if (error.message === "Rate limited" || error.message === "Import in progress") return;
       toast.error(error.message || "Failed to import projects from SAP");
     },
   });

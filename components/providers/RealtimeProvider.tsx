@@ -56,8 +56,18 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
     () => {
       // Invalidate import reports query
       queryClient.invalidateQueries({ queryKey: ["import-reports"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sapImportStatus() });
       // Notify all listeners
       importReportListenersRef.current.forEach((cb) => cb());
+    },
+    [queryClient]
+  );
+
+  const handleSapImportStatusChange = useCallback(
+    () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.sapImportStatus(),
+      });
     },
     [queryClient]
   );
@@ -174,6 +184,15 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         },
         handleImportReportInsert
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sap_import_status",
+        },
+        handleSapImportStatusChange
+      )
       .subscribe((status) => {
         setIsConnected(status === "SUBSCRIBED");
       });
@@ -188,7 +207,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         setIsConnected(false);
       }
     };
-  }, [supabase, handleProjectsChange, handleAssignmentChange, handleImportReportInsert]);
+  }, [supabase, handleProjectsChange, handleAssignmentChange, handleImportReportInsert, handleSapImportStatusChange]);
 
   return (
     <RealtimeContext.Provider value={{ isConnected, onImportReport }}>

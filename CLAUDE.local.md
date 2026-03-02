@@ -125,6 +125,7 @@ create table public.projects (
   url text null,
   hours real null,
   project_notes text null,
+  sap_import_key text null,
   constraint projects_pkey primary key (id),
   constraint projects_api_source_check check (
     (
@@ -138,6 +139,13 @@ create table public.projects (
     )
   )
 ) TABLESPACE pg_default;
+
+create index IF not exists idx_projects_sap_import_key on public.projects using btree (sap_subproject_id, sap_import_key) TABLESPACE pg_default
+where
+  (
+    (sap_subproject_id is not null)
+    and (sap_import_key is not null)
+  );
 
 create index IF not exists idx_projects_deadline on public.projects using btree (final_deadline) TABLESPACE pg_default;
 
@@ -178,11 +186,30 @@ create table public.sap_api_rate_limits (
   constraint sap_api_rate_limits_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE
 ) TABLESPACE pg_default;
 
+create table public.sap_import_status (
+  id bigint not null,
+  status text not null default 'idle'::text,
+  started_at timestamp with time zone null,
+  finished_at timestamp with time zone null,
+  started_by uuid null,
+  last_error text null,
+  updated_at timestamp with time zone not null default now(),
+  constraint sap_import_status_pkey primary key (id),
+  constraint sap_import_status_started_by_fkey foreign KEY (started_by) references users (id) on delete set null,
+  constraint sap_import_status_status_check check (
+    (
+      status = any (
+        array['idle'::text, 'running'::text, 'failed'::text]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
 create table public.users (
   id uuid not null default gen_random_uuid (),
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone null default now(),
-  name text null default 'Sem nome :('::text,
+  name text null default 'Sem nome'::text,
   email text not null,
   role public.user_role not null default 'employee'::user_role,
   "TE_user" text null,
@@ -259,7 +286,7 @@ UI preference only.
 ---
 
 ## Database Triggers (Critical Side Effects)
-The database mutates data automatically via triggers.  
+The database mutates data automatically via triggers.
 Do NOT duplicate or bypass this logic in the application.
 
 ### public.projects
@@ -388,3 +415,490 @@ When in doubt: make it simpler.
 - Use Tailwind for styling with shadcn/ui components
 - Implement proper authentication flows with Supabase
 - Follow consistent file structure and naming conventions
+
+---
+
+# Full Project Structure
+
+## Directory Tree
+
+```
+sap_project_management/
+├── app/                          # Next.js App Router
+│   ├── layout.tsx                # Root layout (providers, fonts, toaster)
+│   ├── globals.css               # Tailwind + CSS variables (light/dark themes)
+│   ├── (auth)/                   # Public auth routes
+│   │   └── login/page.tsx        # Email/password sign-in & sign-up
+│   ├── (protected)/              # Authenticated routes (requires session)
+│   │   ├── layout.tsx            # RealtimeProvider + AppShell + ImportReportNotifier
+│   │   ├── page.tsx              # Home dashboard with role-based cards
+│   │   ├── management/page.tsx   # PM/Admin project oversight (tabs, filters, SAP import)
+│   │   ├── assign-projects/page.tsx # Bulk translator assignment wizard
+│   │   ├── invoicing/page.tsx    # Billing tracking (invoiced/paid status)
+│   │   ├── my-projects/page.tsx  # Employee view (claim/refuse/done workflow)
+│   │   ├── new-project/page.tsx  # Create project or duplicate existing
+│   │   ├── project/[id]/page.tsx # Project detail (role-adaptive view)
+│   │   ├── project/[id]/edit/page.tsx # Full project editor (React Hook Form + Zod)
+│   │   ├── workload/page.tsx     # Team workload dashboard (hours, risk, capacity)
+│   │   ├── profile/page.tsx      # User profile editing
+│   │   └── settings/page.tsx     # Theme, colors, roles, filters, exclusions
+│   ├── api/                      # Server-side API routes
+│   │   ├── cron/sap-sync/route.ts     # Vercel cron: automated SAP sync
+│   │   └── sap/
+│   │       ├── projects/route.ts       # GET: list SAP projects with local sync status
+│   │       ├── projects/[projectId]/route.ts  # GET: single SAP project detail
+│   │       ├── subprojects/[projectId]/[subProjectId]/route.ts  # GET: subproject + instructions
+│   │       ├── sync/route.ts           # POST: manual SAP import (with locking & rate limit)
+│   │       └── import-status/route.ts  # GET: poll import progress (idle/running/failed)
+│   └── auth/callback/route.ts    # OAuth/email verification callback
+│
+├── components/                   # React components organized by feature
+│   ├── ProjectCard.tsx           # (Legacy, commented out) Generic project card
+│   ├── ProjectTable.tsx          # Main project list with deadlines, translators, colors
+│   ├── assign/                   # Assignment workflow
+│   │   ├── ProjectAssignCard.tsx      # Card view for project selection (checkboxes)
+│   │   ├── ProjectAssignTable.tsx     # Table view for project selection
+│   │   └── TranslatorSelectionView.tsx # Multi-step wizard: assign translators per project
+│   ├── auth/
+│   │   └── RoleGuard.tsx              # Route-level authorization (redirects if unauthorized)
+│   ├── general/                  # Reusable UI building blocks
+│   │   ├── DeadlineDisplay.tsx        # Smart multi-deadline display with popover
+│   │   ├── FilterDropdown.tsx         # Single-select filter with optional date picker
+│   │   ├── MultiSelectFilterDropdown.tsx # Multi-select filter dropdown
+│   │   ├── ScrollToTopButton.tsx      # Scroll-to-top FAB (appears at 300px)
+│   │   ├── SearchBar.tsx              # Text search input with clear button
+│   │   └── ViewToggle.tsx             # Table/Card view switcher
+│   ├── home/
+│   │   ├── HomeCard.tsx               # Dashboard link card (icon, count, path)
+│   │   └── CurrentProjectsTable.tsx   # Home page project table with status icons
+│   ├── invoicing/
+│   │   ├── InvoicingCard.tsx          # Card view for invoice projects (checkboxes)
+│   │   ├── InvoicingTable.tsx         # Table view for invoice projects
+│   │   └── InvoicingTabs.tsx          # Tabs: All, To Be Invoiced, To Be Paid
+│   ├── layout/
+│   │   ├── AppShell.tsx               # Main layout with responsive sidebar margin
+│   │   ├── Sidebar.tsx                # Collapsible nav sidebar (role-filtered links, profile)
+│   │   └── DarkModeHandler.tsx        # System dark mode sync + theme resolution
+│   ├── management/
+│   │   ├── ManagementTabs.tsx         # Tabs: All, Ready, In Progress, Unclaimed
+│   │   ├── ManagementCard.tsx         # Card view with inline words/lines editing
+│   │   ├── ManagementTable.tsx        # Table view with actions column
+│   │   ├── ProjectActionsMenu.tsx     # Dropdown: add/remove translator, duplicate, edit, complete
+│   │   ├── InstructionsDrawer.tsx     # Slide-out panel for SAP + custom instructions
+│   │   ├── AddTranslatorDialog.tsx    # Modal: select translators with workload indicators
+│   │   ├── RemoveTranslatorDialog.tsx # Two-step: select translator then confirm removal
+│   │   └── ConfirmationDialog.tsx     # Generic confirm dialog (default/destructive/success variants)
+│   ├── my-projects/
+│   │   ├── MyProjectsCard.tsx         # Card view of user assignments
+│   │   ├── MyProjectsTable.tsx        # Table view of user assignments
+│   │   ├── InitialMessageDialog.tsx   # Shows PM message before claiming
+│   │   ├── DoneDialog.tsx             # Mark-as-done with optional note
+│   │   └── RefusalDialog.tsx          # Refuse project with required reason (min 10 chars)
+│   ├── profile/
+│   │   ├── ProfilePageContent.tsx     # Full profile form (name, email, CAT tool users, avatar)
+│   │   ├── ProfileAvatar.tsx          # Avatar display with initials fallback
+│   │   ├── AvatarSelectionModal.tsx   # Avatar picker/uploader
+│   │   ├── ProfileFormField.tsx       # Reusable form field wrapper
+│   │   └── ProfileStatus.tsx          # Edit/save status indicator
+│   ├── project/
+│   │   ├── ProjectDetailsCard.tsx     # Project metadata display (deadlines, volumes, SAP fields)
+│   │   ├── ProjectInstructionsCard.tsx # SAP + custom instructions with dedup and HTML stripping
+│   │   ├── ProjectNotesCard.tsx       # Editable free-form notes (PM/Admin)
+│   │   ├── TranslatorsList.tsx        # Assigned translators with status badges and actions
+│   │   └── ReminderModal.tsx          # Send reminder to translator with custom message
+│   ├── providers/
+│   │   ├── QueryProvider.tsx          # React Query setup (5min stale, 10min GC, retry logic)
+│   │   └── RealtimeProvider.tsx       # Supabase Realtime subscriptions (projects, assignments, imports)
+│   ├── sap/
+│   │   ├── SapImportDialog.tsx        # Main SAP import dialog (status polling, trigger sync)
+│   │   ├── SapImportPreview.tsx       # Subproject detail preview (volumes, steps, instructions)
+│   │   ├── SapProjectList.tsx         # Hierarchical project/subproject selector with checkboxes
+│   │   ├── ImportReportModal.tsx      # Shows import results (new/modified projects, field changes)
+│   │   └── ImportReportNotifier.tsx   # Auto-surfaces unacknowledged reports for PM/Admin
+│   ├── settings/
+│   │   ├── ThemeSettings.tsx          # System/light/dark toggle
+│   │   ├── ColorSettings.tsx          # Admin color customization
+│   │   ├── UserRoleManagement.tsx     # Admin user role assignment
+│   │   ├── DefaultFilterSettings.tsx  # Persist default project type filters
+│   │   ├── InstructionExclusionSettings.tsx # Exclude specific SAP instruction strings
+│   │   └── color/                     # Color setting sub-components
+│   │       ├── ColorCard.tsx
+│   │       ├── ColorDialog.tsx
+│   │       ├── ColorDynamicFields.tsx
+│   │       ├── ColorForm.tsx
+│   │       └── ColorList.tsx
+│   ├── shared/
+│   │   ├── ProjectTableBase.tsx       # Generic table with pagination, row click, sticky header
+│   │   ├── EmptyState.tsx             # Icon + title + subtitle empty state
+│   │   ├── FormDialog.tsx             # Generic modal wrapper for forms
+│   │   └── StatusIcon.tsx             # Assignment status icon with tooltip
+│   └── ui/                       # shadcn/ui primitives + custom UI
+│       ├── alert-dialog.tsx, badge.tsx, button.tsx, card.tsx, checkbox.tsx
+│       ├── dialog.tsx, dropdown-menu.tsx, form.tsx, input.tsx, label.tsx
+│       ├── pagination.tsx, popover.tsx, select.tsx, sheet.tsx
+│       ├── sonner.tsx, textarea.tsx, toast.tsx, toaster.tsx, tooltip.tsx
+│       ├── ConflictResolutionModal.tsx # 3-column conflict view (was/now/yours)
+│       ├── EditConflictModal.tsx       # During-edit conflict warning
+│       └── TypewriterText.tsx          # Character-by-character text animation
+│
+├── hooks/                        # Custom React hooks
+│   ├── index.ts                       # Barrel export of all hooks
+│   ├── useSupabase.ts                 # Browser Supabase client singleton
+│   ├── useUser.ts                     # Current authenticated user (5min cache)
+│   ├── useUsers.ts                    # All users list (5min cache)
+│   ├── useRoleAccess.ts               # Memoized role checks (canAccessRoute, isPmOrAdmin, etc.)
+│   ├── useProject.ts                  # Single project + assignments + translator details (2min cache)
+│   ├── useProjectsWithTranslators.ts  # All projects with translators (past/future filter, 2min cache)
+│   ├── useMyProjects.ts               # Employee's assignments + claim/reject/done mutations
+│   ├── useHomeCounts.ts               # Dashboard counts (my projects, managed projects)
+│   ├── useUpdateProject.ts            # Project field mutation with concurrency safety
+│   ├── useUpdateAssignment.ts         # Assignment mutation with concurrency safety
+│   ├── useConcurrencySafeMutation.ts  # Optimistic locking via updated_at; conflict detection
+│   ├── useSapProjects.ts              # Fetch SAP project list (manual refetch only)
+│   ├── useSapSubProjectDetails.ts     # Fetch SAP subproject detail + instructions (10min cache)
+│   ├── useSapImportStatus.ts          # Poll /api/sap/import-status for running/idle/failed
+│   ├── useSyncSapProjects.ts          # POST /api/sap/sync mutation (handles 429, 409)
+│   ├── useImportReports.ts            # Unacknowledged import reports + acknowledge mutation
+│   ├── useColorSettings.ts            # Color settings + getSystemColor/getStatusColor/getLanguageColor
+│   ├── useDefaultFilters.ts           # CRUD default filters per user
+│   ├── useInstructionExclusions.ts    # CRUD instruction exclusions per user
+│   ├── useThemePreference.ts          # Theme toggle + resolveTheme helper
+│   ├── useUpdateProfile.ts            # Mutate name, short_name, email
+│   ├── useUpdateAvatar.ts             # Avatar selection with availability check
+│   ├── useUploadAvatar.ts             # Image compression + storage upload
+│   ├── useUpdateUserRole.ts           # Admin-only role change
+│   ├── useAvailableAvatars.ts         # Fetch predefined avatar list
+│   ├── useUserWorkload.ts             # Per-user workload calculation (words, lines, hours)
+│   ├── usePagination.ts               # Generic pagination logic
+│   └── use-toast.ts                   # Toast notification reducer
+│
+├── lib/                          # Shared logic and configuration
+│   ├── queryKeys.ts                   # Centralized React Query key factory
+│   ├── roleAccess.ts                  # 9 role-check helpers + RouteId enum
+│   ├── utils.ts                       # cn() (clsx + tailwind-merge)
+│   ├── sap/                      # SAP TPM API integration (server-side)
+│   │   ├── client.ts                  # SapTpmApiClient: OAuth password grant, token caching, retries
+│   │   ├── constants.ts               # SAP_IMPORT_STATUS_ROW_ID, RATE_LIMIT_MINUTES, TRACKED_FIELDS
+│   │   ├── errors.ts                  # SapApiError, RateLimitError, SapConfigError, SapTokenError
+│   │   ├── mappers.ts                 # SAP→local transform: extractSystem, buildInstructions, joinSteps, sanitize
+│   │   ├── importer.ts               # runManualImport() and runCronSync() orchestrators
+│   │   ├── project-writer.ts         # findExistingProject, updateProjectFromSap, insertProjectFromSap
+│   │   ├── report-writer.ts          # createImportReport (new/modified project arrays)
+│   │   ├── import-lock.ts            # Distributed lock via sap_import_status table
+│   │   ├── sync-utils.ts             # collectTrackedChanges, mergeModifiedProjects, deduplication
+│   │   └── failure-log.ts            # JSON failure logs to logs/sap-import-failures/
+│   └── stores/                   # Zustand stores
+│       ├── useLayoutStore.ts          # Theme, dark mode, sidebar collapsed
+│       ├── useManagementPageStore.ts  # Active tab, view mode, current page
+│       └── useOriginalRecordStore.ts  # Concurrency: stores original record by table+PK
+│
+├── types/                        # TypeScript type definitions
+│   ├── index.ts                       # Barrel export
+│   ├── project.ts                     # Project, ProjectStatus, ProjectWithTranslators, SapInstructionEntry
+│   ├── project-assignment.ts          # ProjectAssignment (with nested Project)
+│   ├── user.ts                        # User, UserRole
+│   ├── sap.ts                         # SAP DTOs, internal types, TOOL_TYPE_TO_SYSTEM map
+│   └── concurrency.ts                # FieldChange, ConflictResult, ConcurrencySafeMutationOptions
+│
+├── utils/                        # Pure utility functions
+│   ├── filterHelpers.ts               # matchesDueDateFilter, matchesLengthFilter
+│   ├── formatters.ts                  # formatNumber, formatDate, formatDateWithTime, stripHtml, formatRoleDisplay
+│   ├── projectTableHelpers.ts         # getStatusIcon, getSystemColorStyle, getLanguageColorStyle
+│   ├── systemColors.ts                # Default system color fallbacks (B0X→blue, XTM→purple, etc.)
+│   ├── tailwindColors.ts              # Tailwind color palette, safelist generator, hex preview map
+│   └── toastHelpers.ts               # getUserFriendlyError (translates DB errors to user messages)
+│
+├── supabase/migrations/          # Database migrations
+│   ├── 20260116_add_sap_integration.sql
+│   ├── 20260302_add_sap_import_key.sql
+│   ├── 20260302_add_sap_import_status.sql
+│   └── 20260302_allow_multiple_sap_projects_per_subproject.sql
+│
+├── TPM API Docs/                 # SAP TPM API documentation
+│   ├── TPM API Docs.md
+│   ├── TPM Field Handling.md
+│   ├── Examples of how to handle API.md
+│   └── sap-tooltypes-2026-02-13.json
+│
+├── proxy.ts                      # Next.js middleware (auth, routing, security)
+├── package.json                  # Dependencies (Next.js 16, React 19, Supabase, React Query 5, Zustand 5, Zod 4)
+├── tailwind.config.js            # Tailwind configuration with color safelist
+├── tsconfig.json                 # TypeScript config (@ alias → project root)
+├── postcss.config.js             # PostCSS for Tailwind
+├── vercel.json                   # Vercel deployment config (cron schedule)
+├── components.json               # shadcn/ui configuration (new-york style)
+└── xtm-api-docs.md               # XTM API documentation
+```
+
+---
+
+## Data Flow Architecture
+
+### Authentication Flow
+```
+/login → Supabase Auth (email/password) → auth/callback → / (home)
+```
+
+### Navigation Hierarchy (Role-Based)
+```
+/ (home dashboard)
+├── /my-projects ────────────── Employee: claim/refuse/done workflow
+├── /management ─────────────── PM/Admin: project oversight
+│   ├── SAP Import Dialog ───── /api/sap/projects → /api/sap/sync
+│   ├── Instructions Drawer
+│   └── Add/Remove Translators
+├── /assign-projects ────────── PM/Admin: bulk translator assignment
+├── /invoicing ──────────────── PM/Admin: invoiced/paid tracking
+├── /workload ───────────────── PM/Admin: team capacity dashboard
+├── /project/[id] ───────────── All roles: project detail (role-adaptive)
+│   └── /project/[id]/edit ──── PM/Admin: full project editor
+├── /new-project ────────────── PM/Admin: create or duplicate project
+├── /profile ────────────────── All: edit name, email, avatar, CAT users
+└── /settings ───────────────── All: theme | PM/Admin: colors, roles, filters, exclusions
+```
+
+### SAP Import Data Flow
+```
+1. SapImportDialog → useSapProjects() → GET /api/sap/projects → SapTpmApiClient
+2. User selects subprojects → useSyncSapProjects() → POST /api/sap/sync
+3. Backend: acquireLock → runManualImport() → mappers → project-writer → report-writer → releaseLock
+4. RealtimeProvider detects INSERT on import_reports → ImportReportNotifier auto-surfaces report
+5. Cron: GET /api/cron/sap-sync (CRON_SECRET) → runCronSync() → same pipeline
+```
+
+### State Management Layers
+```
+React Query (server state)     → Projects, users, assignments, SAP data, colors, filters
+Zustand stores (client state)  → Layout (theme, sidebar), Management page (tab, view, page), Original records
+React Hook Form + Zod (forms)  → Profile editing, project creation/editing
+Component state (local)        → Modals, filters, selections, inline editing
+```
+
+### Realtime Subscriptions (RealtimeProvider)
+```
+projects (all events)          → invalidates project queries
+projects_assignment (all)      → invalidates user's projects and counts
+import_reports (INSERT)        → invalidates reports, notifies ImportReportNotifier
+sap_import_status (all)        → invalidates import status polling
+```
+
+---
+
+## File-by-File Reference
+
+### app/ — Pages & API Routes
+
+| File | Purpose |
+|------|---------|
+| `app/layout.tsx` | Root layout: wraps app in QueryProvider, DarkModeHandler, Sonner toaster |
+| `app/globals.css` | Tailwind directives + CSS custom properties for light/dark themes |
+| `app/(auth)/login/page.tsx` | Login/signup form with email-password via Supabase Auth; redirect support |
+| `app/auth/callback/route.ts` | OAuth/email verification callback; exchanges code for session |
+| `app/(protected)/layout.tsx` | Protected layout: RealtimeProvider + AppShell + ImportReportNotifier |
+| `app/(protected)/page.tsx` | Home: greeting, role-based HomeCards with counts, optional projects table |
+| `app/(protected)/management/page.tsx` | Management hub: tabs (all/ready/inProgress/unclaimed), filters (system/date/status/language/length/type), table/card view, inline words/lines edit, SAP import button, translator dialogs, instructions drawer |
+| `app/(protected)/assign-projects/page.tsx` | Bulk assignment: project selection → TranslatorSelectionView wizard with workload indicators |
+| `app/(protected)/invoicing/page.tsx` | Invoice tracking: tabs (all/toInvoice/toPay), multi-select, bulk mark invoiced/paid |
+| `app/(protected)/my-projects/page.tsx` | Employee projects: tabs (unclaimed/inProgress), claim with initial message, refuse with reason, mark done with note |
+| `app/(protected)/new-project/page.tsx` | Create project form with optional duplication from existing project |
+| `app/(protected)/project/[id]/page.tsx` | Project detail: role-adaptive (PM sees translators list + actions; employee sees claim/refuse/done) |
+| `app/(protected)/project/[id]/edit/page.tsx` | Full project editor (~1600 lines): React Hook Form + Zod, conflict detection, inline translator management |
+| `app/(protected)/workload/page.tsx` | Workload dashboard: per-user hours, words/lines, working-day calculation, risk assessment |
+| `app/(protected)/profile/page.tsx` | Wrapper for ProfilePageContent |
+| `app/(protected)/settings/page.tsx` | Settings page: theme, colors, roles, default filters, instruction exclusions, logout |
+| `app/api/sap/projects/route.ts` | GET: fetches all SAP projects, cross-references local DB for sync status |
+| `app/api/sap/projects/[projectId]/route.ts` | GET: single SAP project detail (filters from full list) |
+| `app/api/sap/subprojects/[pid]/[sid]/route.ts` | GET: subproject details + instructions (3 parallel SAP API calls) |
+| `app/api/sap/sync/route.ts` | POST: manual import with locking, rate limiting, exclusions, report generation |
+| `app/api/sap/import-status/route.ts` | GET: poll import progress (idle/running/failed) |
+| `app/api/cron/sap-sync/route.ts` | GET: Vercel cron trigger, CRON_SECRET auth, service-role Supabase client |
+
+### components/ — UI Components
+
+| File | Purpose |
+|------|---------|
+| `ProjectTable.tsx` | Main project list display with deadline warnings, translator status, color coding |
+| `assign/ProjectAssignCard.tsx` | Card view for project selection with checkboxes and color indicators |
+| `assign/ProjectAssignTable.tsx` | Table view for project selection (extends ProjectTableBase) |
+| `assign/TranslatorSelectionView.tsx` | Multi-step assignment wizard with progress bar, workload/feasibility indicators |
+| `auth/RoleGuard.tsx` | Route authorization: checks role, redirects if unauthorized |
+| `general/DeadlineDisplay.tsx` | Smart deadline display: deduplicates same-day, hides past, popover for multiple |
+| `general/FilterDropdown.tsx` | Single-select filter dropdown with optional custom date picker |
+| `general/MultiSelectFilterDropdown.tsx` | Multi-select filter dropdown with "All" option |
+| `general/ScrollToTopButton.tsx` | FAB that appears on scroll (>300px) |
+| `general/SearchBar.tsx` | Search input with icon and clear button |
+| `general/ViewToggle.tsx` | Table/Card view toggle (pill-shaped buttons) |
+| `home/HomeCard.tsx` | Dashboard navigation card with icon, count, hover effects |
+| `home/CurrentProjectsTable.tsx` | Home page table with status icons and translator avatars |
+| `invoicing/InvoicingCard.tsx` | Invoice card with checkbox, invoiced/paid badges |
+| `invoicing/InvoicingTable.tsx` | Invoice table extending ProjectTableBase |
+| `invoicing/InvoicingTabs.tsx` | Tabs: All, To Be Invoiced, To Be Paid |
+| `layout/AppShell.tsx` | Main layout wrapper with dynamic sidebar margin |
+| `layout/Sidebar.tsx` | Collapsible nav sidebar with role-filtered links, profile section, typewriter animation |
+| `layout/DarkModeHandler.tsx` | Syncs system preference + user theme → applies "dark" class to HTML |
+| `management/ManagementTabs.tsx` | Tabs with counts: All, Ready, In Progress, Unclaimed |
+| `management/ManagementCard.tsx` | Project card with inline words/lines editor and actions dropdown |
+| `management/ManagementTable.tsx` | Project table with actions column |
+| `management/ProjectActionsMenu.tsx` | Dropdown: add/remove translator, duplicate, edit, complete (only if all done) |
+| `management/InstructionsDrawer.tsx` | Sheet panel showing SAP + custom instructions with HTML stripping |
+| `management/AddTranslatorDialog.tsx` | Translator picker with avatar grid, workload, feasibility, custom messages |
+| `management/RemoveTranslatorDialog.tsx` | Two-step: select translator → confirm removal |
+| `management/ConfirmationDialog.tsx` | Generic confirm (default/destructive/success variants) |
+| `my-projects/MyProjectsCard.tsx` | Employee assignment card sorted by deadline |
+| `my-projects/MyProjectsTable.tsx` | Employee assignment table with pagination |
+| `my-projects/InitialMessageDialog.tsx` | Shows PM message before allowing claim |
+| `my-projects/DoneDialog.tsx` | Done confirmation with optional note (Shift+Enter sends) |
+| `my-projects/RefusalDialog.tsx` | Refusal with required reason (min 10 chars, Shift+Enter sends) |
+| `profile/ProfilePageContent.tsx` | Full profile form (RHF + Zod), avatar editor, edit/save flow |
+| `profile/ProfileAvatar.tsx` | Avatar with initials fallback, edit button, error handling |
+| `profile/AvatarSelectionModal.tsx` | Predefined avatar picker + custom upload |
+| `profile/ProfileFormField.tsx` | Reusable form field wrapper |
+| `profile/ProfileStatus.tsx` | Save status indicator (unsaved/editing/saved + timestamp) |
+| `project/ProjectDetailsCard.tsx` | Project metadata: status, type, PM, languages, deadlines, volumes, SAP fields |
+| `project/ProjectInstructionsCard.tsx` | SAP (amber) + custom (blue) instructions with dedup and HTML strip |
+| `project/ProjectNotesCard.tsx` | Editable notes (PM/Admin): inline textarea, save/cancel |
+| `project/TranslatorsList.tsx` | Translator cards with status badges, messages, remove/remind actions |
+| `project/ReminderModal.tsx` | Send reminder with custom message or default template |
+| `providers/QueryProvider.tsx` | React Query: 5min stale, 10min GC, no retry on 4xx, devtools |
+| `providers/RealtimeProvider.tsx` | Supabase Realtime: projects, assignments, import_reports, import_status channels |
+| `sap/SapImportDialog.tsx` | Import dialog: status polling (5s), trigger sync, processing notice |
+| `sap/SapImportPreview.tsx` | Subproject preview: volumes, steps, instructions, environment tags |
+| `sap/SapProjectList.tsx` | Hierarchical selector: expandable projects, subproject checkboxes, NEW/SYNCED badges |
+| `sap/ImportReportModal.tsx` | Import results: new/modified project lists with field-level change details |
+| `sap/ImportReportNotifier.tsx` | Auto-shows modal for PM/Admin when unacknowledged reports exist |
+| `settings/ThemeSettings.tsx` | System/light/dark toggle |
+| `settings/ColorSettings.tsx` | Admin color customization |
+| `settings/UserRoleManagement.tsx` | Admin role assignment |
+| `settings/DefaultFilterSettings.tsx` | Default project type filter persistence |
+| `settings/InstructionExclusionSettings.tsx` | Exclude specific SAP instruction strings |
+| `settings/color/*` | Color setting sub-components (ColorCard, ColorDialog, ColorDynamicFields, ColorForm, ColorList) |
+| `shared/ProjectTableBase.tsx` | Generic table: pagination, row click, sticky header, leading column, external page control |
+| `shared/EmptyState.tsx` | Empty state: icon circle + title + subtitle |
+| `shared/FormDialog.tsx` | Generic modal for forms |
+| `shared/StatusIcon.tsx` | Assignment status icon with tooltip |
+| `ui/ConflictResolutionModal.tsx` | 3-column conflict view: was/now/yours with formatted values |
+| `ui/EditConflictModal.tsx` | During-edit conflict warning (non-dismissible by click-outside) |
+| `ui/TypewriterText.tsx` | Character-by-character animation (handles emoji, resets on text change) |
+
+### hooks/ — Custom Hooks
+
+| Hook | Purpose | Cache |
+|------|---------|-------|
+| `useSupabase` | Browser Supabase client singleton | — |
+| `useUser` | Current auth user from auth + users table | 5min |
+| `useUsers` | All users ordered by name | 5min |
+| `useRoleAccess` | Memoized role checks (canAccessRoute, isPmOrAdmin, isTranslator, etc.) | — |
+| `useProject` | Single project + assignments + translator details | 2min |
+| `useProjectsWithTranslators` | All projects with translators; past/future deadline filter | 2min |
+| `useMyProjects` | User's unclaimed/claimed assignments + claim/reject/done mutations | 2min |
+| `useHomeCounts` | Dashboard counts for my projects and managed projects | — |
+| `useUpdateProject` | Project mutation with concurrency safety | — |
+| `useUpdateAssignment` | Assignment mutation with concurrency safety (uses created_at as version) | — |
+| `useConcurrencySafeMutation` | Optimistic locking: compares updated_at, detects field-level conflicts | — |
+| `useSapProjects` | Fetch SAP project list | manual refetch |
+| `useSapSubProjectDetails` | Fetch SAP subproject detail + instructions | 10min |
+| `useSapImportStatus` | Poll import-status endpoint | 5s interval |
+| `useSyncSapProjects` | POST sync mutation; handles rate-limit (429) and in-progress (409) | — |
+| `useImportReports` | Unacknowledged reports + acknowledge mutation | — |
+| `useColorSettings` | Color settings + getSystemColor/getStatusColor/getLanguageColor helpers | — |
+| `useDefaultFilters` | CRUD default_filters per user | — |
+| `useInstructionExclusions` | CRUD instruction exclusions per user | — |
+| `useThemePreference` | Theme toggle mutation + resolveTheme() | — |
+| `useUpdateProfile` | Mutate name, short_name, email (handles email confirmation) | — |
+| `useUpdateAvatar` | Avatar selection with predefined/custom validation and availability check | — |
+| `useUploadAvatar` | Image compression (max 512px, 500KB) + storage upload | — |
+| `useUpdateUserRole` | Admin-only role change | — |
+| `useAvailableAvatars` | Fetch predefined avatar list from storage | — |
+| `useUserWorkload` | Per-user workload: words, lines, hours, next-week feasibility | — |
+| `usePagination` | Generic page/slice/auto-reset logic | — |
+| `use-toast` | Toast notification state reducer | — |
+
+### lib/ — Shared Logic
+
+| File | Purpose |
+|------|---------|
+| `queryKeys.ts` | Centralized React Query key factory for all entities |
+| `roleAccess.ts` | Route/role authorization matrix; 9 helpers + RouteId enum |
+| `utils.ts` | cn() — clsx + tailwind-merge |
+| `sap/client.ts` | SapTpmApiClient: OAuth password grant, x-approuter-authorization header, token caching (60s buffer), 3 retries, 30s timeout |
+| `sap/constants.ts` | SAP_IMPORT_STATUS_ROW_ID=1, RATE_LIMIT_MINUTES=3, TRACKED_FIELDS array |
+| `sap/errors.ts` | Custom error classes: SapApiError, RateLimitError, SapConfigError, SapTokenError; parseSapError(); isRetryableError() |
+| `sap/mappers.ts` | ~828 lines: extractSystem, extractTerminologyKeys, extractLxeProjects, extractTranslationAreas, buildInstructions, buildSapInstructions, joinSteps (groups by contentId+lang), mapSapSubProjectToProjects (multi-TA for SSE/SSK/SSH), sanitizeString, sanitizeImportData |
+| `sap/importer.ts` | runManualImport() and runCronSync() — orchestrate fetch→map→write→report pipeline |
+| `sap/project-writer.ts` | findExistingProject (primary: sap_subproject_id+sap_import_key, fallback: legacy match), updateProjectFromSap, insertProjectFromSap |
+| `sap/report-writer.ts` | createImportReport — inserts to import_reports with new/modified arrays |
+| `sap/import-lock.ts` | Distributed lock via sap_import_status table: ensure row, acquire (neq 'running'), finalize |
+| `sap/sync-utils.ts` | collectTrackedChanges (date normalization), mergeModifiedProjects, dedupeImportProjects, valuesAreMeaningfullyEqual |
+| `sap/failure-log.ts` | JSON failure logs to logs/sap-import-failures/ with stage/explanation/timestamp |
+| `stores/useLayoutStore.ts` | Zustand: themePreference, resolvedDarkMode, collapsed sidebar |
+| `stores/useManagementPageStore.ts` | Zustand: activeTab, viewMode, currentPage for management page |
+| `stores/useOriginalRecordStore.ts` | Zustand: stores original record state by table+PK for concurrency checks |
+
+### types/ — TypeScript Definitions
+
+| File | Key Exports |
+|------|-------------|
+| `project.ts` | Project, ProjectStatus, AssignmentStatus, ProjectTranslator, ProjectWithTranslators, ProjectWithTranslatorDetails, SapInstructionEntry |
+| `project-assignment.ts` | ProjectAssignment (with nested Project) |
+| `user.ts` | User, UserRole (employee/admin/pm) |
+| `sap.ts` | SAP DTOs (SapProjectDTO, SapSubProject, SapEnvironment, SapStep, SapVolume, SapInstructionDTO), internal types (SapProjectForImport, SapSyncRequest/Response, SapSubProjectDetails, SapProjectListItem), TOOL_TYPE_TO_SYSTEM map, ApiSource |
+| `concurrency.ts` | FieldChange, ConflictResult<T>, ConcurrencySafeMutationOptions |
+
+### utils/ — Pure Utility Functions
+
+| File | Key Exports |
+|------|-------------|
+| `filterHelpers.ts` | matchesDueDateFilter (today/1d/3d/week/month/custom), matchesLengthFilter (short=lines, long=words) |
+| `formatters.ts` | formatNumber (de-DE locale), formatDate ("25 Nov"), formatDateWithTime ("25 Nov 14:00"), stripHtml, formatRoleDisplay |
+| `projectTableHelpers.ts` | getStatusIcon (status→icon+color+label), getSystemColorStyle, getLanguageColorStyle |
+| `systemColors.ts` | Default system→color fallbacks (B0X→blue-500, XTM→purple-500, SSE→green-500, etc.) |
+| `tailwindColors.ts` | TAILWIND_COLORS, TAILWIND_SHADES, isValidTailwindColor, getBgClass, getTextClass, COLOR_PREVIEW_MAP (350+ hex), generateColorSafelist |
+| `toastHelpers.ts` | getUserFriendlyError (translates unique constraint, FK, permission, network errors to user messages) |
+
+### Root Files
+
+| File | Purpose |
+|------|---------|
+| `proxy.ts` | Next.js middleware: authentication checks, route protection, redirect logic |
+| `package.json` | Next.js 16.0.10, React 19.2.1, Supabase SSR, React Query 5.90.2, Zustand 5.0.8, RHF 7.65, Zod 4.1.12, date-fns, lucide-react, sonner, browser-image-compression; Dev: TypeScript 5, ESLint 9, Prettier, Vitest, Husky |
+| `tailwind.config.js` | Tailwind config with dynamically generated color safelist |
+| `tsconfig.json` | TypeScript strict mode, @/* path alias → project root |
+| `vercel.json` | Vercel deployment: cron schedule for SAP sync |
+| `components.json` | shadcn/ui config: new-york style |
+
+---
+
+## Key Architectural Patterns
+
+### 1. Role-Based Access Control
+- **Database**: RLS policies enforce access at query level
+- **Frontend**: `RoleGuard` component wraps protected pages; `useRoleAccess` hook provides memoized checks
+- **Navigation**: Sidebar filters links by role; home cards shown per role
+
+### 2. Concurrency Safety
+- `useConcurrencySafeMutation` implements optimistic locking via `updated_at` timestamp
+- Detects field-level conflicts and surfaces them via `ConflictResolutionModal`
+- `EditConflictModal` warns during active editing sessions
+
+### 3. SAP Import Pipeline
+- **Client**: OAuth password grant with token caching (60s buffer), 3 retries
+- **Locking**: Distributed lock via `sap_import_status` table (prevents concurrent imports)
+- **Rate limiting**: Per-user cooldown tracked in `sap_api_rate_limits`
+- **Mapping**: Complex transform pipeline (joinSteps, multi-TA splitting, sanitization)
+- **Matching**: Primary key: `sap_subproject_id + sap_import_key`; fallback: legacy match by system+languages
+- **Reporting**: Import reports broadcast via Supabase Realtime
+
+### 4. Realtime Updates
+- `RealtimeProvider` subscribes to 4 Supabase channels
+- Automatically invalidates React Query caches on relevant DB changes
+- `ImportReportNotifier` auto-surfaces unacknowledged import reports
+
+### 5. Form Handling
+- React Hook Form + Zod validation throughout (profile, project create/edit)
+- Field-level error display with proper TypeScript integration
+
+### 6. Color System
+- Centralized `color_settings` table (system, language, status categories)
+- `useColorSettings` hook provides helper functions
+- Tailwind safelist dynamically generated for all color combinations
+- Fallback defaults in `systemColors.ts`

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, Loader2, AlertCircle, Download } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
+import { useSapImportStatus } from "@/hooks/useSapImportStatus";
 import { FilterDropdown } from "@/components/general/FilterDropdown";
 import { MultiSelectFilterDropdown } from "@/components/general/MultiSelectFilterDropdown";
 import { ViewToggle } from "@/components/general/ViewToggle";
@@ -48,6 +49,7 @@ export default function ProjectManagementPage() {
 function ProjectManagementContent() {
   const router = useRouter();
   const { user, loading: userLoading } = useUser();
+  const { data: sapImportStatus } = useSapImportStatus({ refetchInterval: 5000 });
   const queryClient = useQueryClient();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -58,6 +60,8 @@ function ProjectManagementContent() {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Missing Supabase environment variables.");
   }
+
+  const isSapImportRunning = sapImportStatus?.status === "running";
 
   const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
@@ -682,10 +686,11 @@ function ProjectManagementContent() {
         </div>
         <Button
           onClick={() => setSapImportDialogOpen(true)}
+          disabled={isSapImportRunning}
           className="bg-blue-500 hover:bg-blue-600 text-white"
         >
           <Download className="w-4 h-4 mr-2" />
-          Import from SAP
+          {isSapImportRunning ? "SAP Import Running..." : "Import from SAP"}
         </Button>
       </div>
 

@@ -66,7 +66,7 @@ export interface SapStep {
   hasInstructions: boolean;
   instructionsLastChangedAt: string;
   subProjectFiles: string;
-  volume: SapVolume[];
+  volume?: SapVolume[];
   stepStatusId: string;
   stepStatusDescription: string;
   // toolType is on EnvironmentModel per OpenAPI spec, not on steps.
@@ -142,6 +142,7 @@ export interface SapTokenResponse {
 /** Data ready to be inserted/updated in the projects table */
 export interface SapProjectForImport {
   sap_subproject_id: string;
+  sap_import_key: string;
   name: string;
   language_in: string | null;
   language_out: string | null;
@@ -193,6 +194,9 @@ export interface SapSyncResponse {
   updated: number;   // Existing projects updated
   failed: number;    // Projects that failed to import
   errors?: string[]; // Error messages for failed imports
+  failureLogPath?: string;
+  reportCreated?: boolean;
+  reportCreationError?: string | null;
 }
 
 /** Response from GET /api/sap/projects (transformed for frontend) */

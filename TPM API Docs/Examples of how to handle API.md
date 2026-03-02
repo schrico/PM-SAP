@@ -392,6 +392,7 @@ all Examples are from GET “https://lpxtpmsub-tpm.ingress.prod.lp.shoot.live.k8
 
 - «translationArea» does not need to be just a number in this case it should be saved “CGQ000”;
 - «system» - In this example and in every single one that has toolType as SAP I want the system to be saved as the charachters after ”SAP Translation System - ” and before the next “ “ , in this case is “SSK” (that is always in environmentName);
+- an extra project should be created, with words and lines 0/null and «system» STM, because "volumeUnit": "Terms" exists.
 
 ## Example 6:
 
@@ -639,6 +640,7 @@ all Examples are from GET “https://lpxtpmsub-tpm.ingress.prod.lp.shoot.live.k8
 - «translationArea» - is “CPP000”;
 - «lxeProject» - is “003998”;
 - «worklist» - is “0001”
+- 2 extra projects should be created, with words and lines 0/null and «system» STM, because "volumeUnit": "Terms" exists (in both TRANSLREGU + TRANSLFWL of both).
 
 ## Example 7:
 
@@ -1339,9 +1341,8 @@ all Examples are from GET “https://lpxtpmsub-tpm.ingress.prod.lp.shoot.live.k8
 
 - Here as we can see we have 4 different contentIds, but that does NOT matter, to see what projects we create what we should do in this situation is see what TranslationAreas exist(in this case there are 3), and how many subprojectSteps(always group REGU & FWL with the same contentId together) there are so in this case there are 4 different contentIds, but what we want to look how many of those have different language combinations there are in this example we can see we only have deDE→ptBR & enUS→ptBR. And now we combine, 1 language combination per translationArea, so in this case we are going to get 6 projects imported, with the same everything except 3 will have the same Language comb(deDE→ptBR) but different translationAreas(from K6I000, KI8000, K7I000) each, and the other 3 (enUS→ptBR) also with each with 1 translationArea(from K6I000, KI8000, K7I000).
 - this way of handling projects should be for projects with tooltype SAP and for systems SSE, SSH, SSK
+- In this example no extra projects with system STM should be created because only in there is only "volumeUnit": "Terms", in TRANSLREGU and not in TRANSLFWL
 
-6690-42 (RQ9)
 
-4820-76 (STM)
 
-7437-20 (B0T)
+7018-1 (XTM todo maluco)

@@ -27,6 +27,8 @@ export { useUpdateAssignment } from './useUpdateAssignment';
 // SAP integration hooks
 export { useSapProjects } from './useSapProjects';
 export type { SapProject, SapSubProject } from './useSapProjects';
+export { useSapImportStatus } from './useSapImportStatus';
+export type { SapImportStatusResponse } from './useSapImportStatus';
 export { useSapSubProjectDetails } from './useSapSubProjectDetails';
 export type { SapSubProjectDetails, SapStep, SapVolume, SapEnvironment } from './useSapSubProjectDetails';
 export { useSyncSapProjects } from './useSyncSapProjects';

@@ -146,7 +146,7 @@ export function extractUrl(steps: SapStep[]): string | null {
 export function extractHours(steps: SapStep[]): number {
   let total = 0;
   for (const step of steps) {
-    for (const vol of step.volume) {
+    for (const vol of step.volume ?? []) {
       if (vol.volumeUnit === 'Hours') {
         total += vol.volumeQuantity || vol.ceBillQuantity || 0;
       }
@@ -172,7 +172,7 @@ export function extractProjectType(subProject: SapSubProject): string | null {
 /** Sum volumes by unit type across steps, using volumeQuantity with ceBillQuantity fallback */
 export function sumVolumesByUnit(steps: SapStep[], unit: string): number {
   return steps.reduce((total, step) => {
-    const match = step.volume.find(
+    const match = (step.volume ?? []).find(
       v => v.volumeUnit.toLowerCase() === unit.toLowerCase()
     );
     if (!match) return total;
@@ -183,7 +183,7 @@ export function sumVolumesByUnit(steps: SapStep[], unit: string): number {
 /** Count terms from steps */
 export function countTerms(steps: SapStep[]): number {
   return steps.reduce((total, step) => {
-    const match = step.volume.find(v => v.volumeUnit === 'Terms');
+    const match = (step.volume ?? []).find(v => v.volumeUnit === 'Terms');
     return total + (match ? 1 : 0);
   }, 0);
 }
@@ -308,6 +308,7 @@ interface JoinedStepGroup {
   lines: number;
   hours: number;
   terms: number;
+  hasTermsInFwl: boolean;
   allSteps: SapStep[];
 }
 
@@ -333,6 +334,7 @@ function joinSteps(steps: SapStep[]): JoinedStepGroup[] {
         lines: 0,
         hours: 0,
         terms: 0,
+        hasTermsInFwl: false,
         allSteps: [],
       });
     }
@@ -360,7 +362,7 @@ function joinSteps(steps: SapStep[]): JoinedStepGroup[] {
     }
 
     // Sum volumes from this step
-    for (const vol of step.volume) {
+    for (const vol of step.volume ?? []) {
       const qty = vol.volumeQuantity || vol.ceBillQuantity || 0;
       switch (vol.volumeUnit) {
         case 'Words': group.words += qty; break;
@@ -368,6 +370,11 @@ function joinSteps(steps: SapStep[]): JoinedStepGroup[] {
         case 'Hours': group.hours += qty; break;
         case 'Terms': group.terms += 1; break;
       }
+    }
+
+    // Track Terms presence in TRANSLFWL steps specifically
+    if (step.serviceStep === 'TRANSLFWL' && (step.volume ?? []).some(v => v.volumeUnit === 'Terms')) {
+      group.hasTermsInFwl = true;
     }
   }
 
@@ -380,6 +387,37 @@ function joinSteps(steps: SapStep[]): JoinedStepGroup[] {
 
 /** Systems that create language_pairs × translationAreas projects */
 const MULTI_TA_SYSTEMS = new Set(['SSE', 'SSK', 'SSH']);
+
+function keyPart(value: string | null | undefined): string {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : '_';
+}
+
+function buildSapImportKey(params: {
+  mode: 'STD' | 'STM';
+  system: string;
+  languageIn: string | null;
+  languageOut: string | null;
+  contentId?: string | null;
+  translationArea?: string | null;
+}): string {
+  const base = [
+    params.mode,
+    keyPart(params.system),
+    keyPart(params.languageIn),
+    keyPart(params.languageOut),
+  ];
+
+  if (params.translationArea !== undefined) {
+    return [...base, 'TA', keyPart(params.translationArea)].join('|');
+  }
+
+  if (params.contentId !== undefined) {
+    return [...base, 'CID', keyPart(params.contentId)].join('|');
+  }
+
+  return [...base, 'LANGPAIR'].join('|');
+}
 
 /**
  * Map SAP subproject data to one or more import-ready projects.
@@ -436,6 +474,7 @@ export function mapSapSubProjectToProjects(
         existing.lines += group.lines;
         existing.hours += group.hours;
         existing.terms += group.terms;
+        existing.hasTermsInFwl = existing.hasTermsInFwl || group.hasTermsInFwl;
         existing.allSteps.push(...group.allSteps);
       }
     }
@@ -464,6 +503,13 @@ export function mapSapSubProjectToProjects(
 
         results.push({
           sap_subproject_id: subProject.subProjectId,
+          sap_import_key: buildSapImportKey({
+            mode: 'STD',
+            system,
+            languageIn: langGroup.languageIn,
+            languageOut: langGroup.languageOut,
+            translationArea: ta,
+          }),
           name: sanitizeString(baseName) || baseName,
           language_in: langGroup.languageIn,
           language_out: langGroup.languageOut,
@@ -487,6 +533,57 @@ export function mapSapSubProjectToProjects(
           words: langGroup.words || null,
           lines: langGroup.lines || null,
         });
+      }
+
+      if (langGroup.hasTermsInFwl) {
+        // Deadline filter — skip STM if all deadlines are in the past
+        const stmDeadlines = [langGroup.finalDeadline, langGroup.initialDeadline].filter(Boolean);
+        const stmAllInPast = stmDeadlines.length > 0 && stmDeadlines.every(d => new Date(d!) < today);
+
+        if (!stmAllInPast) {
+          const stmInstructions = buildInstructions({
+            translationAreas: allTranslationAreas,
+            lxeProjects: allLxeProjects,
+            graphIds: allGraphIds,
+            hours: langGroup.hours,
+            terms: langGroup.terms,
+            terminologyKeys,
+            workLists: allWorkLists,
+            system: 'STM',
+          });
+
+          results.push({
+            sap_subproject_id: subProject.subProjectId,
+            sap_import_key: buildSapImportKey({
+              mode: 'STM',
+              system: 'STM',
+              languageIn: langGroup.languageIn,
+              languageOut: langGroup.languageOut,
+            }),
+            name: sanitizeString(baseName) || baseName,
+            language_in: langGroup.languageIn,
+            language_out: langGroup.languageOut,
+            initial_deadline: langGroup.initialDeadline,
+            final_deadline: langGroup.finalDeadline,
+            instructions: stmInstructions,
+            sap_instructions: sapInstructions,
+            system: 'STM',
+            api_source: 'TPM_sap_api',
+            last_synced_at: now,
+            sap_pm: sapPm,
+            project_type: projectType,
+            terminology_key: terminologyKeys.length > 0 ? terminologyKeys : null,
+            lxe_project: allLxeProjects.length > 0 ? allLxeProjects : null,
+            translation_area: allTranslationAreas.length > 0 ? allTranslationAreas : null,
+            work_list: allWorkLists.length > 0 ? allWorkLists : null,
+            graph_id: allGraphIds.length > 0 ? allGraphIds : null,
+            lxe_projects: allLxeProjects.length > 0 ? allLxeProjects : null,
+            url,
+            hours: langGroup.hours || null,
+            words: null,
+            lines: null,
+          });
+        }
       }
     }
   } else {
@@ -520,6 +617,7 @@ export function mapSapSubProjectToProjects(
       let lines = 0;
       let hours = 0;
       let terms = 0;
+      let hasTermsInFwl = false;
 
       for (const g of groups) {
         if (!langIn) langIn = g.languageIn;
@@ -534,6 +632,7 @@ export function mapSapSubProjectToProjects(
         lines += g.lines;
         hours += g.hours;
         terms += g.terms;
+        hasTermsInFwl = hasTermsInFwl || g.hasTermsInFwl;
       }
 
       // Extract TA from matching env or all envs
@@ -566,6 +665,13 @@ export function mapSapSubProjectToProjects(
 
       results.push({
         sap_subproject_id: subProject.subProjectId,
+        sap_import_key: buildSapImportKey({
+          mode: 'STD',
+          system,
+          languageIn: langIn,
+          languageOut: langOut,
+          contentId,
+        }),
         name: sanitizeString(baseName) || baseName,
         language_in: langIn,
         language_out: langOut,
@@ -590,18 +696,33 @@ export function mapSapSubProjectToProjects(
         lines: lines || null,
       });
 
-      // TERMO handling: if any step has volumeUnit === "TERMO", create STM project
-      const allSteps = groups.flatMap(g => g.allSteps);
-      const hasTermo = allSteps.some(s => s.volume.some(v => v.volumeUnit === 'TERMO'));
-      if (hasTermo) {
+      if (hasTermsInFwl) {
+        const stmInstructions = buildInstructions({
+          translationAreas: envTAs,
+          lxeProjects: envLxeProjects,
+          graphIds: envGraphIds,
+          hours,
+          terms,
+          terminologyKeys,
+          workLists: envWorkLists,
+          system: 'STM',
+        });
+
         results.push({
           sap_subproject_id: subProject.subProjectId,
+          sap_import_key: buildSapImportKey({
+            mode: 'STM',
+            system: 'STM',
+            languageIn: langIn,
+            languageOut: langOut,
+            contentId,
+          }),
           name: sanitizeString(baseName) || baseName,
           language_in: langIn,
           language_out: langOut,
           initial_deadline: initialDeadline,
           final_deadline: finalDeadline,
-          instructions: composedInstructions,
+          instructions: stmInstructions,
           sap_instructions: sapInstructions,
           system: 'STM',
           api_source: 'TPM_sap_api',

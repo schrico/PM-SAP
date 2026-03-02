@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -9,13 +10,9 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Loader2,
-  Download,
-  RefreshCw,
-  Package,
-  Clock,
-} from "lucide-react";
+import { Clock, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useSapImportStatus } from "@/hooks/useSapImportStatus";
 import { useSapProjects } from "@/hooks/useSapProjects";
 import { useSyncSapProjects } from "@/hooks/useSyncSapProjects";
 
@@ -24,174 +21,211 @@ interface SapImportDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/**
- * Dialog for importing SAP projects.
- * Shows total subprojects to process and a single "Import All" action.
- */
+function flattenSubProjects(data: Awaited<ReturnType<ReturnType<typeof useSapProjects>["refetch"]>>["data"]) {
+  if (!data?.projects) return [];
+
+  return data.projects.flatMap((project) =>
+    project.subProjects.map((subProject) => ({
+      projectId: project.projectId,
+      subProjectId: subProject.subProjectId,
+    }))
+  );
+}
+
 export function SapImportDialog({
   open,
   onOpenChange,
 }: SapImportDialogProps) {
-  // Fetch SAP projects
   const {
-    data: sapData,
-    isLoading: isLoadingProjects,
-    error: projectsError,
+    data: importStatus,
+    isLoading: isLoadingStatus,
+    error: statusError,
+    refetch: refetchStatus,
+  } = useSapImportStatus({
+    enabled: open,
+    refetchInterval: open ? 5000 : false,
+  });
+  const {
     refetch: fetchProjects,
-    isFetching,
+    isFetching: isFetchingProjects,
   } = useSapProjects();
-
-  // Sync mutation
   const syncMutation = useSyncSapProjects();
 
-  // Fetch projects when dialog opens
+  const [processingNoticeOpen, setProcessingNoticeOpen] = useState(false);
+  const processingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    if (open) {
-      fetchProjects();
-    }
-  }, [open, fetchProjects]);
-
-  // Collect all subprojects for import
-  const allSubProjects = useMemo(() => {
-    if (!sapData?.projects) return [];
-
-    const subProjects: Array<{
-      projectId: number;
-      subProjectId: string;
-    }> = [];
-
-    sapData.projects.forEach((project) => {
-      project.subProjects.forEach((subProject) => {
-        subProjects.push({
-          projectId: project.projectId,
-          subProjectId: subProject.subProjectId,
-        });
-      });
-    });
-
-    return subProjects;
-  }, [sapData]);
-
-  // Handle import all
-  const handleImportAll = () => {
-    if (allSubProjects.length === 0) return;
-
-    syncMutation.mutate(
-      allSubProjects.map(({ projectId, subProjectId }) => ({
-        projectId,
-        subProjectId,
-      })),
-      {
-        onSuccess: () => {
-          onOpenChange(false);
-        },
+    return () => {
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
       }
-    );
+    };
+  }, []);
+
+  const closeProcessingNotice = () => {
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+      processingTimeoutRef.current = null;
+    }
+    setProcessingNoticeOpen(false);
   };
 
-  const isLoading = isLoadingProjects || isFetching;
-  const isSyncing = syncMutation.isPending;
-  const isSyncRateLimited =
-    syncMutation.error?.message === "Rate limited";
+  const showProcessingNotice = () => {
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+    }
+
+    setProcessingNoticeOpen(true);
+    processingTimeoutRef.current = setTimeout(() => {
+      setProcessingNoticeOpen(false);
+      processingTimeoutRef.current = null;
+    }, 7000);
+  };
+
+  const isImportRunning = importStatus?.status === "running";
+  const isBusy = isFetchingProjects || syncMutation.isPending;
+
+  const lastSyncText = importStatus?.finishedAt
+    ? `Last synchronization finished ${formatDistanceToNow(
+        new Date(importStatus.finishedAt),
+        { addSuffix: true }
+      )}.`
+    : "No completed SAP import yet.";
+
+  const handleConfirmImport = async () => {
+    if (isImportRunning || isBusy) return;
+
+    showProcessingNotice();
+    onOpenChange(false);
+
+    try {
+      const fetchResult = await fetchProjects();
+      if (fetchResult.error) {
+        throw fetchResult.error;
+      }
+
+      const allSubProjects = flattenSubProjects(fetchResult.data);
+      if (allSubProjects.length === 0) {
+        toast.info("No SAP subprojects are available to import.");
+        closeProcessingNotice();
+        return;
+      }
+
+      await syncMutation.mutateAsync(allSubProjects);
+      refetchStatus();
+    } catch (error) {
+      if (!(error instanceof Error)) {
+        toast.error("Failed to start the SAP import");
+      }
+      refetchStatus();
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Download className="w-5 h-5" />
-            Import from SAP
-          </DialogTitle>
-          <DialogDescription>
-            Import projects from SAP TPM to your local project management
-            system.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Import from SAP
+            </DialogTitle>
+            <DialogDescription>
+              Start a full synchronization from SAP TPM into the local project
+              management system.
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">
-              Fetching projects from SAP...
-            </p>
-          </div>
-        )}
-
-        {/* Error State */}
-        {projectsError && !isLoading && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-red-500 font-medium mb-2">
-              Failed to fetch SAP projects
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {projectsError.message || "An unexpected error occurred."}
-            </p>
-            <Button onClick={() => fetchProjects()} variant="outline">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {/* Content */}
-        {!isLoading && !projectsError && sapData && (
-          <div className="space-y-6 py-4">
-            {/* Subproject count */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 text-center">
-              <p className="text-3xl font-bold text-blue-700 dark:text-blue-400">
-                {allSubProjects.length}
+          <div className="space-y-5 py-2">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-4">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                Last synchronization
               </p>
-              <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
-                subprojects to process
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {isLoadingStatus ? "Checking latest synchronization..." : lastSyncText}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                The actual number of projects created or updated may differ due
-                to language pairs, translation areas, and deadline filtering.
-              </p>
+              {importStatus?.finishedAt && (
+                <p className="mt-2 text-xs text-gray-400">
+                  Completed at {new Date(importStatus.finishedAt).toLocaleString()}
+                </p>
+              )}
             </div>
 
-            {/* Sync rate limit warning */}
-            {isSyncRateLimited && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                <Clock className="w-5 h-5 text-amber-500 shrink-0" />
-                <p className="text-sm text-amber-600 dark:text-amber-400">
-                  Import is on cooldown. Check the toast notification for when
-                  it will be available again.
-                </p>
+            {isImportRunning && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <div className="text-sm text-amber-700 dark:text-amber-300">
+                  An SAP import is already being processed.
+                  {importStatus?.startedAt && (
+                    <span className="block text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Started {formatDistanceToNow(new Date(importStatus.startedAt), { addSuffix: true })}.
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Import Action */}
-            <Button
-              onClick={handleImportAll}
-              disabled={isSyncing || isSyncRateLimited || allSubProjects.length === 0}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-            >
-              {isSyncing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                <>
-                  <Package className="w-4 h-4 mr-2" />
-                  Import All ({allSubProjects.length})
-                </>
-              )}
-            </Button>
+            {statusError && !isLoadingStatus && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                The latest synchronization time could not be loaded, but you can still try to start the import.
+              </p>
+            )}
 
-            {/* Info */}
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              Importing will create new projects and update existing ones with
-              the latest SAP data.
-              <br />
-              Local-only fields (words, lines, status, assignments) will not be
-              overwritten.
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              This action creates new projects and updates existing SAP-sourced
+              projects. You will receive the import report when it finishes.
             </p>
+
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isBusy}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmImport}
+                disabled={isImportRunning || isBusy}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                {isBusy ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  "Confirm Import"
+                )}
+              </Button>
+            </div>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={processingNoticeOpen} onOpenChange={setProcessingNoticeOpen}>
+        <DialogContent className="max-w-sm">
+          <div className="flex flex-col items-center text-center py-4 space-y-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
+            </div>
+            <DialogHeader className="space-y-1.5">
+              <DialogTitle className="text-lg">Import in progress</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                This may take a few minutes. You&apos;ll be notified with the
+                report when it finishes.
+              </DialogDescription>
+            </DialogHeader>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={closeProcessingNotice}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

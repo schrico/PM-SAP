@@ -25,6 +25,7 @@ export interface Project {
 
   // SAP Integration Fields
   sap_subproject_id?: string | null;
+  sap_import_key?: string | null;
   api_source?: ApiSource;
   last_synced_at?: string | null;
   sap_instructions?: SapInstructionEntry[] | null;

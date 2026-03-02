@@ -29,6 +29,7 @@ export const queryKeys = {
 
   // SAP Integration
   sapProjects: () => ['sap-projects'] as const,
+  sapImportStatus: () => ['sap-import-status'] as const,
   sapSubProject: (projectId: number | null, subProjectId: string | null) =>
     ['sap-subproject', projectId, subProjectId] as const,
 } as const;
