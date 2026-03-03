@@ -43,6 +43,7 @@ export function useProjectsWithTranslators(
         .select(`
           project_id,
           assignment_status,
+          done_message,
           users (
             id,
             name,
@@ -70,13 +71,14 @@ export function useProjectsWithTranslators(
             role: assignment.users.role,
             assignment_status: assignment.assignment_status,
             avatar: assignment.users.avatar || null,
+            done_message: assignment.done_message || null,
           });
         }
         return acc;
       }, {});
 
       // Combine projects with their translators
-      const projectsWithTranslators: ProjectWithTranslators[] = projects.map(project => ({
+      const projectsWithTranslators: ProjectWithTranslators[] = projects.map((project: any) => ({
         ...project,
         translators: assignmentsByProject[project.id] || []
       }));

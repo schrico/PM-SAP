@@ -47,7 +47,7 @@ export function ColorSettings({ userRole }: ColorSettingsProps) {
 
   // Open delete confirmation modal
   function handleDeleteClick(id: number) {
-    const colorSetting = settings.find((s) => s.id === id);
+    const colorSetting = settings.find((s: { id: number }) => s.id === id);
     if (colorSetting) {
       setColorToDelete(colorSetting);
     }

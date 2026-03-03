@@ -64,6 +64,7 @@ export interface ProjectTranslator {
   role: string;
   assignment_status: AssignmentStatus;
   avatar?: string | null;
+  done_message?: string | null;
 }
 
 /** Extended translator info with messages (for detail views) */

@@ -8,6 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface DoneDialogProps {
   open: boolean;
@@ -22,14 +24,17 @@ export function DoneDialog({
   onConfirm,
   onCancel,
 }: DoneDialogProps) {
+  const [wantsToNote, setWantsToNote] = useState(false);
   const [message, setMessage] = useState("");
 
   const handleConfirm = () => {
-    onConfirm(message.trim() || null);
+    onConfirm(wantsToNote ? message.trim() || null : null);
+    setWantsToNote(false);
     setMessage("");
   };
 
   const handleCancel = () => {
+    setWantsToNote(false);
     setMessage("");
     onCancel();
   };
@@ -48,19 +53,43 @@ export function DoneDialog({
           <DialogTitle>Mark Project as Done</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Add an optional note for "{projectName}":
-            </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            You are about to mark{" "}
+            <span className="font-medium text-gray-900 dark:text-white">
+              "{projectName}"
+            </span>{" "}
+            as done.
+          </p>
+
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="wants-note"
+              checked={wantsToNote}
+              onCheckedChange={(checked) => {
+                setWantsToNote(!!checked);
+                if (!checked) setMessage("");
+              }}
+            />
+            <Label
+              htmlFor="wants-note"
+              className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+            >
+              Leave a note for the PM{" "}
+              <span className="text-gray-400 dark:text-gray-500">(optional)</span>
+            </Label>
+          </div>
+
+          {wantsToNote && (
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Add a note about what was completed (optional)..."
-              className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none min-h-[120px]"
+              placeholder="Write your note here..."
+              autoFocus
+              className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none min-h-[100px]"
               rows={4}
             />
-          </div>
+          )}
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={handleCancel}>

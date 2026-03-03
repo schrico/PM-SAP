@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Check, XCircle } from "lucide-react";
+import { Check, XCircle, MessageSquare } from "lucide-react";
 import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle, getStatusIcon } from "@/utils/projectTableHelpers";
@@ -14,6 +14,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface ProjectWithTranslators {
   id: number;
@@ -28,6 +33,7 @@ interface ProjectWithTranslators {
     role: string;
     assignment_status: string;
     avatar?: string | null;
+    done_message?: string | null;
   }>;
   initial_deadline: string | null;
   interim_deadline: string | null;
@@ -224,6 +230,31 @@ export function ManagementCard({
                             showEditButton={false}
                           />
                           <span>{translator.short_name || translator.name}</span>
+                          {translator.done_message && translator.assignment_status === "done" && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="cursor-pointer shrink-0"
+                                  aria-label="View translator note"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5 text-green-500 hover:text-green-600 transition-colors" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="max-w-xs text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                  {translator.name} wrote:
+                                </p>
+                                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                                  {translator.done_message}
+                                </p>
+                              </PopoverContent>
+                            </Popover>
+                          )}
                         </div>
                       );
                     })}

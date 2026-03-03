@@ -43,6 +43,15 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const importReportListenersRef = useRef<Set<() => void>>(new Set());
+  const currentUserIdRef = useRef<string | null>(null);
+
+  // Cache current user ID so handleAssignmentChange can invalidate unconditionally
+  // (payload user_id may be absent if RLS filters the row before delivery)
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }: { data: { user: { id: string } | null } }) => {
+      currentUserIdRef.current = data.user?.id ?? null;
+    });
+  }, [supabase]);
 
   const onImportReport = useCallback((callback: () => void) => {
     importReportListenersRef.current.add(callback);
@@ -149,6 +158,15 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
       queryClient.invalidateQueries({
         queryKey: ["projects-with-translators"],
       });
+
+      // Always invalidate the current user's cache regardless of payload contents.
+      // The payload's user_id may be absent if Supabase RLS filters the row before delivery,
+      // causing the conditional above to silently skip invalidation for the acting user.
+      const currentUserId = currentUserIdRef.current;
+      if (currentUserId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(currentUserId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(currentUserId) });
+      }
     },
     [queryClient]
   );
@@ -193,7 +211,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         },
         handleSapImportStatusChange
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         setIsConnected(status === "SUBSCRIBED");
       });
 

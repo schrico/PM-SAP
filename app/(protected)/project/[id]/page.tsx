@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Edit, Loader2, Check, X, Copy } from "lucide-react";
+import { ArrowLeft, Edit, Loader2, Check, X, Copy, Info } from "lucide-react";
 import { formatProjectName } from "@/utils/formatters";
 import { useEffect, useRef, useState } from "react";
 import { useProject } from "@/hooks/project/useProject";
@@ -14,6 +14,7 @@ import { ProjectNotesCard } from "@/components/project/ProjectNotesCard";
 import { TranslatorsList } from "@/components/project/TranslatorsList";
 import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
 import { ReminderModal } from "@/components/project/ReminderModal";
+import { ReassignModal } from "@/components/project/ReassignModal";
 import { RefusalDialog } from "@/components/my-projects/RefusalDialog";
 import { DoneDialog } from "@/components/my-projects/DoneDialog";
 import { InitialMessageDialog } from "@/components/my-projects/InitialMessageDialog";
@@ -49,7 +50,13 @@ export default function ProjectPage() {
     projectName: string;
     assignedTranslatorIds: string[];
   }>({ open: false, projectId: 0, projectName: "", assignedTranslatorIds: [] });
-  const [showReminderModal, setShowReminderModal] = useState<{
+  const [showPMNoteModal, setShowPMNoteModal] = useState<{
+    open: boolean;
+    userId: string;
+    userName: string;
+    currentMessage: string | null;
+  }>({ open: false, userId: "", userName: "", currentMessage: null });
+  const [showReassignModal, setShowReassignModal] = useState<{
     open: boolean;
     userId: string;
     userName: string;
@@ -142,8 +149,13 @@ export default function ProjectPage() {
 
       if (error) throw new Error(`Failed to add translators: ${error.message}`);
     },
-    onSuccess: () => {
+    onSuccess: (_, { userIds }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
+      userIds.forEach((uid) => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(uid) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(uid) });
+      });
       toast.success("Translators added successfully");
       setAddTranslatorModal({
         open: false,
@@ -176,8 +188,11 @@ export default function ProjectPage() {
         throw new Error(`Failed to remove translator: ${error.message}`);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
       toast.success("Translator removed successfully");
     },
     onError: (error: Error) => {
@@ -185,8 +200,8 @@ export default function ProjectPage() {
     },
   });
 
-  // Send reminder mutation (PM/Admin only)
-  const sendReminderMutation = useMutation({
+  // Save PM note mutation (PM/Admin only)
+  const savePMNoteMutation = useMutation({
     mutationFn: async ({
       projectId,
       userId,
@@ -194,25 +209,62 @@ export default function ProjectPage() {
     }: {
       projectId: number;
       userId: string;
-      message?: string;
+      message: string | null;
+    }) => {
+      const { error } = await supabase
+        .from("projects_assignment")
+        .update({ initial_message: message })
+        .eq("project_id", projectId)
+        .eq("user_id", userId);
+
+      if (error) {
+        throw new Error(`Failed to save PM note: ${error.message}`);
+      }
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
+      toast.success("PM note saved");
+      setShowPMNoteModal({ open: false, userId: "", userName: "", currentMessage: null });
+    },
+    onError: (error: Error) => {
+      toast.error(getUserFriendlyError(error, "translator management"));
+    },
+  });
+
+  // Reassign mutation (PM/Admin only) — resets assignment to unclaimed + clears messages
+  const reassignMutation = useMutation({
+    mutationFn: async ({
+      projectId,
+      userId,
+      message,
+    }: {
+      projectId: number;
+      userId: string;
+      message: string | null;
     }) => {
       const { error } = await supabase
         .from("projects_assignment")
         .update({
-          initial_message:
-            message || "This is a reminder about your project assignment.",
+          assignment_status: "unclaimed",
+          initial_message: message,
+          done_message: null,
+          refusal_message: null,
         })
         .eq("project_id", projectId)
         .eq("user_id", userId);
 
       if (error) {
-        throw new Error(`Failed to send reminder: ${error.message}`);
+        throw new Error(`Failed to reassign: ${error.message}`);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
-      toast.success("Reminder sent successfully");
-      setShowReminderModal({ open: false, userId: "", userName: "" });
+      queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
+      toast.success("Assignment reset — project is now available to claim again");
+      setShowReassignModal({ open: false, userId: "", userName: "" });
     },
     onError: (error: Error) => {
       toast.error(getUserFriendlyError(error, "translator management"));
@@ -265,24 +317,29 @@ export default function ProjectPage() {
     removeTranslatorMutation.mutate({ projectId, userId });
   };
 
-  const handleSendReminder = (userId: string, userName: string) => {
-    setShowReminderModal({ open: true, userId, userName });
+  const handleEditPMNote = (userId: string, userName: string, currentMessage: string | null) => {
+    setShowPMNoteModal({ open: true, userId, userName, currentMessage });
   };
 
-  const handleSendReminderMessage = (message: string) => {
+  const handleSavePMNote = (message: string | null) => {
     if (!projectId) return;
-    sendReminderMutation.mutate({
+    savePMNoteMutation.mutate({
       projectId,
-      userId: showReminderModal.userId,
+      userId: showPMNoteModal.userId,
       message,
     });
   };
 
-  const handleSendDefaultReminder = () => {
+  const handleReassign = (userId: string, userName: string) => {
+    setShowReassignModal({ open: true, userId, userName });
+  };
+
+  const handleConfirmReassign = (message: string | null) => {
     if (!projectId) return;
-    sendReminderMutation.mutate({
+    reassignMutation.mutate({
       projectId,
-      userId: showReminderModal.userId,
+      userId: showReassignModal.userId,
+      message,
     });
   };
 
@@ -549,6 +606,20 @@ export default function ProjectPage() {
         <div
           className={`${canManageAssignments() ? "lg:col-span-2" : ""} space-y-6`}
         >
+          {/* PM Info banner — shown to employees when a PM note exists */}
+          {isTranslator() && translatorAssignment?.initial_message && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex gap-3">
+              <Info className="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide">
+                  Info from PM
+                </p>
+                <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                  {translatorAssignment.initial_message}
+                </p>
+              </div>
+            </div>
+          )}
           <ProjectDetailsCard project={project} />
           <ProjectInstructionsCard
             instructions={project.instructions}
@@ -563,7 +634,8 @@ export default function ProjectPage() {
               project={project}
               onAddTranslator={handleAddTranslator}
               onRemoveTranslator={handleRemoveTranslator}
-              onSendReminder={handleSendReminder}
+              onEditPMNote={handleEditPMNote}
+              onReassign={handleReassign}
               currentUserId={user?.id}
               onClaim={handleClaimForTranslator}
               onRefuse={handleRefuseForTranslator}
@@ -579,7 +651,9 @@ export default function ProjectPage() {
               }
               isUpdating={
                 isUpdating ||
-                markCompleteMutation.isPending
+                markCompleteMutation.isPending ||
+                savePMNoteMutation.isPending ||
+                reassignMutation.isPending
               }
               projectStatus={project.status}
             />
@@ -614,14 +688,24 @@ export default function ProjectPage() {
           />
 
           <ReminderModal
-            open={showReminderModal.open}
-            translatorName={showReminderModal.userName}
+            open={showPMNoteModal.open}
+            translatorName={showPMNoteModal.userName}
+            initialValue={showPMNoteModal.currentMessage}
             onClose={() =>
-              setShowReminderModal({ open: false, userId: "", userName: "" })
+              setShowPMNoteModal({ open: false, userId: "", userName: "", currentMessage: null })
             }
-            onSend={handleSendReminderMessage}
-            onSendDefault={handleSendDefaultReminder}
-            isSending={sendReminderMutation.isPending}
+            onSend={handleSavePMNote}
+            isSending={savePMNoteMutation.isPending}
+          />
+
+          <ReassignModal
+            open={showReassignModal.open}
+            translatorName={showReassignModal.userName}
+            onClose={() =>
+              setShowReassignModal({ open: false, userId: "", userName: "" })
+            }
+            onReassign={handleConfirmReassign}
+            isReassigning={reassignMutation.isPending}
           />
 
           <ConfirmationDialog

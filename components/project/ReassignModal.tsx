@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -11,33 +11,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface ReminderModalProps {
+interface ReassignModalProps {
   open: boolean;
   translatorName: string;
-  initialValue?: string | null;
   onClose: () => void;
-  onSend: (message: string | null) => void;
-  isSending: boolean;
+  onReassign: (message: string | null) => void;
+  isReassigning: boolean;
 }
 
-export function ReminderModal({
+export function ReassignModal({
   open,
   translatorName,
-  initialValue,
   onClose,
-  onSend,
-  isSending,
-}: ReminderModalProps) {
-  const [message, setMessage] = useState(initialValue ?? "");
+  onReassign,
+  isReassigning,
+}: ReassignModalProps) {
+  const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    if (open) {
-      setMessage(initialValue ?? "");
-    }
-  }, [open, initialValue]);
-
-  const handleSend = () => {
-    onSend(message.trim() || null);
+  const handleReassign = () => {
+    onReassign(message.trim() || null);
+    setMessage("");
   };
 
   const handleClose = () => {
@@ -48,19 +41,24 @@ export function ReminderModal({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!isSending) {
-        handleSend();
+      if (!isReassigning) {
+        handleReassign();
       }
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>PM Note for {translatorName}</DialogTitle>
+          <DialogTitle>Reassign {translatorName}</DialogTitle>
           <DialogDescription>
-            This note will be shown to the translator when they view the project.
+            This will reset the assignment to{" "}
+            <span className="font-medium text-gray-900 dark:text-white">
+              Available to Claim
+            </span>
+            , clearing any previous messages. You can optionally add a new note
+            for the translator.
           </DialogDescription>
         </DialogHeader>
 
@@ -69,24 +67,25 @@ export function ReminderModal({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Write a note for the translator... (leave empty to clear)"
-            className="min-h-32"
-            disabled={isSending}
+            placeholder="Optional note for the translator..."
+            className="min-h-28"
+            disabled={isReassigning}
           />
 
           <div className="flex items-center justify-between gap-4">
             <Button
               variant="outline"
               onClick={handleClose}
-              disabled={isSending}
+              disabled={isReassigning}
             >
               Cancel
             </Button>
             <Button
-              onClick={handleSend}
-              disabled={isSending}
+              onClick={handleReassign}
+              disabled={isReassigning}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
             >
-              {isSending ? "Saving..." : "Save Note"}
+              {isReassigning ? "Reassigning..." : "Reassign"}
             </Button>
           </div>
         </div>

@@ -115,6 +115,9 @@ export function useMyProjects(userId: string | null) {
       // Invalidate and refetch the projects queries
       queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.homeManageProjectsCount() });
     },
     onError: (error: any, { status }) => {
       const action = status === "claimed"
