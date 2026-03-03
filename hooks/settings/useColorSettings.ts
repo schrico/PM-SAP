@@ -27,17 +27,17 @@ export function useColorSettings() {
 
   // Get color value (tailwind class like "blue-500") for a system
   function getSystemColor(system: string): string {
-    return settings.find(s => s.category === "system" && s.system_name === system)?.color_value || "";
+    return settings.find((s: any) => s.category === "system" && s.system_name === system)?.color_value || "";
   }
 
   // Get color value for a status
   function getStatusColor(status: string): string {
-    return settings.find(s => s.category === "status" && s.status_key === status)?.color_value || "";
+    return settings.find((s: any) => s.category === "status" && s.status_key === status)?.color_value || "";
   }
 
   // Get color value for a language pair
   function getLanguageColor(langIn: string, langOut: string): string {
-    return settings.find(s => s.category === "language" && s.language_in === langIn && s.language_out === langOut)?.color_value || "";
+    return settings.find((s: any) => s.category === "language" && s.language_in === langIn && s.language_out === langOut)?.color_value || "";
   }
 
   // Get Tailwind background class for a system

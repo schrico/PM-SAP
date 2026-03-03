@@ -6,7 +6,8 @@ import {
   UserPlus,
   MoreVertical,
   UserMinus,
-  Bell,
+  Pencil,
+  RotateCcw,
   X,
   Check,
 } from "lucide-react";
@@ -25,7 +26,8 @@ interface TranslatorsListProps {
   project: ProjectWithTranslatorDetails;
   onAddTranslator: () => void;
   onRemoveTranslator: (userId: string) => void;
-  onSendReminder: (userId: string, userName: string) => void;
+  onEditPMNote: (userId: string, userName: string, currentMessage: string | null) => void;
+  onReassign: (userId: string, userName: string) => void;
   currentUserId?: string;
   onClaim?: (projectId: number) => void;
   onRefuse?: (projectId: number) => void;
@@ -40,7 +42,8 @@ export function TranslatorsList({
   project,
   onAddTranslator,
   onRemoveTranslator,
-  onSendReminder,
+  onEditPMNote,
+  onReassign,
   currentUserId,
   onClaim,
   onRefuse,
@@ -95,6 +98,9 @@ export function TranslatorsList({
         return "Unclaimed";
     }
   };
+
+  const isDoneOrRejected = (status: string) =>
+    status === "done" || status === "rejected";
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
@@ -165,6 +171,25 @@ export function TranslatorsList({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {isDoneOrRejected(translator.assignment_status) ? (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          onReassign(translator.id, translator.name)
+                        }
+                      >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Reassign
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          onEditPMNote(translator.id, translator.name, translator.initial_message ?? null)
+                        }
+                      >
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Edit PM Note
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       onClick={() =>
                         handleRemoveClick(translator.id, translator.name)
@@ -173,14 +198,6 @@ export function TranslatorsList({
                     >
                       <UserMinus className="w-4 h-4 mr-2" />
                       Remove Translator
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        onSendReminder(translator.id, translator.name)
-                      }
-                    >
-                      <Bell className="w-4 h-4 mr-2" />
-                      Send Reminder
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -246,7 +263,7 @@ export function TranslatorsList({
                   {translator.initial_message && (
                     <div className="text-xs">
                       <span className="text-gray-500 dark:text-gray-400 font-medium">
-                        Initial:
+                        PM info:
                       </span>{" "}
                       <span className="text-gray-700 dark:text-gray-300">
                         {translator.initial_message}

@@ -513,8 +513,13 @@ export default function EditProjectPage() {
 
       if (error) throw new Error(`Failed to add translators: ${error.message}`);
     },
-    onSuccess: () => {
+    onSuccess: (_, { userIds }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
+      userIds.forEach((uid) => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(uid) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(uid) });
+      });
       toast.success("Translators added successfully");
       setAddTranslatorModal({
         open: false,
@@ -551,8 +556,11 @@ export default function EditProjectPage() {
         throw new Error(`Failed to remove translator: ${error.message}`);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
       toast.success("Translator removed successfully");
       setTranslatorToRemove(null);
       // Update original project to reflect removal (avoid conflict modal for our own changes)

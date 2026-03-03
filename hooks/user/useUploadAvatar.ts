@@ -68,7 +68,7 @@ export function useUploadAvatar() {
         .list(user.id);
 
       if (existingFiles && existingFiles.length > 0) {
-        const filesToDelete = existingFiles.map((f) => `${user.id}/${f.name}`);
+        const filesToDelete = existingFiles.map((f: any) => `${user.id}/${f.name}`);
         await supabase.storage.from("user-avatars").remove(filesToDelete);
       }
 

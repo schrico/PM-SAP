@@ -283,9 +283,12 @@ function ProjectManagementContent() {
         .insert(assignments);
       if (error) throw new Error(`Failed to add translators: ${error.message}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
+    onSuccess: (_, { projectId, userIds }) => {
+      queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      userIds.forEach((uid) => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(uid) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(uid) });
       });
       toast.success("Translators added successfully");
       setAddTranslatorModal({
@@ -403,10 +406,11 @@ function ProjectManagementContent() {
       // Return the deleted assignment data for confirmation
       return existingAssignment;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.projectsWithTranslators(),
-      });
+    onSuccess: (_, { projectId, userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
       toast.success("Translator removed successfully");
       setRemoveTranslatorModal({
         open: false,

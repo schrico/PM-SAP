@@ -52,12 +52,12 @@ export function useAvailableAvatars() {
       // Only consider predefined avatars (not custom uploads) as "in use"
       const usedFilenames = new Set(
         (usedAvatars ?? [])
-          .map((u) => u.avatar)
-          .filter((avatar) => !isCustomAvatar(avatar))
+          .map((u: any) => u.avatar)
+          .filter((avatar: any) => !isCustomAvatar(avatar))
       );
 
       return (allAvatars ?? []).filter(
-        (avatar) => !usedFilenames.has(avatar.filename)
+        (avatar: any) => !usedFilenames.has(avatar.filename)
       );
     },
     staleTime: 1 * 60 * 1000, // 1 minute (shorter since availability changes)
