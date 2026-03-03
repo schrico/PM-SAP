@@ -17,9 +17,9 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { useUser } from "@/hooks/useUser";
-import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
-import { useUserWorkload } from "@/hooks/useUserWorkload";
+import { useUser } from "@/hooks/user/useUser";
+import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
+import { useUserWorkload } from "@/hooks/user/useUserWorkload";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RouteId } from "@/lib/roleAccess";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,29 +40,7 @@ import {
   addWeeks,
   addMonths,
 } from "date-fns";
-
-/**
- * Count the number of working days (Mon-Fri) between two dates
- */
-function countWorkingDays(startDate: Date, endDate: Date): number {
-  let count = 0;
-  const current = new Date(startDate);
-  current.setHours(0, 0, 0, 0);
-
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-
-  while (current <= end) {
-    const dayOfWeek = current.getDay();
-    // 0 = Sunday, 6 = Saturday
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-      count++;
-    }
-    current.setDate(current.getDate() + 1);
-  }
-
-  return count;
-}
+import { countWorkingDays } from "@/lib/date-utils";
 
 const HOURS_PER_WORKDAY = 8;
 import { createBrowserClient } from "@supabase/ssr";

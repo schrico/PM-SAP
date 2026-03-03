@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSupabase } from "@/hooks/useSupabase";
+import { useSupabase } from "@/hooks/core/useSupabase";
 import { queryKeys } from "@/lib/queryKeys";
 import type {
   RealtimeChannel,

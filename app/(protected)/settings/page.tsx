@@ -10,7 +10,7 @@ import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { UserRoleManagement } from "@/components/settings/UserRoleManagement";
 import { InstructionExclusionSettings } from "@/components/settings/InstructionExclusionSettings";
 import { DefaultFilterSettings } from "@/components/settings/DefaultFilterSettings";
-import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { useRoleAccess } from "@/hooks/user/useRoleAccess";
 import { createBrowserClient } from "@supabase/ssr";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { useUsers } from "./useUsers";
-import { useProjectsWithTranslators } from "./useProjectsWithTranslators";
+import { useUsers } from '@/hooks/user/useUsers';
+import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
 
 export interface ProjectTranslatorInfo {
   id: string;

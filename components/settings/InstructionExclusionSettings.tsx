@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2, Loader2, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useInstructionExclusions } from "@/hooks/useInstructionExclusions";
+import { useInstructionExclusions } from "@/hooks/settings/useInstructionExclusions";
 
 interface InstructionExclusionSettingsProps {
   userId: string | null;

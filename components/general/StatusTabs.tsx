@@ -1,24 +1,22 @@
 "use client";
 
-type TabType = "all" | "toBeInvoiced" | "toBePaid";
-
-interface Tab {
-  id: TabType;
+interface Tab<T extends string> {
+  id: T;
   label: string;
   count: number;
 }
 
-interface InvoicingTabsProps {
-  tabs: Tab[];
-  activeTab: TabType;
-  onTabChange: (tab: TabType) => void;
+interface StatusTabsProps<T extends string> {
+  tabs: Tab<T>[];
+  activeTab: T;
+  onTabChange: (tab: T) => void;
 }
 
-export function InvoicingTabs({
+export function StatusTabs<T extends string>({
   tabs,
   activeTab,
   onTabChange,
-}: InvoicingTabsProps) {
+}: StatusTabsProps<T>) {
   return (
     <div className="flex gap-8 overflow-x-auto">
       {tabs.map((tab) => (
@@ -38,11 +36,3 @@ export function InvoicingTabs({
     </div>
   );
 }
-
-
-
-
-
-
-
-

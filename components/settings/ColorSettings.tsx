@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useSupabase } from "@/hooks/useSupabase";
+import { useSupabase } from "@/hooks/core/useSupabase";
 import { ConfirmationDialog } from "@/components/management/ConfirmationDialog";
 import { Loader2, Palette, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useColorSettings } from "@/hooks/useColorSettings";
+import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { useQueryClient } from "@tanstack/react-query";
 import { ColorDialog } from "./color/ColorDialog";
 import { ColorList } from "./color/ColorList";

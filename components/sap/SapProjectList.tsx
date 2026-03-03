@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, FolderOpen, FileText } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import type { SapProject, SapSubProject } from "@/hooks/useSapProjects";
+import type { SapProject, SapSubProject } from "@/hooks/sap/useSapProjects";
 
 export interface SapSubProjectSelection {
   projectId: number;

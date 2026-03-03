@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useSupabase } from "./useSupabase";
-import { useUser } from "@/hooks/useUser";
+import { useSupabase } from '@/hooks/core/useSupabase';
+import { useUser } from "@/hooks/user/useUser";
 import { queryKeys } from "@/lib/queryKeys";
 
 export function useHomeCounts() {

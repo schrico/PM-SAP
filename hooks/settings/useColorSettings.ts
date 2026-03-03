@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from '@tanstack/react-query';
-import { useSupabase } from "./useSupabase";
+import { useSupabase } from '@/hooks/core/useSupabase';
 import { getBgClass, getTextClass, getColorPreview } from "@/utils/tailwindColors";
 import { queryKeys } from "@/lib/queryKeys";
 

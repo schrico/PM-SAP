@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import type { ConflictResult, FieldChange } from "@/types/concurrency";
-import { format } from "date-fns";
+import { formatConflictValue } from "@/utils/formatters";
 
 interface ConflictResolutionModalProps<T> {
   open: boolean;
@@ -34,20 +34,8 @@ export function ConflictResolutionModal<T>({
 }: ConflictResolutionModalProps<T>) {
   if (!conflictResult) return null;
 
-  const formatValue = (value: unknown): string => {
-    if (value === null || value === undefined) return "(empty)";
-    if (typeof value === "boolean") return value ? "Yes" : "No";
-    if (value instanceof Date) return format(value, "PPp");
-    if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}/)) {
-      try {
-        return format(new Date(value), "PPp");
-      } catch {
-        return value;
-      }
-    }
-    if (typeof value === "number") return value.toLocaleString();
-    return String(value);
-  };
+  const formatValue = (value: unknown) =>
+    formatConflictValue(value, { emptyText: "(empty)", truncateAt: 0 });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

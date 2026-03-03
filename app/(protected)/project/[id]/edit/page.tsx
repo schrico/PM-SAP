@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Save, Loader2, Users, UserPlus, X } from "lucide-react";
-import { useProject } from "@/hooks/useProject";
+import { useProject } from "@/hooks/project/useProject";
 import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
 import { EditConflictModal, FieldConflict } from "@/components/ui/EditConflictModal";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";

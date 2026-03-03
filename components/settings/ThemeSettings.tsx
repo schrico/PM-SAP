@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Monitor, Sun, Moon, Check, Loader2 } from "lucide-react";
-import { useUser } from "@/hooks/useUser";
+import { useUser } from "@/hooks/user/useUser";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
-import { useThemePreference, type ThemePreference } from "@/hooks/useThemePreference";
+import { useThemePreference, type ThemePreference } from "@/hooks/settings/useThemePreference";
 
 export function ThemeSettings() {
   const { user } = useUser();

@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, FileText, CheckCircle2, RefreshCw } from "lucide-react";
-import { useSapSubProjectDetails } from "@/hooks/useSapSubProjectDetails";
+import { useSapSubProjectDetails } from "@/hooks/sap/useSapSubProjectDetails";
 import type { SapSubProjectSelection } from "./SapProjectList";
 
 interface SapImportPreviewProps {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useColorSettings } from "@/hooks/useColorSettings";
+import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle } from "@/utils/projectTableHelpers";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
 import { formatProjectName } from "@/utils/formatters";

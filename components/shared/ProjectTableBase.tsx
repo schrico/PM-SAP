@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef } from "react";
-import { usePagination } from "@/hooks/usePagination";
+import { usePagination } from "@/hooks/core/usePagination";
 import { EmptyState } from "./EmptyState";
 import { Pagination } from "@/components/ui/pagination";
 

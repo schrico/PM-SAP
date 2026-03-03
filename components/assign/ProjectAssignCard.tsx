@@ -2,7 +2,7 @@
 
 import { UserCircle } from "lucide-react";
 import { formatNumber, formatProjectName } from "@/utils/formatters";
-import { useColorSettings } from "@/hooks/useColorSettings";
+import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import type { Project } from "@/types/project";

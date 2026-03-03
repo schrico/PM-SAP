@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
-import { useUser } from "@/hooks/useUser";
-import { resolveTheme, type ThemePreference } from "@/hooks/useThemePreference";
+import { useUser } from "@/hooks/user/useUser";
+import { resolveTheme, type ThemePreference } from "@/hooks/settings/useThemePreference";
 
 export function DarkModeHandler() {
   const { user } = useUser();

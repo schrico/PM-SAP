@@ -1,7 +1,7 @@
 "use client";
 
 import { formatNumber, formatProjectName } from "@/utils/formatters";
-import { useColorSettings } from "@/hooks/useColorSettings";
+import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";

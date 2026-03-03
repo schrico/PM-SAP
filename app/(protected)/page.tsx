@@ -11,13 +11,13 @@ import {
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { useHomeCounts } from "@/hooks/useHomeCounts";
+import { useRoleAccess } from "@/hooks/user/useRoleAccess";
+import { useHomeCounts } from "@/hooks/ui/useHomeCounts";
 import { TypewriterText } from "@/components/ui/TypewriterText";
 import { HomeCard } from "@/components/home/HomeCard";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { CurrentProjectsTable } from "@/components/home/CurrentProjectsTable";
-import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
+import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
 import { Button } from "@/components/ui/button";
 import type { UserRole } from "@/types/user";
 

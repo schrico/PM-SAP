@@ -8,8 +8,8 @@ import { MyProjectsCard } from "@/components/my-projects/MyProjectsCard";
 import { RefusalDialog } from "@/components/my-projects/RefusalDialog";
 import { DoneDialog } from "@/components/my-projects/DoneDialog";
 import { InitialMessageDialog } from "@/components/my-projects/InitialMessageDialog";
-import { useUser } from "@/hooks/useUser";
-import { useMyProjects } from "@/hooks/useMyProjects";
+import { useUser } from "@/hooks/user/useUser";
+import { useMyProjects } from "@/hooks/project/useMyProjects";
 import type { ProjectAssignment } from "@/types/project-assignment";
 
 export default function MyProjectsPage() {

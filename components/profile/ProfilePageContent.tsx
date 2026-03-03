@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Save, Loader2, SlidersHorizontal, Pencil, X, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { useUser } from "@/hooks/useUser";
-import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import { useUser } from "@/hooks/user/useUser";
+import { useUpdateProfile } from "@/hooks/user/useUpdateProfile";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { ProfileFormField } from "./ProfileFormField";
 import { ProfileStatus } from "./ProfileStatus";

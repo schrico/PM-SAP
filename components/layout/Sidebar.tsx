@@ -15,7 +15,7 @@ import {
   BarChart3,
   type LucideIcon,
 } from "lucide-react";
-import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { useRoleAccess } from "@/hooks/user/useRoleAccess";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import { TypewriterText } from "@/components/ui/TypewriterText";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";

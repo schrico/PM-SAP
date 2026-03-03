@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from '@tanstack/react-query';
-import { useSupabase } from "./useSupabase";
+import { useSupabase } from '@/hooks/core/useSupabase';
 import type { ProjectWithTranslators, ProjectTranslator } from '@/types/project';
 import { queryKeys } from "@/lib/queryKeys";
 

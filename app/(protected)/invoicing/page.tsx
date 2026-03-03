@@ -2,26 +2,24 @@
 
 import { useState, useMemo } from "react";
 import { X, Loader2, AlertCircle } from "lucide-react";
-import { useUser } from "@/hooks/useUser";
-import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
+import { useUser } from "@/hooks/user/useUser";
+import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
+import { useProjectFilters } from "@/hooks/project/useProjectFilters";
 import { FilterDropdown } from "@/components/general/FilterDropdown";
 import { ViewToggle } from "@/components/general/ViewToggle";
 import { SearchBar } from "@/components/general/SearchBar";
-import { InvoicingTabs } from "@/components/invoicing/InvoicingTabs";
+import { StatusTabs } from "@/components/general/StatusTabs";
 import { InvoicingTable } from "@/components/invoicing/InvoicingTable";
 import { InvoicingCard } from "@/components/invoicing/InvoicingCard";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RouteId } from "@/lib/roleAccess";
+import { queryKeys } from "@/lib/queryKeys";
 import { Card, CardContent } from "@/components/ui/card";
 import { createBrowserClient } from "@supabase/ssr";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
-import {
-  matchesDueDateFilter,
-  matchesLengthFilter,
-} from "@/utils/filterHelpers";
 
 type TabType = "all" | "toBeInvoiced" | "toBePaid";
 type ViewMode = "table" | "card";
@@ -52,26 +50,12 @@ function InvoicingContent() {
 
   // State
   const [activeTab, setActiveTab] = useState<TabType>("all");
-  const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(
     new Set()
   );
 
-  // Filter states
-  const [systemFilter, setSystemFilter] = useState<string | null>(null);
-  const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
-  const [customDueDate, setCustomDueDate] = useState<string>("");
-  const [assignmentStatusFilter, setAssignmentStatusFilter] = useState<
-    string | null
-  >(null);
-  const [sourceLanguageFilter, setSourceLanguageFilter] = useState<
-    string | null
-  >(null);
-  const [targetLanguageFilter, setTargetLanguageFilter] = useState<
-    string | null
-  >(null);
-  const [lengthFilter, setLengthFilter] = useState<string | null>(null);
+  // Page-specific filter states
   const [hideFullyProcessed, setHideFullyProcessed] = useState<boolean>(true);
 
   // Fetch all projects
@@ -87,20 +71,31 @@ function InvoicingContent() {
     [projectsData]
   );
 
-  // Get unique systems and languages for filters
-  const uniqueSystems = useMemo(() => {
-    const systems = new Set(allProjectsRaw.map((p) => p.system));
-    return Array.from(systems).sort();
-  }, [allProjectsRaw]);
-
-  const uniqueLanguages = useMemo(() => {
-    const langs = new Set<string>();
-    allProjectsRaw.forEach((p) => {
-      if (p.language_in) langs.add(p.language_in);
-      if (p.language_out) langs.add(p.language_out);
-    });
-    return Array.from(langs).sort();
-  }, [allProjectsRaw]);
+  // Common filters from hook
+  const {
+    searchTerm,
+    setSearchTerm,
+    systemFilter,
+    setSystemFilter,
+    dueDateFilter,
+    setDueDateFilter,
+    customDueDate,
+    setCustomDueDate,
+    assignmentStatusFilter,
+    setAssignmentStatusFilter,
+    sourceLangFilter,
+    setSourceLangFilter,
+    targetLangFilter,
+    setTargetLangFilter,
+    lengthFilter,
+    setLengthFilter,
+    uniqueSystems,
+    uniqueSourceLangs,
+    uniqueTargetLangs,
+    hasActiveFilters: baseHasActiveFilters,
+    clearFilters: baseClearFilters,
+    applyBaseFilters,
+  } = useProjectFilters(allProjectsRaw);
 
   // Get closest deadline for a project
   const getClosestDeadline = (project: (typeof allProjectsRaw)[0]) => {
@@ -162,82 +157,20 @@ function InvoicingContent() {
   const filteredProjects = useMemo(() => {
     let projects = [...allProjectsRaw];
 
-    // Tab filter
+    // Tab filter (page-specific)
     if (activeTab === "toBeInvoiced") {
       projects = projects.filter((p) => !p.invoiced);
     } else if (activeTab === "toBePaid") {
       projects = projects.filter((p) => p.invoiced && !p.paid);
     }
 
-    // Search filter
-    if (searchTerm) {
-      projects = projects.filter((p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // System filter
-    if (systemFilter) {
-      projects = projects.filter((p) => p.system === systemFilter);
-    }
-
-    // Due date filter
-    if (dueDateFilter && dueDateFilter !== "Custom date") {
-      projects = projects.filter((p) => {
-        const deadline = getClosestDeadline(p);
-        return (
-          deadline &&
-          matchesDueDateFilter(
-            deadline.toISOString(),
-            dueDateFilter,
-            customDueDate || undefined
-          )
-        );
-      });
-    } else if (dueDateFilter === "Custom date" && customDueDate) {
-      projects = projects.filter((p) => {
-        const deadline = getClosestDeadline(p);
-        return (
-          deadline &&
-          matchesDueDateFilter(
-            deadline.toISOString(),
-            "Custom date",
-            customDueDate
-          )
-        );
-      });
-    }
-
-    // Assignment status filter
-    if (assignmentStatusFilter === "Unassigned") {
-      projects = projects.filter((p) => p.translators.length === 0);
-    } else if (assignmentStatusFilter === "Assigned") {
-      projects = projects.filter((p) => p.translators.length > 0);
-    }
-
-    // Source language filter
-    if (sourceLanguageFilter) {
-      projects = projects.filter((p) => p.language_in === sourceLanguageFilter);
-    }
-
-    // Target language filter
-    if (targetLanguageFilter) {
-      projects = projects.filter(
-        (p) => p.language_out === targetLanguageFilter
-      );
-    }
-
-    // Length filter
-    if (lengthFilter) {
-      projects = projects.filter((p) =>
-        matchesLengthFilter(p.words, p.lines, lengthFilter)
-      );
-    }
-
-    // Hide fully processed (invoiced + paid) filter
+    // Hide fully processed (invoiced + paid) filter (page-specific)
     if (hideFullyProcessed) {
       projects = projects.filter((p) => !(p.invoiced && p.paid));
     }
+
+    // Apply the 7 common filters via the hook
+    projects = applyBaseFilters(projects);
 
     // Sort: projects that are both invoiced AND paid go to the end, then by due date
     return projects.sort((a, b) => {
@@ -259,16 +192,8 @@ function InvoicingContent() {
   }, [
     allProjectsRaw,
     activeTab,
-    searchTerm,
-    systemFilter,
-    dueDateFilter,
-    customDueDate,
-    assignmentStatusFilter,
-    sourceLanguageFilter,
-    targetLanguageFilter,
-    lengthFilter,
     hideFullyProcessed,
-    categorizedProjects,
+    applyBaseFilters,
   ]);
 
   // Mutations
@@ -286,7 +211,7 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Projects marked as invoiced");
       setSelectedProjects(new Set());
@@ -307,7 +232,7 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Projects marked as paid");
       setSelectedProjects(new Set());
@@ -330,7 +255,7 @@ function InvoicingContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Projects marked as paid & invoiced");
       setSelectedProjects(new Set());
@@ -380,24 +305,11 @@ function InvoicingContent() {
   };
 
   const clearAllFilters = () => {
-    setSystemFilter(null);
-    setDueDateFilter(null);
-    setCustomDueDate("");
-    setAssignmentStatusFilter(null);
-    setSourceLanguageFilter(null);
-    setTargetLanguageFilter(null);
-    setLengthFilter(null);
+    baseClearFilters();
     setHideFullyProcessed(true);
   };
 
-  const hasActiveFilters =
-    systemFilter ||
-    dueDateFilter ||
-    assignmentStatusFilter ||
-    sourceLanguageFilter ||
-    targetLanguageFilter ||
-    lengthFilter ||
-    !hideFullyProcessed;
+  const hasActiveFilters = baseHasActiveFilters || !hideFullyProcessed;
 
   // Loading state
   if (userLoading || projectsLoading) {
@@ -452,7 +364,7 @@ function InvoicingContent() {
         {/* Tabs + View Toggle */}
         <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-end justify-between">
-            <InvoicingTabs
+            <StatusTabs
               tabs={tabs}
               activeTab={activeTab}
               onTabChange={(tab) => {
@@ -509,15 +421,15 @@ function InvoicingContent() {
               />
               <FilterDropdown
                 label="Source Language"
-                options={uniqueLanguages}
-                selected={sourceLanguageFilter}
-                onSelect={setSourceLanguageFilter}
+                options={uniqueSourceLangs}
+                selected={sourceLangFilter}
+                onSelect={setSourceLangFilter}
               />
               <FilterDropdown
                 label="Target Language"
-                options={uniqueLanguages}
-                selected={targetLanguageFilter}
-                onSelect={setTargetLanguageFilter}
+                options={uniqueTargetLangs}
+                selected={targetLangFilter}
+                onSelect={setTargetLangFilter}
               />
               <FilterDropdown
                 label="Length"

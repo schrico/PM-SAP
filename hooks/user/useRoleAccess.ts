@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useUser } from "./useUser";
+import { useUser } from '@/hooks/user/useUser';
 import type { UserRole } from "@/types/user";
 import {
   canAccessRoute as canAccessRouteHelper,

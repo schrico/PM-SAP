@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Filter, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useDefaultFilters } from "@/hooks/useDefaultFilters";
+import { useDefaultFilters } from "@/hooks/settings/useDefaultFilters";
 
 interface DefaultFilterSettingsProps {
   userId: string | null;

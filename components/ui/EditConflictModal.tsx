@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { formatConflictValue } from "@/utils/formatters";
 
 export interface FieldConflict {
   field: string;
@@ -27,30 +28,7 @@ interface EditConflictModalProps {
 
 /** Format a value for display in the conflict modal */
 function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return "—";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (typeof value === "string") {
-    if (value === "") return "—";
-    // Check if it's a date string
-    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
-      try {
-        const date = new Date(value);
-        return date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-      } catch {
-        return value;
-      }
-    }
-    // Truncate long strings
-    if (value.length > 50) return value.substring(0, 50) + "...";
-    return value;
-  }
-  if (typeof value === "number") return value.toLocaleString();
-  if (Array.isArray(value)) return `${value.length} item(s)`;
-  return String(value);
+  return formatConflictValue(value);
 }
 
 export function EditConflictModal({

@@ -12,9 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Clock, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useSapImportStatus } from "@/hooks/useSapImportStatus";
-import { useSapProjects } from "@/hooks/useSapProjects";
-import { useSyncSapProjects } from "@/hooks/useSyncSapProjects";
+import { useSapImportStatus } from "@/hooks/sap/useSapImportStatus";
+import { useSapProjects } from "@/hooks/sap/useSapProjects";
+import { useSyncSapProjects } from "@/hooks/sap/useSyncSapProjects";
 
 interface SapImportDialogProps {
   open: boolean;

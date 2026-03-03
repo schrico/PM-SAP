@@ -4,7 +4,7 @@ import { useState } from "react";
 import { StickyNote, Save, X, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSupabase } from "@/hooks/useSupabase";
+import { useSupabase } from "@/hooks/core/useSupabase";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 

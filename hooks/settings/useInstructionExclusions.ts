@@ -1,8 +1,9 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSupabase } from "./useSupabase";
+import { useSupabase } from '@/hooks/core/useSupabase';
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface InstructionExclusion {
   id: number;
@@ -14,7 +15,7 @@ export function useInstructionExclusions(userId: string | null) {
   const supabase = useSupabase();
   const queryClient = useQueryClient();
 
-  const queryKey = ["instruction-exclusions", userId];
+  const queryKey = queryKeys.instructionExclusions(userId);
 
   const { data: exclusions = [], isLoading } = useQuery({
     queryKey,

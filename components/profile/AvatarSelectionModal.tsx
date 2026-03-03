@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
-import { useAvailableAvatars } from "@/hooks/useAvailableAvatars";
+import { useAvailableAvatars } from "@/hooks/user/useAvailableAvatars";
 import {
   useUpdateAvatar,
   AvatarAlreadyTakenError,
-} from "@/hooks/useUpdateAvatar";
-import { useUploadAvatar } from "@/hooks/useUploadAvatar";
+} from "@/hooks/user/useUpdateAvatar";
+import { useUploadAvatar } from "@/hooks/user/useUploadAvatar";
 import { isCustomAvatar } from "@/components/profile/ProfileAvatar";
 import {
   Loader2,

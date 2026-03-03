@@ -2,7 +2,6 @@
 // POST: Import SAP subprojects to local database (thin controller)
 
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createErrorResponse } from '@/lib/sap/errors';
@@ -10,51 +9,29 @@ import { RATE_LIMIT_MINUTES } from '@/lib/sap/constants';
 import { ensureSapImportStatusRow, getSapImportStatus, acquireSapImportLock, finalizeSapImportStatus } from '@/lib/sap/import-lock';
 import { getSapClient } from '@/lib/sap/client';
 import { runManualImport } from '@/lib/sap/importer';
-import type { SapSyncRequest } from '@/types/sap';
+import { getAuthenticatedSupabase } from '@/lib/api/withAuth';
+import { sapSyncRequestSchema } from '@/types/sap';
 
 export async function POST(request: NextRequest) {
   let supabase: ReturnType<typeof createServerClient> | null = null;
   let lockAcquired = false;
   try {
-    const body: SapSyncRequest = await request.json();
+    const rawBody = await request.json();
+    const parsed = sapSyncRequestSchema.safeParse(rawBody);
 
-    if (!body.projects || !Array.isArray(body.projects) || body.projects.length === 0) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Request must include projects array' },
+        { error: parsed.error.issues[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey =
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const body = parsed.data;
 
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const cookieStore = await cookies();
-    supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        },
-      },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await getAuthenticatedSupabase();
+    if ('error' in auth) return auth.error;
+    supabase = auth.supabase;
+    const { user } = auth;
 
     // Ensure status row exists
     const { error: ensureStatusError } = await ensureSapImportStatusRow(supabase);

@@ -2,9 +2,9 @@
 
 import { useState, useRef } from "react";
 import { Loader2, Shield, AlertCircle } from "lucide-react";
-import { useUsers } from "@/hooks/useUsers";
-import { useUser } from "@/hooks/useUser";
-import { useUpdateUserRole } from "@/hooks/useUpdateUserRole";
+import { useUsers } from "@/hooks/user/useUsers";
+import { useUser } from "@/hooks/user/useUser";
+import { useUpdateUserRole } from "@/hooks/user/useUpdateUserRole";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";

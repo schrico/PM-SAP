@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSupabase } from "./useSupabase";
+import { useSupabase } from '@/hooks/core/useSupabase';
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { queryKeys } from "@/lib/queryKeys";

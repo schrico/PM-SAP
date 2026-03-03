@@ -113,9 +113,12 @@ export function useSyncSapProjects() {
       // Invalidate all project-related queries
       queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.sapImportStatus() });
+      // Refresh import reports so the notifier picks up the new report
+      // even if the realtime event is missed
+      queryClient.invalidateQueries({ queryKey: ["import-reports"] });
 
       // Show summary toast
       if (data.failed === 0) {

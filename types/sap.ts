@@ -188,6 +188,18 @@ export interface SapSyncRequest {
   }>;
 }
 
+// Zod schema for runtime validation of SapSyncRequest
+import { z } from 'zod';
+
+export const sapSyncRequestSchema = z.object({
+  projects: z.array(
+    z.object({
+      projectId: z.number({ message: 'projectId must be a number' }),
+      subProjectId: z.string().min(1, 'subProjectId is required'),
+    })
+  ).min(1, 'Request must include at least one project'),
+});
+
 /** Response from POST /api/sap/sync */
 export interface SapSyncResponse {
   imported: number;  // New projects created

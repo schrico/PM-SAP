@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useConcurrencySafeMutation } from "./useConcurrencySafeMutation";
+import { useConcurrencySafeMutation } from '@/hooks/core/useConcurrencySafeMutation';
 import { useOriginalRecordStore } from "@/lib/stores/useOriginalRecordStore";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";

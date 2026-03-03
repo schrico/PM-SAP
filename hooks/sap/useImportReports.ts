@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSupabase } from "./useSupabase";
+import { useSupabase } from '@/hooks/core/useSupabase';
+import { queryKeys } from "@/lib/queryKeys";
 
 interface ImportReport {
   id: number;
@@ -28,7 +29,7 @@ export function useImportReports(userId: string | null) {
   const supabase = useSupabase();
   const queryClient = useQueryClient();
 
-  const queryKey = ["import-reports", userId];
+  const queryKey = queryKeys.importReports(userId);
 
   // Fetch unacknowledged reports for the current user
   const { data: reports = [], isLoading } = useQuery({

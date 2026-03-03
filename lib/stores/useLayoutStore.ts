@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ThemePreference } from "@/hooks/useThemePreference";
+import type { ThemePreference } from "@/hooks/settings/useThemePreference";
 
 interface LayoutState {
   // Theme preference from user settings ('system', 'light', 'dark')

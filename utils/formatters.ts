@@ -57,6 +57,51 @@ export function stripHtml(html: string): string {
     .trim();
 }
 
+/**
+ * Format a value for display in conflict modals.
+ * Handles null, booleans, dates, numbers, arrays, and strings.
+ */
+export function formatConflictValue(
+  value: unknown,
+  options?: { emptyText?: string; truncateAt?: number }
+): string {
+  const empty = options?.emptyText ?? "—";
+  const truncateAt = options?.truncateAt ?? 50;
+
+  if (value === null || value === undefined) return empty;
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string") {
+    if (value === "") return empty;
+    // Check if it's a date string
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+      try {
+        const date = new Date(value);
+        return date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+      } catch {
+        return value;
+      }
+    }
+    if (truncateAt > 0 && value.length > truncateAt) {
+      return value.substring(0, truncateAt) + "...";
+    }
+    return value;
+  }
+  if (typeof value === "number") return value.toLocaleString();
+  if (Array.isArray(value)) return `${value.length} item(s)`;
+  if (value instanceof Date) {
+    return value.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+  return String(value);
+}
+
 /** Human-readable display names for user roles */
 export const ROLE_DISPLAY: Record<string, string> = {
   employee: "Collaborator",

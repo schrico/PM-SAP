@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react";
 import { X, Clock, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
-import { useUsers } from "@/hooks/useUsers";
-import { useUserWorkload } from "@/hooks/useUserWorkload";
+import { useUsers } from "@/hooks/user/useUsers";
+import { useUserWorkload } from "@/hooks/user/useUserWorkload";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import type { Project } from "@/types/project";
 import type { User } from "@/types/user";

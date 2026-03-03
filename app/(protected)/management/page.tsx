@@ -3,15 +3,15 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2, AlertCircle, Download } from "lucide-react";
-import { useUser } from "@/hooks/useUser";
-import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
-import { useSapImportStatus } from "@/hooks/useSapImportStatus";
+import { useUser } from "@/hooks/user/useUser";
+import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
+import { useSapImportStatus } from "@/hooks/sap/useSapImportStatus";
 import { FilterDropdown } from "@/components/general/FilterDropdown";
 import { MultiSelectFilterDropdown } from "@/components/general/MultiSelectFilterDropdown";
 import { ViewToggle } from "@/components/general/ViewToggle";
 import { SearchBar } from "@/components/general/SearchBar";
 import { ScrollToTopButton } from "@/components/general/ScrollToTopButton";
-import { ManagementTabs } from "@/components/management/ManagementTabs";
+import { StatusTabs } from "@/components/general/StatusTabs";
 import { ManagementTable } from "@/components/management/ManagementTable";
 import { ManagementCard } from "@/components/management/ManagementCard";
 import { AddTranslatorDialog } from "@/components/management/AddTranslatorDialog";
@@ -22,16 +22,14 @@ import { InstructionsDrawer } from "@/components/management/InstructionsDrawer";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { RouteId } from "@/lib/roleAccess";
+import { queryKeys } from "@/lib/queryKeys";
 import { Card, CardContent } from "@/components/ui/card";
 import { createBrowserClient } from "@supabase/ssr";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
-import {
-  matchesDueDateFilter,
-  matchesLengthFilter,
-} from "@/utils/filterHelpers";
-import { useDefaultFilters } from "@/hooks/useDefaultFilters";
+import { useDefaultFilters } from "@/hooks/settings/useDefaultFilters";
+import { useProjectFilters } from "@/hooks/project/useProjectFilters";
 import { useManagementPageStore } from "@/lib/stores/useManagementPageStore";
 import type { SapInstructionEntry } from "@/types/project";
 
@@ -69,7 +67,6 @@ function ProjectManagementContent() {
   const { activeTab, setActiveTab, viewMode, setViewMode, currentPage, setCurrentPage } = useManagementPageStore();
 
   // State
-  const [searchTerm, setSearchTerm] = useState("");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [addTranslatorModal, setAddTranslatorModal] = useState<{
     open: boolean;
@@ -103,16 +100,7 @@ function ProjectManagementContent() {
   const [editWords, setEditWords] = useState<string>("");
   const [editLines, setEditLines] = useState<string>("");
 
-  // Filter states
-  const [systemFilter, setSystemFilter] = useState<string | null>(null);
-  const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
-  const [customDueDate, setCustomDueDate] = useState<string>("");
-  const [assignmentStatusFilter, setAssignmentStatusFilter] = useState<
-    string | null
-  >(null);
-  const [sourceLangFilter, setSourceLangFilter] = useState<string | null>(null);
-  const [targetLangFilter, setTargetLangFilter] = useState<string | null>(null);
-  const [lengthFilter, setLengthFilter] = useState<string | null>(null);
+  // Project type filter (page-specific, on top of shared filters)
   const [projectTypeFilter, setProjectTypeFilter] = useState<string[]>([]);
 
   // Load default project type filter from user settings
@@ -146,6 +134,25 @@ function ProjectManagementContent() {
     [allProjectsRaw]
   );
 
+  // Shared filter state + logic
+  const {
+    searchTerm, setSearchTerm,
+    systemFilter, setSystemFilter,
+    dueDateFilter, setDueDateFilter,
+    customDueDate, setCustomDueDate,
+    assignmentStatusFilter, setAssignmentStatusFilter,
+    sourceLangFilter, setSourceLangFilter,
+    targetLangFilter, setTargetLangFilter,
+    lengthFilter, setLengthFilter,
+    uniqueSystems,
+    uniqueSourceLangs,
+    uniqueTargetLangs,
+    uniqueProjectTypes,
+    hasActiveFilters: baseHasActiveFilters,
+    clearFilters: baseClearFilters,
+    applyBaseFilters,
+  } = useProjectFilters(allProjects);
+
   // Determine project status based on translators
   const getProjectStatus = (
     project: (typeof allProjects)[0]
@@ -162,28 +169,6 @@ function ProjectManagementContent() {
     return "unclaimed";
   };
 
-  // Get unique systems and languages for filters
-  const uniqueSystems = useMemo(() => {
-    const systems = new Set(allProjects.map((p) => p.system));
-    return Array.from(systems).sort();
-  }, [allProjects]);
-
-  const uniqueProjectTypes = useMemo(() => {
-    const types = new Set<string>();
-    allProjects.forEach((p) => {
-      if (p.project_type) types.add(p.project_type);
-    });
-    return Array.from(types).sort();
-  }, [allProjects]);
-
-  const uniqueLanguages = useMemo(() => {
-    const langs = new Set<string>();
-    allProjects.forEach((p) => {
-      if (p.language_in) langs.add(p.language_in);
-      if (p.language_out) langs.add(p.language_out);
-    });
-    return Array.from(langs).sort();
-  }, [allProjects]);
 
 
   // Categorize projects
@@ -229,11 +214,10 @@ function ProjectManagementContent() {
     [allProjects, categorizedProjects]
   );
 
-  // Filter projects
+  // Filter projects: tab filter + page-specific projectType on top of shared base filters
   const filteredProjects = useMemo(() => {
+    // Start with tab filter
     let projects = [...allProjects];
-
-    // Tab filter
     if (activeTab !== "all") {
       const status =
         activeTab === "ready" ? categorizedProjects.ready
@@ -242,97 +226,18 @@ function ProjectManagementContent() {
       projects = projects.filter((p) => status.includes(p));
     }
 
-    // Search filter
-    if (searchTerm) {
-      projects = projects.filter((p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    // Apply shared base filters (search, system, dueDate, assignment, langs, length)
+    projects = applyBaseFilters(projects);
 
-    // System filter
-    if (systemFilter) {
-      projects = projects.filter((p) => p.system === systemFilter);
-    }
-
-    // Due date filter
-    if (dueDateFilter && dueDateFilter !== "Custom date") {
-      projects = projects.filter((p) => {
-        const deadline =
-          p.final_deadline || p.interim_deadline || p.initial_deadline;
-        return (
-          deadline &&
-          matchesDueDateFilter(
-            deadline,
-            dueDateFilter,
-            customDueDate || undefined
-          )
-        );
-      });
-    } else if (dueDateFilter === "Custom date" && customDueDate) {
-      projects = projects.filter((p) => {
-        const deadline =
-          p.final_deadline || p.interim_deadline || p.initial_deadline;
-        return (
-          deadline &&
-          matchesDueDateFilter(deadline, "Custom date", customDueDate)
-        );
-      });
-    }
-
-    // Assignment status filter
-    if (assignmentStatusFilter === "Unassigned") {
-      projects = projects.filter((p) => p.translators.length === 0);
-    } else if (assignmentStatusFilter === "Assigned") {
-      projects = projects.filter((p) => p.translators.length > 0);
-    }
-
-    // Source language filter
-    if (sourceLangFilter) {
-      projects = projects.filter((p) => p.language_in === sourceLangFilter);
-    }
-
-    // Target language filter
-    if (targetLangFilter) {
-      projects = projects.filter((p) => p.language_out === targetLangFilter);
-    }
-
-    // Length filter
-    if (lengthFilter) {
-      projects = projects.filter((p) =>
-        matchesLengthFilter(p.words, p.lines, lengthFilter)
-      );
-    }
-
-    // Project type filter
+    // Page-specific: project type filter
     if (projectTypeFilter.length > 0) {
       projects = projects.filter(
         (p) => p.project_type && projectTypeFilter.includes(p.project_type)
       );
     }
 
-    // Sort by final deadline (earliest first)
-    return projects.sort((a, b) => {
-      const dateA = new Date(a.final_deadline || "").getTime();
-      const dateB = new Date(b.final_deadline || "").getTime();
-      if (!a.final_deadline && !b.final_deadline) return 0;
-      if (!a.final_deadline) return 1;
-      if (!b.final_deadline) return -1;
-      return dateA - dateB;
-    });
-  }, [
-    allProjects,
-    activeTab,
-    searchTerm,
-    systemFilter,
-    dueDateFilter,
-    customDueDate,
-    assignmentStatusFilter,
-    sourceLangFilter,
-    targetLangFilter,
-    lengthFilter,
-    projectTypeFilter,
-    categorizedProjects,
-  ]);
+    return projects;
+  }, [allProjects, activeTab, categorizedProjects, applyBaseFilters, projectTypeFilter]);
 
   // Mutations
   const markCompleteMutation = useMutation({
@@ -347,7 +252,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Project marked as complete");
       setOpenMenu(null);
@@ -380,7 +285,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Translators added successfully");
       setAddTranslatorModal({
@@ -500,7 +405,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Translator removed successfully");
       setRemoveTranslatorModal({
@@ -537,7 +442,7 @@ function ProjectManagementContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       toast.success("Words/Lines updated successfully");
       setEditingProjectId(null);
@@ -619,24 +524,11 @@ function ProjectManagementContent() {
   };
 
   const clearAllFilters = () => {
-    setSystemFilter(null);
-    setDueDateFilter(null);
-    setCustomDueDate("");
-    setAssignmentStatusFilter(null);
-    setSourceLangFilter(null);
-    setTargetLangFilter(null);
-    setLengthFilter(null);
+    baseClearFilters();
     setProjectTypeFilter([]);
   };
 
-  const hasActiveFilters =
-    systemFilter ||
-    dueDateFilter ||
-    assignmentStatusFilter ||
-    sourceLangFilter ||
-    targetLangFilter ||
-    lengthFilter ||
-    projectTypeFilter.length > 0;
+  const hasActiveFilters = baseHasActiveFilters || projectTypeFilter.length > 0;
 
   // Loading state
   if (userLoading || projectsLoading) {
@@ -699,7 +591,7 @@ function ProjectManagementContent() {
         {/* Tabs + View Toggle */}
         <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-end justify-between">
-            <ManagementTabs
+            <StatusTabs
               tabs={tabs}
               activeTab={activeTab}
               onTabChange={setActiveTab}
@@ -753,13 +645,13 @@ function ProjectManagementContent() {
               />
               <FilterDropdown
                 label="Source Language"
-                options={uniqueLanguages}
+                options={uniqueSourceLangs}
                 selected={sourceLangFilter}
                 onSelect={setSourceLangFilter}
               />
               <FilterDropdown
                 label="Target Language"
-                options={uniqueLanguages}
+                options={uniqueTargetLangs}
                 selected={targetLangFilter}
                 onSelect={setTargetLangFilter}
               />

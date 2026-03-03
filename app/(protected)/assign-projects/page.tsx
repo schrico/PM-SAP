@@ -15,30 +15,16 @@ import {
 } from "@/components/assign/TranslatorSelectionView";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RouteId } from "@/lib/roleAccess";
-import { useProjectsWithTranslators } from "@/hooks/useProjectsWithTranslators";
-import {
-  matchesDueDateFilter,
-  matchesLengthFilter,
-} from "@/utils/filterHelpers";
+import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
+import { useProjectFilters } from "@/hooks/project/useProjectFilters";
 import { createBrowserClient } from "@supabase/ssr";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
-import { useUser } from "@/hooks/useUser";
-import { useDefaultFilters } from "@/hooks/useDefaultFilters";
-import type { Project } from "@/types/project";
-
-interface ProjectWithTranslators extends Project {
-  translators: Array<{
-    id: string;
-    name: string;
-    role: string;
-    assignment_status: string;
-  }>;
-}
-
+import { useUser } from "@/hooks/user/useUser";
+import { useDefaultFilters } from "@/hooks/settings/useDefaultFilters";
 export default function AssignProjectsPage() {
   return (
     <RoleGuard routeId={RouteId.ASSIGN_PROJECTS}>
@@ -54,24 +40,35 @@ function AssignProjectsContent() {
   const { user } = useUser();
   const collapsed = useLayoutStore((state) => state.collapsed);
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(
     new Set()
   );
   const [showUserSelection, setShowUserSelection] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
 
-  // Filter states
-  const [systemFilter, setSystemFilter] = useState<string | null>(null);
-  const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
-  const [customDueDate, setCustomDueDate] = useState<string>("");
-  const [sourceLangFilter, setSourceLangFilter] = useState<string | null>(null);
-  const [targetLangFilter, setTargetLangFilter] = useState<string | null>(null);
-  const [lengthFilter, setLengthFilter] = useState<string | null>(null);
+  // Page-specific filter states
   const [assignmentFilter, setAssignmentFilter] = useState<string | null>(
     "Unassigned"
   );
   const [projectTypeFilter, setProjectTypeFilter] = useState<string[]>([]);
+
+  // Shared filter state + logic
+  const {
+    searchTerm, setSearchTerm,
+    systemFilter, setSystemFilter,
+    dueDateFilter, setDueDateFilter,
+    customDueDate, setCustomDueDate,
+    sourceLangFilter, setSourceLangFilter,
+    targetLangFilter, setTargetLangFilter,
+    lengthFilter, setLengthFilter,
+    uniqueSystems,
+    uniqueSourceLangs,
+    uniqueTargetLangs,
+    uniqueProjectTypes,
+    hasActiveFilters: baseHasActiveFilters,
+    clearFilters: baseClearFilters,
+    applyBaseFilters,
+  } = useProjectFilters(allProjects);
 
   // Load default project type filter from user settings
   const { getFilter: getDefaultFilter, isLoading: defaultFiltersLoading } =
@@ -98,142 +95,35 @@ function AssignProjectsContent() {
 
   const loading = projectsLoading;
 
-  // Get unique values for filters
-  const uniqueSystems = useMemo(() => {
-    const systems = new Set(allProjects.map((p) => p.system).filter(Boolean));
-    return Array.from(systems).sort();
-  }, [allProjects]);
-
-  const uniqueProjectTypes = useMemo(() => {
-    const types = new Set<string>();
-    allProjects.forEach((p) => {
-      if (p.project_type) types.add(p.project_type);
-    });
-    return Array.from(types).sort();
-  }, [allProjects]);
-
-  const uniqueSourceLangs = useMemo(() => {
-    const langs = new Set(
-      allProjects.map((p) => p.language_in).filter(Boolean)
-    );
-    return Array.from(langs).sort();
-  }, [allProjects]);
-
-  const uniqueTargetLangs = useMemo(() => {
-    const langs = new Set(
-      allProjects.map((p) => p.language_out).filter(Boolean)
-    );
-    return Array.from(langs).sort();
-  }, [allProjects]);
-
   const clearAllFilters = () => {
-    setSystemFilter(null);
-    setDueDateFilter(null);
-    setCustomDueDate("");
+    baseClearFilters();
     setAssignmentFilter(null);
-    setSourceLangFilter(null);
-    setTargetLangFilter(null);
-    setLengthFilter(null);
     setProjectTypeFilter([]);
   };
 
-  const hasActiveFilters =
-    systemFilter ||
-    dueDateFilter ||
-    assignmentFilter ||
-    sourceLangFilter ||
-    targetLangFilter ||
-    lengthFilter ||
-    projectTypeFilter.length > 0;
+  const hasActiveFilters = baseHasActiveFilters || !!assignmentFilter || projectTypeFilter.length > 0;
 
-  // Filtering logic
+  // Filtering logic: shared base filters + page-specific filters
   const filteredProjects = useMemo(() => {
-    return allProjects
-      .filter((p) => {
-        // Search filter
-        if (
-          searchTerm &&
-          !p.name.toLowerCase().includes(searchTerm.toLowerCase())
-        ) {
-          return false;
-        }
+    // Apply shared base filters (search, system, dueDate, langs, length)
+    let projects = applyBaseFilters(allProjects);
 
-        // Assignment status filter
-        const hasTranslators = p.translators && p.translators.length > 0;
-        if (assignmentFilter === "Unassigned" && hasTranslators) {
-          return false;
-        }
-        if (assignmentFilter === "Assigned" && !hasTranslators) {
-          return false;
-        }
+    // Page-specific: assignment status filter
+    if (assignmentFilter === "Unassigned") {
+      projects = projects.filter((p) => !p.translators || p.translators.length === 0);
+    } else if (assignmentFilter === "Assigned") {
+      projects = projects.filter((p) => p.translators && p.translators.length > 0);
+    }
 
-        // System filter
-        if (systemFilter && p.system !== systemFilter) {
-          return false;
-        }
+    // Page-specific: project type filter
+    if (projectTypeFilter.length > 0) {
+      projects = projects.filter(
+        (p) => p.project_type && projectTypeFilter.includes(p.project_type)
+      );
+    }
 
-        // Due date filter
-        const dueDate =
-          p.final_deadline || p.interim_deadline || p.initial_deadline;
-        if (
-          dueDateFilter &&
-          dueDate &&
-          !matchesDueDateFilter(
-            dueDate,
-            dueDateFilter,
-            customDueDate || undefined
-          )
-        ) {
-          return false;
-        }
-        if (dueDateFilter && !dueDate) {
-          return false; // Filter out projects without deadlines when date filter is active
-        }
-
-        // Source language filter
-        if (sourceLangFilter && p.language_in !== sourceLangFilter) {
-          return false;
-        }
-
-        // Target language filter
-        if (targetLangFilter && p.language_out !== targetLangFilter) {
-          return false;
-        }
-
-        // Length filter
-        if (lengthFilter && !matchesLengthFilter(p.words, p.lines, lengthFilter)) {
-          return false;
-        }
-
-        // Project type filter
-        if (projectTypeFilter.length > 0 && (!p.project_type || !projectTypeFilter.includes(p.project_type))) {
-          return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        // Sort by final deadline (earliest first) - same as Manage Projects
-        const dateA = new Date(a.final_deadline || "").getTime();
-        const dateB = new Date(b.final_deadline || "").getTime();
-        // Handle projects without final_deadline - put them at the end
-        if (!a.final_deadline && !b.final_deadline) return 0;
-        if (!a.final_deadline) return 1;
-        if (!b.final_deadline) return -1;
-        return dateA - dateB;
-      });
-  }, [
-    allProjects,
-    searchTerm,
-    systemFilter,
-    dueDateFilter,
-    customDueDate,
-    sourceLangFilter,
-    targetLangFilter,
-    lengthFilter,
-    assignmentFilter,
-    projectTypeFilter,
-  ]);
+    return projects;
+  }, [allProjects, applyBaseFilters, assignmentFilter, projectTypeFilter]);
 
   const handleSelection = (projectId: number) => {
     const newSelection = new Set(selectedProjects);
@@ -296,7 +186,7 @@ function AssignProjectsContent() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({
-        queryKey: ['projects-with-translators'],
+        queryKey: queryKeys.projectsWithTranslators(),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects() });
       toast.success(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useSupabase } from "./useSupabase";
+import { useSupabase } from '@/hooks/core/useSupabase';
 import type { ConflictResult, FieldChange } from "@/types/concurrency";
 
 interface UseConcurrencySafeMutationOptions<T> {

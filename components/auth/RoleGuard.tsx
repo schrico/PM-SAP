@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { useRoleAccess } from "@/hooks/user/useRoleAccess";
 import type { RouteIdType } from "@/lib/roleAccess";
 
 interface RoleGuardProps {

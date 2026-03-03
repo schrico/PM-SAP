@@ -1,30 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser } from "@/hooks/useUser";
-import { useImportReports } from "@/hooks/useImportReports";
+import { useUser } from "@/hooks/user/useUser";
+import { useImportReports } from "@/hooks/sap/useImportReports";
 import { useRealtime } from "@/components/providers/RealtimeProvider";
 import { ImportReportModal } from "./ImportReportModal";
 
 export function ImportReportNotifier() {
   const { user } = useUser();
   const isPmOrAdmin = user?.role === "admin" || user?.role === "pm";
-  const { reports, hasUnacknowledged, acknowledgeAll } = useImportReports(
+  const { onImportReport } = useRealtime();
+  const { reports, hasUnacknowledged, isLoading, acknowledgeAll } = useImportReports(
     isPmOrAdmin ? user?.id ?? null : null
   );
-  const { onImportReport } = useRealtime();
   const [showModal, setShowModal] = useState(false);
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
   // Show modal on mount if there are unacknowledged reports
+  // Wait until loading is complete before deciding — otherwise the empty initial
+  // state marks initialCheckDone=true and we never show existing reports.
   useEffect(() => {
-    if (!initialCheckDone && hasUnacknowledged && isPmOrAdmin) {
+    if (isLoading || !isPmOrAdmin) return;
+
+    if (!initialCheckDone && hasUnacknowledged) {
       setShowModal(true);
       setInitialCheckDone(true);
-    } else if (!hasUnacknowledged) {
+    } else if (!initialCheckDone) {
       setInitialCheckDone(true);
     }
-  }, [hasUnacknowledged, isPmOrAdmin, initialCheckDone]);
+  }, [hasUnacknowledged, isPmOrAdmin, initialCheckDone, isLoading]);
 
   // Show modal on realtime import report events
   useEffect(() => {

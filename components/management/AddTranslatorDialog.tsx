@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { Clock, CheckCircle2, AlertTriangle } from "lucide-react";
-import { useUsers } from "@/hooks/useUsers";
-import { useUserWorkload } from "@/hooks/useUserWorkload";
+import { useUsers } from "@/hooks/user/useUsers";
+import { useUserWorkload } from "@/hooks/user/useUserWorkload";
 import type { User } from "@/types/user";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import {

@@ -2,8 +2,9 @@
 
 import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSupabase } from "./useSupabase";
+import { useSupabase } from '@/hooks/core/useSupabase';
 import { toast } from "sonner";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface DefaultFilter {
   id: number;
@@ -17,7 +18,7 @@ export function useDefaultFilters(userId: string | null) {
   const supabase = useSupabase();
   const queryClient = useQueryClient();
 
-  const queryKey = ["default-filters", userId];
+  const queryKey = queryKeys.defaultFilters(userId);
 
   const { data: filters = [], isLoading } = useQuery({
     queryKey,

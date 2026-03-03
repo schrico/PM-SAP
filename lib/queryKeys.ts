@@ -32,4 +32,9 @@ export const queryKeys = {
   sapImportStatus: () => ['sap-import-status'] as const,
   sapSubProject: (projectId: number | null, subProjectId: string | null) =>
     ['sap-subproject', projectId, subProjectId] as const,
+  importReports: (userId: string | null) => ['import-reports', userId] as const,
+
+  // User settings
+  instructionExclusions: (userId: string | null) => ['instruction-exclusions', userId] as const,
+  defaultFilters: (userId: string | null) => ['default-filters', userId] as const,
 } as const;
