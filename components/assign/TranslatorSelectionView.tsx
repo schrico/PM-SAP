@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { X, Clock, CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatNumber } from "@/utils/formatters";
+import { formatNumber, formatRoleDisplay } from "@/utils/formatters";
 import { useUsers } from "@/hooks/user/useUsers";
 import { useUserWorkload } from "@/hooks/user/useUserWorkload";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
@@ -338,7 +338,7 @@ export function TranslatorSelectionView({
                     )}
                   </h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    {user.role}
+                    {formatRoleDisplay(user.role)}
                   </p>
                 </div>
               </div>

@@ -49,12 +49,18 @@ export function extractSystem(steps: SapStep[], environment?: SapEnvironment[]):
     return 'XTM';
   }
 
+  // 4. SMARTLING toolType
+  if (toolType === 'SMARTLING') {
+    return 'SMARTLING';
+  }
+
   // Fallback: try step-level toolType
   const stepWithTool = steps.find(s => s.toolType);
   if (stepWithTool?.toolType) {
     const stepToolType = stepWithTool.toolType.toUpperCase();
     if (stepToolType === 'SAP') return 'Unknown';
     if (stepToolType === 'XTM_PM' || stepToolType === 'XTM') return 'XTM';
+    if (stepToolType === 'SMARTLING') return 'SMARTLING';
   }
 
   return 'Unknown';
@@ -125,8 +131,22 @@ export function extractGraphIds(env: SapEnvironment[]): string[] {
   return [...new Set(ids)];
 }
 
-/** Extract URL from subProjectFiles of first step that has one */
-export function extractUrl(steps: SapStep[]): string | null {
+/** Extract URL from subProjectFiles of first step that has one.
+ *  For SMARTLING, environment.projectUrl always takes priority. */
+export function extractUrl(
+  steps: SapStep[],
+  environment?: SapEnvironment[],
+  system?: string
+): string | null {
+  // SMARTLING: environment.projectUrl takes priority
+  if (system === 'SMARTLING' && environment?.length) {
+    for (const env of environment) {
+      if (env.projectUrl && env.projectUrl.trim()) {
+        return env.projectUrl.trim();
+      }
+    }
+  }
+
   for (const step of steps) {
     if (step.subProjectFiles && step.subProjectFiles.trim()) {
       return step.subProjectFiles.trim();

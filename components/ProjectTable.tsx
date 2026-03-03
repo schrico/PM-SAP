@@ -8,6 +8,7 @@ import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTrans
 import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
 import type { ProjectWithTranslators } from "@/types/project";
+import { formatRoleDisplay } from "@/utils/formatters";
 
 interface ProjectTableProps {
   showPast?: boolean;
@@ -159,7 +160,7 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
               <div key={translator.id} className="text-xs">
                 <span className="font-medium">{translator.name}</span>
                 <span className="text-gray-800 ml-1">
-                  ({translator.role})
+                  ({formatRoleDisplay(translator.role)})
                 </span>
                 {translator.assignment_status === "claimed" && (
                   <span className="ml-1 text-green-800 font-bold">

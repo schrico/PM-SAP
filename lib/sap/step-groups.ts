@@ -166,7 +166,7 @@ export function mapSapSubProjectToProjects(
   const allLxeProjects = extractLxeProjects(details.environment, system);
   const allWorkLists = extractWorkLists(details.environment);
   const allGraphIds = extractGraphIds(details.environment);
-  const url = extractUrl(details.subProjectSteps);
+  const url = extractUrl(details.subProjectSteps, details.environment, system);
   const sapPm = extractSapPm(subProject);
   const projectType = extractProjectType(subProject);
 
@@ -425,7 +425,7 @@ export function mapSapSubProjectToProjects(
         lines: lines || null,
       });
 
-      if (hasTermsInFwl) {
+      if (hasTermsInFwl && system !== 'SMARTLING') {
         const stmInstructions = buildInstructions({
           translationAreas: envTAs,
           lxeProjects: envLxeProjects,

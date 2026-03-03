@@ -6,6 +6,7 @@ import { useUsers } from "@/hooks/user/useUsers";
 import { useUserWorkload } from "@/hooks/user/useUserWorkload";
 import type { User } from "@/types/user";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { formatRoleDisplay } from "@/utils/formatters";
 import {
   Dialog,
   DialogContent,
@@ -208,7 +209,7 @@ export function AddTranslatorDialog({
                         )}
                       </h3>
                       <p className="text-gray-500 dark:text-gray-400 text-xs">
-                        {user.role}
+                        {formatRoleDisplay(user.role)}
                       </p>
                     </div>
                   </div>
