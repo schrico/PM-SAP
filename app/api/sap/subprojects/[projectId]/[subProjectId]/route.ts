@@ -7,6 +7,7 @@ import { getSapClient } from '@/lib/sap/client';
 import { createErrorResponse } from '@/lib/sap/errors';
 import { getAuthenticatedSupabase } from '@/lib/api/withAuth';
 import { mapSapToSubProjectDetails } from '@/lib/sap/mappers';
+import { isBlockedSapProjectType } from '@/lib/sap/project-type-rules';
 
 interface RouteParams {
   params: Promise<{ projectId: string; subProjectId: string }>;
@@ -48,6 +49,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const subProjectSummary = project?.subProjects.find(s => s.subProjectId === subProjectId);
 
     if (!subProjectSummary) {
+      return NextResponse.json(
+        { error: 'Subproject not found' },
+        { status: 404 }
+      );
+    }
+    if (isBlockedSapProjectType(subProjectSummary.projectType)) {
       return NextResponse.json(
         { error: 'Subproject not found' },
         { status: 404 }

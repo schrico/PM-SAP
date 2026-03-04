@@ -95,11 +95,12 @@ export default function ProjectPage() {
 
   const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
-  // Check if translator is assigned to this project
-  const translatorAssignment =
-    isTranslator() && project ?
-      project.translators.find((t) => t.id === user?.id)
-    : null;
+  // Current user's assignment (if assigned to this project)
+  const currentUserAssignment =
+    project ? project.translators.find((t) => t.id === user?.id) : null;
+
+  // Employee-specific assignment used for access gating and employee actions
+  const translatorAssignment = isTranslator() ? currentUserAssignment : null;
 
   const isTranslatorAssigned = !!translatorAssignment;
 
@@ -606,8 +607,8 @@ export default function ProjectPage() {
         <div
           className={`${canManageAssignments() ? "lg:col-span-2" : ""} space-y-6`}
         >
-          {/* PM Info banner — shown to employees when a PM note exists */}
-          {isTranslator() && translatorAssignment?.initial_message && (
+          {/* PM Info banner shown when the assigned current user has a PM note */}
+          {currentUserAssignment?.initial_message && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex gap-3">
               <Info className="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
               <div>
@@ -615,7 +616,7 @@ export default function ProjectPage() {
                   Info from PM
                 </p>
                 <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                  {translatorAssignment.initial_message}
+                  {currentUserAssignment.initial_message}
                 </p>
               </div>
             </div>
@@ -625,6 +626,13 @@ export default function ProjectPage() {
             instructions={project.instructions}
             sapInstructions={project.sap_instructions}
           />
+          {!canManageAssignments() && (
+            <ProjectNotesCard
+              projectId={project.id}
+              notes={project.project_notes}
+              canEdit={false}
+            />
+          )}
         </div>
 
         {/* Right Column - Translators (PM/Admin only) */}

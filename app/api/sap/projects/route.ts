@@ -6,6 +6,7 @@ import { getSapClient } from '@/lib/sap/client';
 import { createErrorResponse } from '@/lib/sap/errors';
 import { getAuthenticatedSupabase } from '@/lib/api/withAuth';
 import type { SapProjectListItem, SapSubProjectListItem } from '@/types/sap';
+import { isBlockedSapProjectType } from '@/lib/sap/project-type-rules';
 
 export async function GET() {
   try {
@@ -35,25 +36,29 @@ export async function GET() {
     }
 
     // Transform to frontend format with local status
-    const projects: SapProjectListItem[] = sapData.projects.map(project => ({
-      projectId: project.projectId,
-      projectName: project.projectName,
-      account: project.account,
-      subProjects: project.subProjects.map(sub => {
-        const existingList = existingBySubId.get(sub.subProjectId) || [];
-        const hasLocal = existingList.length > 0;
-        return {
-          subProjectId: sub.subProjectId,
-          subProjectName: sub.subProjectName,
-          dmName: sub.dmName,
-          pmName: sub.pmName,
-          projectType: sub.projectType,
-          existsLocally: hasLocal,
-          localProjectId: hasLocal ? existingList[0].id : undefined,
-          needsUpdate: hasLocal,
-        } satisfies SapSubProjectListItem;
-      }),
-    }));
+    const projects: SapProjectListItem[] = sapData.projects
+      .map(project => ({
+        projectId: project.projectId,
+        projectName: project.projectName,
+        account: project.account,
+        subProjects: project.subProjects
+          .filter(sub => !isBlockedSapProjectType(sub.projectType))
+          .map(sub => {
+            const existingList = existingBySubId.get(sub.subProjectId) || [];
+            const hasLocal = existingList.length > 0;
+            return {
+              subProjectId: sub.subProjectId,
+              subProjectName: sub.subProjectName,
+              dmName: sub.dmName,
+              pmName: sub.pmName,
+              projectType: sub.projectType,
+              existsLocally: hasLocal,
+              localProjectId: hasLocal ? existingList[0].id : undefined,
+              needsUpdate: hasLocal,
+            } satisfies SapSubProjectListItem;
+          }),
+      }))
+      .filter(project => project.subProjects.length > 0);
 
     return NextResponse.json({ projects });
   } catch (error) {

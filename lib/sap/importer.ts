@@ -10,6 +10,7 @@ import { createFailureRecorder, writeFailureLogFile } from './failure-log';
 import { findExistingProject, updateProjectFromSap, insertProjectFromSap } from './project-writer';
 import { createImportReport, type NewProjectReport } from './report-writer';
 import type { ModifiedReportEntry } from './sync-utils';
+import { isBlockedSapProjectType } from './project-type-rules';
 
 // ---------------------------------------------------------------------------
 // Manual Import
@@ -54,6 +55,9 @@ export async function runManualImport(params: ManualImportParams): Promise<Manua
       const subProject = parent.subProjects.find(s => s.subProjectId === subProjectId);
       if (!subProject) {
         failures.record('lookup', `Subproject ${subProjectId} not found in project ${projectId}`, projectId, subProjectId);
+        continue;
+      }
+      if (isBlockedSapProjectType(subProject.projectType)) {
         continue;
       }
 
@@ -196,7 +200,7 @@ export async function runCronSync(
   // Get all projects that came from SAP
   const { data: sapProjects, error: fetchError } = await supabase
     .from('projects')
-    .select('id, sap_subproject_id, sap_import_key, language_in, language_out, translation_area, system')
+    .select('id, sap_subproject_id, sap_import_key, language_in, language_out, translation_area, system, project_type')
     .eq('api_source', 'TPM_sap_api')
     .not('sap_subproject_id', 'is', null);
 
@@ -231,6 +235,10 @@ export async function runCronSync(
 
   for (const localProject of sapProjects) {
     try {
+      if (isBlockedSapProjectType(localProject.project_type)) {
+        continue;
+      }
+
       const sapData = subProjectToParent.get(localProject.sap_subproject_id);
       if (!sapData) continue;
 

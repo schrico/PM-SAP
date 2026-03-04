@@ -19,6 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { getInstructionsPreview } from "@/utils/instructionsPreview";
 
 interface ProjectWithTranslators {
   id: number;
@@ -274,17 +275,26 @@ export function ManagementCard({
                 finalDeadline={project.final_deadline}
               />
             </div>
-            <p
-              className={`text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate mt-1 ${onInstructionsClick ? "cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors" : ""}`}
-              onClick={(e) => {
-                if (onInstructionsClick) {
-                  e.stopPropagation();
-                  onInstructionsClick(project);
-                }
-              }}
-            >
-              Instructions: {project.instructions || "No instructions"}
-            </p>
+            {(() => {
+              const { displayText, hasAnyInstructions } = getInstructionsPreview({
+                instructions: project.instructions,
+                sapInstructions: project.sap_instructions,
+              });
+              const canOpenInstructions = !!onInstructionsClick && hasAnyInstructions;
+
+              return (
+                <p
+                  className={`text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs truncate mt-1 ${canOpenInstructions ? "cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors" : ""}`}
+                  onClick={(e) => {
+                    if (!canOpenInstructions) return;
+                    e.stopPropagation();
+                    onInstructionsClick(project);
+                  }}
+                >
+                  Instructions: {displayText}
+                </p>
+              );
+            })()}
           </div>
         );
       })}

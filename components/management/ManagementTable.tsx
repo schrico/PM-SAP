@@ -20,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { getInstructionsPreview } from "@/utils/instructionsPreview";
 
 interface ProjectWithTranslators {
   id: number;
@@ -312,19 +313,26 @@ export function ManagementTable({
     {
       header: "Instructions",
       className: "text-gray-500 dark:text-gray-400 text-xs md:text-sm max-w-xs",
-      render: (project: ProjectWithTranslators) => (
-        <span
-          className={`line-clamp-3 ${onInstructionsClick ? "cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors" : ""}`}
-          onClick={(e) => {
-            if (onInstructionsClick) {
+      render: (project: ProjectWithTranslators) => {
+        const { displayText, hasAnyInstructions } = getInstructionsPreview({
+          instructions: project.instructions,
+          sapInstructions: project.sap_instructions,
+        });
+        const canOpenInstructions = !!onInstructionsClick && hasAnyInstructions;
+
+        return (
+          <span
+            className={`line-clamp-3 ${canOpenInstructions ? "cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors" : ""}`}
+            onClick={(e) => {
+              if (!canOpenInstructions) return;
               e.stopPropagation();
               onInstructionsClick(project);
-            }
-          }}
-        >
-          {project.instructions || "No instructions"}
-        </span>
-      ),
+            }}
+          >
+            {displayText}
+          </span>
+        );
+      },
     },
     {
       header: "Actions",

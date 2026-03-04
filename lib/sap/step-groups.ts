@@ -23,6 +23,7 @@ import {
 } from './extract-fields';
 import { buildInstructions, buildSapInstructions } from './instructions';
 import { sanitizeString } from './mappers';
+import { isBlockedSapProjectType } from './project-type-rules';
 
 // ============================================================================
 // Step Joining (TRANSLFWL + TRANSLREGU)
@@ -160,6 +161,10 @@ export function mapSapSubProjectToProjects(
   instructions: SapInstruction[],
   exclusions: string[] = []
 ): SapProjectForImport[] {
+  if (isBlockedSapProjectType(subProject.projectType)) {
+    return [];
+  }
+
   const system = extractSystem(details.subProjectSteps, details.environment);
   const terminologyKeys = extractTerminologyKeys(details);
   const allTranslationAreas = extractTranslationAreas(details.environment);

@@ -6,6 +6,7 @@ import type { NextRequest } from 'next/server';
 import { getSapClient } from '@/lib/sap/client';
 import { createErrorResponse } from '@/lib/sap/errors';
 import { getAuthenticatedSupabase } from '@/lib/api/withAuth';
+import { isBlockedSapProjectType } from '@/lib/sap/project-type-rules';
 
 interface RouteParams {
   params: Promise<{ projectId: string }>;
@@ -40,6 +41,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { status: 404 }
       );
     }
+
+    project.subProjects = project.subProjects.filter(
+      sub => !isBlockedSapProjectType(sub.projectType)
+    );
 
     return NextResponse.json({ project });
   } catch (error) {

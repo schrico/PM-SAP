@@ -4,6 +4,7 @@ import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle } from "@/utils/projectTableHelpers";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
 import { formatProjectName } from "@/utils/formatters";
+import { getInstructionsPreview } from "@/utils/instructionsPreview";
 import type { ProjectWithTranslators } from "@/types/project";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
@@ -127,9 +128,13 @@ export function InvoicingTable({
     {
       header: "Instructions",
       className: "text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate",
-      render: (project: ProjectWithTranslators) => (
-        project.instructions || "No instructions"
-      ),
+      render: (project: ProjectWithTranslators) => {
+        const { displayText } = getInstructionsPreview({
+          instructions: project.instructions,
+          sapInstructions: project.sap_instructions,
+        });
+        return displayText;
+      },
     },
   ];
 
