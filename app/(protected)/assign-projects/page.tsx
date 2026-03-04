@@ -25,6 +25,11 @@ import { getUserFriendlyError } from "@/utils/toastHelpers";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import { useUser } from "@/hooks/user/useUser";
 import { useDefaultFilters } from "@/hooks/settings/useDefaultFilters";
+import {
+  getGroupSelectionState,
+  groupProjectsByExactName,
+} from "@/lib/projectGrouping";
+import { useProjectGroupExpansion } from "@/hooks/project/useProjectGroupExpansion";
 export default function AssignProjectsPage() {
   return (
     <RoleGuard routeId={RouteId.ASSIGN_PROJECTS}>
@@ -128,6 +133,17 @@ function AssignProjectsContent() {
     return projects;
   }, [allProjects, applyBaseFilters, assignmentFilter, projectTypeFilter]);
 
+  const groupedProjects = useMemo(
+    () => groupProjectsByExactName(filteredProjects),
+    [filteredProjects]
+  );
+
+  const { expandedGroups, toggleGroup, expandGroup, expandAll, collapseAll } =
+    useProjectGroupExpansion({
+      groups: groupedProjects,
+      defaultExpanded: false,
+    });
+
   const handleSelection = (projectId: number) => {
     const newSelection = new Set(selectedProjects);
     if (newSelection.has(projectId)) {
@@ -136,6 +152,25 @@ function AssignProjectsContent() {
       newSelection.add(projectId);
     }
     setSelectedProjects(newSelection);
+  };
+
+  const handleGroupSelection = (groupKey: string) => {
+    const group = groupedProjects.find((g) => g.key === groupKey);
+    if (!group) return;
+
+    const groupProjectIds = group.projects.map((project) => project.id);
+    const groupState = getGroupSelectionState(groupProjectIds, selectedProjects);
+
+    const nextSelection = new Set(selectedProjects);
+    if (groupState === "checked") {
+      groupProjectIds.forEach((id) => nextSelection.delete(id));
+    } else {
+      groupProjectIds.forEach((id) => nextSelection.add(id));
+      if (group.projects.length > 1) {
+        expandGroup(group.key);
+      }
+    }
+    setSelectedProjects(nextSelection);
   };
 
   const handleConfirmSelection = () => {
@@ -320,32 +355,53 @@ function AssignProjectsContent() {
             )}
           </div>
 
-          {/* Clear Filters Button */}
-          {hasActiveFilters && (
+          <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={clearAllFilters}
-              className="px-4 py-2 cursor-pointer rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-black text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400 transition-all flex items-center gap-2 text-sm shadow-sm shrink-0"
+              onClick={expandAll}
+              className="px-4 py-2 cursor-pointer rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-500 transition-all text-sm shadow-sm"
               type="button"
             >
-              <X className="w-4 h-4" />
-              Clear Filters
+              Expand all
             </button>
-          )}
+            <button
+              onClick={collapseAll}
+              className="px-4 py-2 cursor-pointer rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-500 transition-all text-sm shadow-sm"
+              type="button"
+            >
+              Collapse all
+            </button>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 cursor-pointer rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-black text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400 transition-all flex items-center gap-2 text-sm shadow-sm"
+                type="button"
+              >
+                <X className="w-4 h-4" />
+                Clear Filters
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Table or Card View */}
       {viewMode === "table" ?
         <ProjectAssignTable
-          projects={filteredProjects}
+          groups={groupedProjects}
+          expandedGroups={expandedGroups}
+          onToggleGroup={toggleGroup}
           selectedProjects={selectedProjects}
           onToggleProject={handleSelection}
+          onToggleGroupSelection={handleGroupSelection}
           onRowClick={handleSelection}
         />
       : <ProjectAssignCard
-          projects={filteredProjects}
+          groups={groupedProjects}
+          expandedGroups={expandedGroups}
+          onToggleGroup={toggleGroup}
           selectedProjects={selectedProjects}
           onToggleProject={handleSelection}
+          onToggleGroupSelection={handleGroupSelection}
         />
       }
 
