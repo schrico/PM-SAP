@@ -65,7 +65,7 @@ export function ProfileAvatar({
   onAvatarClick,
   showEditButton = true,
 }: ProfileAvatarProps) {
-  const [imageError, setImageError] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   const initials = useMemo(() => {
     if (!name?.trim()) return "??";
@@ -75,13 +75,8 @@ export function ProfileAvatar({
     return (first + last).toUpperCase();
   }, [name]);
 
-  // Reset image error state when avatar changes
-  useMemo(() => {
-    setImageError(false);
-  }, [avatar]);
-
   const avatarSrc = getAvatarSrc(avatar);
-  const showImage = avatarSrc && !imageError;
+  const showImage = !!avatarSrc && avatarSrc !== failedSrc;
   const isExternal = isCustomAvatar(avatar);
 
   return (
@@ -93,7 +88,7 @@ export function ProfileAvatar({
           width={96}
           height={96}
           className={`${sizeClasses[size]} rounded-full object-cover bg-gray-100 dark:bg-gray-800`}
-          onError={() => setImageError(true)}
+          onError={() => setFailedSrc(avatarSrc)}
           priority={size === "lg"}
           unoptimized={isExternal}
         />

@@ -6,11 +6,10 @@ import Link from "next/link";
 import { useUser } from "@/hooks/user/useUser";
 import { useUpdateProfile } from "@/hooks/user/useUpdateProfile";
 import { ProfileAvatar } from "./ProfileAvatar";
-import { ProfileFormField } from "./ProfileFormField";
 import { ProfileStatus } from "./ProfileStatus";
 import { AvatarSelectionModal } from "./AvatarSelectionModal";
 import { Loader2 as LoaderIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -83,7 +82,7 @@ export function ProfilePageContent() {
         : user.role === "pm" ? "Project Manager"
         : "Translator",
     };
-  }, [user]);
+  }, [user, form]);
 
   const hasChanges = useMemo(() => {
     const currentValues = form.getValues();
@@ -102,7 +101,7 @@ export function ProfilePageContent() {
         email: data.email,
       });
       setIsEditing(false);
-    } catch (error) {
+    } catch {
       // Error is handled by the mutation
     }
   };
@@ -111,6 +110,8 @@ export function ProfilePageContent() {
     form.reset(initialData);
     setIsEditing(false);
   };
+
+  const formValues = useWatch({ control: form.control });
 
   if (userLoading) {
     return (
@@ -130,8 +131,6 @@ export function ProfilePageContent() {
     );
   }
 
-  const formValues = form.watch();
-
   return (
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
@@ -150,16 +149,16 @@ export function ProfilePageContent() {
         <div className="p-8 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-6">
             <ProfileAvatar
-              name={formValues.name}
+              name={formValues.name || ""}
               avatar={user?.avatar}
               onAvatarClick={() => setAvatarModalOpen(true)}
             />
             <div>
               <h2 className="text-gray-900 dark:text-white mb-1 text-lg font-semibold">
-                {formValues.name}
+                {formValues.name || ""}
               </h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm">
-                {formValues.email}
+                {formValues.email || ""}
               </p>
             </div>
           </div>

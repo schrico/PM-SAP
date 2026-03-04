@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { ViewToggle } from "@/components/general/ViewToggle";
 import { MyProjectsTable } from "@/components/my-projects/MyProjectsTable";
 import { MyProjectsCard } from "@/components/my-projects/MyProjectsCard";
@@ -13,7 +12,6 @@ import { useMyProjects } from "@/hooks/project/useMyProjects";
 import type { ProjectAssignment } from "@/types/project-assignment";
 
 export default function MyProjectsPage() {
-  const router = useRouter();
   const { user, loading: userLoading } = useUser();
   const {
     unclaimedProjects,
@@ -52,7 +50,10 @@ export default function MyProjectsPage() {
       unclaimedProjects.length === 0 &&
       claimedProjects.length > 0
     ) {
-      setActiveTab("inProgress");
+      const timeout = setTimeout(() => {
+        setActiveTab("inProgress");
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [projectsLoading, unclaimedProjects.length, claimedProjects.length]);
 

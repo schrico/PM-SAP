@@ -32,7 +32,10 @@ export function ReminderModal({
 
   useEffect(() => {
     if (open) {
-      setMessage(initialValue ?? "");
+      const timeout = setTimeout(() => {
+        setMessage(initialValue ?? "");
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [open, initialValue]);
 

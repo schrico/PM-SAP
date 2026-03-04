@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2, AlertCircle, Download } from "lucide-react";
 import { useUser } from "@/hooks/user/useUser";
@@ -34,7 +34,6 @@ import { useManagementPageStore } from "@/lib/stores/useManagementPageStore";
 import type { SapInstructionEntry } from "@/types/project";
 
 type ProjectStatus = "all" | "ready" | "inProgress" | "unclaimed";
-type ViewMode = "table" | "card";
 
 export default function ProjectManagementPage() {
   return (
@@ -111,7 +110,10 @@ function ProjectManagementContent() {
     if (defaultFiltersLoading) return;
     const defaultPT = getDefaultFilter("project_type");
     if (defaultPT?.included_values && defaultPT.included_values.length > 0) {
-      setProjectTypeFilter(defaultPT.included_values);
+      const timeout = setTimeout(() => {
+        setProjectTypeFilter(defaultPT.included_values ?? []);
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [defaultFiltersLoading, getDefaultFilter]);
 
@@ -154,7 +156,7 @@ function ProjectManagementContent() {
   } = useProjectFilters(allProjects);
 
   // Determine project status based on translators
-  const getProjectStatus = (
+  const getProjectStatus = useCallback((
     project: (typeof allProjects)[0]
   ): ProjectStatus => {
     if (project.translators.length === 0) return "unclaimed";
@@ -167,7 +169,7 @@ function ProjectManagementContent() {
     );
     if (hasClaimed) return "inProgress";
     return "unclaimed";
-  };
+  }, []);
 
 
 
@@ -185,7 +187,7 @@ function ProjectManagementContent() {
     });
 
     return { ready, inProgress, unclaimed };
-  }, [allProjects]);
+  }, [allProjects, getProjectStatus]);
 
   // Create tabs
   const tabs = useMemo(

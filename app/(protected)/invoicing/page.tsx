@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { X, Loader2, AlertCircle } from "lucide-react";
 import { useUser } from "@/hooks/user/useUser";
 import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
@@ -33,7 +33,7 @@ export default function InvoicingPage() {
 }
 
 function InvoicingContent() {
-  const { user, loading: userLoading } = useUser();
+  const { loading: userLoading } = useUser();
   const queryClient = useQueryClient();
   const collapsed = useLayoutStore((state) => state.collapsed);
 
@@ -98,7 +98,7 @@ function InvoicingContent() {
   } = useProjectFilters(allProjectsRaw);
 
   // Get closest deadline for a project
-  const getClosestDeadline = (project: (typeof allProjectsRaw)[0]) => {
+  const getClosestDeadline = useCallback((project: (typeof allProjectsRaw)[0]) => {
     const deadlines = [
       project.final_deadline,
       project.interim_deadline,
@@ -113,7 +113,7 @@ function InvoicingContent() {
 
     if (deadlines.length === 0) return null;
     return new Date(Math.min(...deadlines.map((d) => d.getTime())));
-  };
+  }, []);
 
   // Categorize projects by invoicing status
   const categorizedProjects = useMemo(() => {
@@ -194,6 +194,7 @@ function InvoicingContent() {
     activeTab,
     hideFullyProcessed,
     applyBaseFilters,
+    getClosestDeadline,
   ]);
 
   // Mutations

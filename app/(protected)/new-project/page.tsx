@@ -103,16 +103,19 @@ function NewProjectPageContent() {
   // Update form data when source project loads
   useEffect(() => {
     if (sourceProject) {
-      setFormData({
-        name: `${sourceProject.name} (Copy)`,
-        system: sourceProject.system || "B0X",
-        words: sourceProject.words || 0,
-        lines: sourceProject.lines || 0,
-        dueDate: getClosestDeadline(sourceProject),
-        instructions: sourceProject.instructions || "",
-        sourceLanguage: sourceProject.language_in || "",
-        targetLanguage: sourceProject.language_out || "",
-      });
+      const timeout = setTimeout(() => {
+        setFormData({
+          name: `${sourceProject.name} (Copy)`,
+          system: sourceProject.system || "B0X",
+          words: sourceProject.words || 0,
+          lines: sourceProject.lines || 0,
+          dueDate: getClosestDeadline(sourceProject),
+          instructions: sourceProject.instructions || "",
+          sourceLanguage: sourceProject.language_in || "",
+          targetLanguage: sourceProject.language_out || "",
+        });
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [sourceProject]);
 

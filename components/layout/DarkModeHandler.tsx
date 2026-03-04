@@ -16,7 +16,10 @@ export function DarkModeHandler() {
   } = useLayoutStore();
   
   // Track system preference
-  const [systemPrefersDark, setSystemPrefersDark] = useState(false);
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
 
   // Initialize system preference and listen for changes
   useEffect(() => {
@@ -25,9 +28,6 @@ export function DarkModeHandler() {
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     
-    // Set initial system preference
-    setSystemPrefersDark(mediaQuery.matches);
-
     // Listen for system preference changes
     const handleChange = (e: MediaQueryListEvent) => {
       setSystemPrefersDark(e.matches);

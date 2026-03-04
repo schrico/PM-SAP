@@ -12,6 +12,10 @@ interface UploadResult {
   url: string;
 }
 
+interface StorageFileRow {
+  name: string;
+}
+
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_WIDTH_HEIGHT = 512; // Max dimensions for avatar
@@ -68,7 +72,7 @@ export function useUploadAvatar() {
         .list(user.id);
 
       if (existingFiles && existingFiles.length > 0) {
-        const filesToDelete = existingFiles.map((f: any) => `${user.id}/${f.name}`);
+        const filesToDelete = (existingFiles as StorageFileRow[]).map((f) => `${user.id}/${f.name}`);
         await supabase.storage.from("user-avatars").remove(filesToDelete);
       }
 

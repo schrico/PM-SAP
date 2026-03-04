@@ -24,9 +24,12 @@ export function TypewriterText({
 
   // Reset when text changes
   useEffect(() => {
-    setDisplayedText("");
-    setCurrentIndex(0);
-    setIsReady(false);
+    const timeout = setTimeout(() => {
+      setDisplayedText("");
+      setCurrentIndex(0);
+      setIsReady(false);
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [text, delay]);
 
   // Handle initial delay
@@ -52,4 +55,3 @@ export function TypewriterText({
 
   return <span className={className}>{displayedText}</span>;
 }
-

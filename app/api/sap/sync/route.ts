@@ -118,7 +118,8 @@ export async function POST(request: NextRequest) {
     lockAcquired = false;
 
     // Strip internal field before responding
-    const { hadSuccessfulSync: _, ...response } = result;
+    const { hadSuccessfulSync, ...response } = result;
+    void hadSuccessfulSync;
     return NextResponse.json(response);
   } catch (error) {
     if (lockAcquired && supabase) {

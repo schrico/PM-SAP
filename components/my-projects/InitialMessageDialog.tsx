@@ -1,6 +1,5 @@
 "use client";
 
-import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +33,7 @@ export function InitialMessageDialog({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between pr-8">
-            <span>Custom Instruction</span>
+            <span>Custom Instruction - {projectName}</span>
           </DialogTitle>
         </DialogHeader>
         <div className="py-4">

@@ -77,7 +77,7 @@ export function extractTerminologyKeys(details: SapSubProjectInfo): string[] {
 }
 
 /** Extract first number from each lxeProject entry (only for systems with LXE) */
-export function extractLxeProjects(env: SapEnvironment[], system: string): string[] {
+export function extractLxeProjects(env: SapEnvironment[]): string[] {
   const relevantEnvs = env.filter(e => e.lxeProject?.length > 0);
   const projects: string[] = [];
   for (const e of relevantEnvs) {

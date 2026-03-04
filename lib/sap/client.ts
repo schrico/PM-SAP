@@ -11,7 +11,6 @@ import {
   SapApiError,
   SapConfigError,
   SapTokenError,
-  parseSapError,
   isRetryableError,
 } from './errors';
 

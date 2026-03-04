@@ -13,7 +13,6 @@ export function useMyProjects(userId: string | null) {
   const {
     data: projectsData,
     isLoading: loading,
-    error,
   } = useQuery({
     queryKey: queryKeys.myProjects(userId),
     queryFn: async (): Promise<{ unclaimed: ProjectAssignment[]; claimed: ProjectAssignment[] }> => {
@@ -119,7 +118,7 @@ export function useMyProjects(userId: string | null) {
       queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.homeManageProjectsCount() });
     },
-    onError: (error: any, { status }) => {
+    onError: (_error: Error, { status }) => {
       const action = status === "claimed"
         ? "claim"
         : status === "rejected"

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Monitor, Sun, Moon, Check, Loader2 } from "lucide-react";
+import { Monitor, Sun, Moon, Check } from "lucide-react";
 import { useUser } from "@/hooks/user/useUser";
 import { useLayoutStore } from "@/lib/stores/useLayoutStore";
 import { useThemePreference, type ThemePreference } from "@/hooks/settings/useThemePreference";
@@ -10,11 +9,6 @@ export function ThemeSettings() {
   const { user } = useUser();
   const { themePreference } = useLayoutStore();
   const { updateTheme, isUpdating } = useThemePreference();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleThemeChange = (preference: ThemePreference) => {
     if (!user?.id || isUpdating) return;
@@ -26,14 +20,6 @@ export function ThemeSettings() {
     { value: "light", label: "Light", icon: Sun },
     { value: "dark", label: "Dark", icon: Moon },
   ];
-
-  if (!mounted) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -102,4 +88,3 @@ export function ThemeSettings() {
     </div>
   );
 }
-

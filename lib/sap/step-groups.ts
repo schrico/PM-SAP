@@ -17,7 +17,6 @@ import {
   extractWorkLists,
   extractGraphIds,
   extractUrl,
-  extractHours,
   extractSapPm,
   extractProjectType,
 } from './extract-fields';
@@ -168,7 +167,7 @@ export function mapSapSubProjectToProjects(
   const system = extractSystem(details.subProjectSteps, details.environment);
   const terminologyKeys = extractTerminologyKeys(details);
   const allTranslationAreas = extractTranslationAreas(details.environment);
-  const allLxeProjects = extractLxeProjects(details.environment, system);
+  const allLxeProjects = extractLxeProjects(details.environment);
   const allWorkLists = extractWorkLists(details.environment);
   const allGraphIds = extractGraphIds(details.environment);
   const url = extractUrl(details.subProjectSteps, details.environment, system);
@@ -372,7 +371,7 @@ export function mapSapSubProjectToProjects(
       // Extract TA from matching env or all envs
       const envTAs = matchingEnv ? extractTranslationAreas([matchingEnv]) : allTranslationAreas;
       const envLxeProjects = matchingEnv
-        ? extractLxeProjects([matchingEnv], system)
+        ? extractLxeProjects([matchingEnv])
         : allLxeProjects;
       const envGraphIds = matchingEnv ? extractGraphIds([matchingEnv]) : allGraphIds;
       const envWorkLists = matchingEnv ? extractWorkLists([matchingEnv]) : allWorkLists;

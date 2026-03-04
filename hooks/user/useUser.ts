@@ -8,7 +8,7 @@ import type { User } from '@/types/user';
 export function useUser() {
   const supabase = useSupabase();
 
-  const { data: user, isLoading: loading, error } = useQuery({
+  const { data: user, isLoading: loading } = useQuery({
     queryKey: queryKeys.user(),
     queryFn: async (): Promise<(User & { email: string; theme_preference?: string | null }) | null> => {
       const { data: userData } = await supabase.auth.getUser();

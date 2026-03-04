@@ -91,6 +91,7 @@ export function Sidebar() {
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
+    let collapseTimeout: ReturnType<typeof setTimeout> | undefined;
 
     if (!collapsed) {
       // expanding → wait before showing labels and starting animation
@@ -100,12 +101,15 @@ export function Sidebar() {
       }, 115);
     } else {
       // collapsing → hide labels immediately and reset animation
-      setShowLabels(false);
-      setShouldAnimate(false);
+      collapseTimeout = setTimeout(() => {
+        setShowLabels(false);
+        setShouldAnimate(false);
+      }, 0);
     }
 
     return () => {
       if (timeout) clearTimeout(timeout);
+      if (collapseTimeout) clearTimeout(collapseTimeout);
     };
   }, [collapsed]);
 

@@ -9,6 +9,10 @@ interface Avatar {
   display_name: string;
 }
 
+interface UsedAvatarRow {
+  avatar: string | null;
+}
+
 /**
  * Check if an avatar value is a custom upload (URL) vs predefined (filename)
  */
@@ -51,13 +55,13 @@ export function useAvailableAvatars() {
       // Filter out avatars that are already taken
       // Only consider predefined avatars (not custom uploads) as "in use"
       const usedFilenames = new Set(
-        (usedAvatars ?? [])
-          .map((u: any) => u.avatar)
-          .filter((avatar: any) => !isCustomAvatar(avatar))
+        ((usedAvatars ?? []) as UsedAvatarRow[])
+          .map((u) => u.avatar)
+          .filter((avatar) => !isCustomAvatar(avatar))
       );
 
-      return (allAvatars ?? []).filter(
-        (avatar: any) => !usedFilenames.has(avatar.filename)
+      return ((allAvatars ?? []) as Avatar[]).filter(
+        (avatar) => !usedFilenames.has(avatar.filename)
       );
     },
     staleTime: 1 * 60 * 1000, // 1 minute (shorter since availability changes)

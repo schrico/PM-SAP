@@ -66,13 +66,16 @@ export function AvatarSelectionModal({
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      setSelected(currentAvatar ?? null);
-      setShowConflictWarning(false);
-      setPreviewUrl(null);
-      setSelectedFile(null);
-      setUploadError(null);
-      // Set initial tab based on current avatar type
-      setActiveTab(isCustomAvatar(currentAvatar) ? "upload" : "predefined");
+      const timeout = setTimeout(() => {
+        setSelected(currentAvatar ?? null);
+        setShowConflictWarning(false);
+        setPreviewUrl(null);
+        setSelectedFile(null);
+        setUploadError(null);
+        // Set initial tab based on current avatar type
+        setActiveTab(isCustomAvatar(currentAvatar) ? "upload" : "predefined");
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [open, currentAvatar]);
 
@@ -88,8 +91,11 @@ export function AvatarSelectionModal({
   // Handle avatar update error - specifically race conditions
   useEffect(() => {
     if (updateAvatar.error instanceof AvatarAlreadyTakenError) {
-      setShowConflictWarning(true);
-      refetch();
+      const timeout = setTimeout(() => {
+        setShowConflictWarning(true);
+        refetch();
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [updateAvatar.error, refetch]);
 

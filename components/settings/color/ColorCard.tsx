@@ -16,7 +16,7 @@ export function ColorCard({ setting, onEdit, onDelete }: Props) {
   const previewColor = getColorPreview(setting.color_value);
   
   // Check if it's a light color to determine text color
-  const isLightColor = (color: string): boolean => {
+  const isLightColor = (): boolean => {
     // For Tailwind classes, check the shade number
     const parts = setting.color_value.split("-");
     if (parts.length === 2) {
@@ -30,7 +30,7 @@ export function ColorCard({ setting, onEdit, onDelete }: Props) {
     return false;
   };
 
-  const textColorClass = isLightColor(previewColor) ? "text-gray-800" : "text-white";
+  const textColorClass = isLightColor() ? "text-gray-800" : "text-white";
 
   return (
     <div className="border rounded-lg p-4 space-y-2 bg-card">

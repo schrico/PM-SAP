@@ -67,7 +67,7 @@ function AuthFormContent() {
           router.refresh();
         }
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -84,10 +84,12 @@ function AuthFormContent() {
           setShowVerifyPopup(true);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Show user-friendly error messages
       const errorMessage =
-        err.message || "An error occurred. Please try again.";
+        err instanceof Error ?
+          err.message
+        : "An error occurred. Please try again.";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

@@ -23,10 +23,16 @@ export function ImportReportNotifier() {
     if (isLoading || !isPmOrAdmin) return;
 
     if (!initialCheckDone && hasUnacknowledged) {
-      setShowModal(true);
-      setInitialCheckDone(true);
+      const timeout = setTimeout(() => {
+        setShowModal(true);
+        setInitialCheckDone(true);
+      }, 0);
+      return () => clearTimeout(timeout);
     } else if (!initialCheckDone) {
-      setInitialCheckDone(true);
+      const timeout = setTimeout(() => {
+        setInitialCheckDone(true);
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [hasUnacknowledged, isPmOrAdmin, initialCheckDone, isLoading]);
 

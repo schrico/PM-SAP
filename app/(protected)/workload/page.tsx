@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo, useCallback, Fragment } from "react";
 import {
   Loader2,
   AlertCircle,
@@ -130,11 +130,11 @@ function WorkloadContent() {
   }, [selectedPreset, customDate]);
 
   // Get final deadline for a project
-  const getFinalDeadline = (project: (typeof activeProjects)[0]) => {
+  const getFinalDeadline = useCallback((project: (typeof activeProjects)[0]) => {
     if (!project.final_deadline) return null;
     const date = new Date(project.final_deadline);
     return isNaN(date.getTime()) ? null : date;
-  };
+  }, []);
 
   // Filter projects by target date and calculate totals
   const workloadStats = useMemo(() => {
@@ -166,7 +166,7 @@ function WorkloadContent() {
       totalLines,
       projectCount: filteredProjects.length,
     };
-  }, [activeProjects, targetDate]);
+  }, [activeProjects, targetDate, getFinalDeadline]);
 
   const datePresets: { id: DatePreset; label: string }[] = [
     { id: "today", label: "Today" },

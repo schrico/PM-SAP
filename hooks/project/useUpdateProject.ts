@@ -80,7 +80,7 @@ export function useUpdateProject(projectId: number) {
       );
 
       return result;
-    } catch (error) {
+    } catch {
       toast.error("Failed to update project. Please try again.");
       return { conflictDetected: false, error: true };
     }

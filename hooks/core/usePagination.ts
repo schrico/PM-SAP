@@ -8,7 +8,7 @@ interface UsePaginationOptions {
 interface UsePaginationReturn {
   currentPage: number;
   totalPages: number;
-  paginatedItems: any[];
+  paginatedItems: unknown[];
   setCurrentPage: (page: number) => void;
   startIndex: number;
   endIndex: number;
@@ -21,7 +21,7 @@ interface UsePaginationReturn {
 export function usePagination<T>(
   items: T[],
   options: UsePaginationOptions = { totalItems: 0 }
-): UsePaginationReturn {
+): Omit<UsePaginationReturn, "paginatedItems"> & { paginatedItems: T[] } {
   const { itemsPerPage = 10, totalItems } = options;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -41,13 +41,19 @@ export function usePagination<T>(
   // Reset to page 1 when items change or if current page is invalid
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
+      const timeout = setTimeout(() => {
+        setCurrentPage(1);
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [currentPage, totalPages]);
 
   // Reset to page 1 when items array changes (e.g., filters change)
   useEffect(() => {
-    setCurrentPage(1);
+    const timeout = setTimeout(() => {
+      setCurrentPage(1);
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [items.length]);
 
   return {

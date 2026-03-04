@@ -23,7 +23,10 @@ export function DefaultFilterSettings({
   useEffect(() => {
     const existing = getFilter("project_type");
     if (existing?.included_values) {
-      setSelectedTypes(existing.included_values);
+      const timeout = setTimeout(() => {
+        setSelectedTypes(existing.included_values ?? []);
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [getFilter]);
 

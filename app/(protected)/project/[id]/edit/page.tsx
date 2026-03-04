@@ -157,12 +157,10 @@ export default function EditProjectPage() {
   const hasStoredOriginal = useRef(false);
 
   // Include project's current system in the list if it's not already there
-  const SYSTEMS = React.useMemo(() => {
-    if (project?.system && !BASE_SYSTEMS.includes(project.system)) {
-      return [project.system, ...BASE_SYSTEMS];
-    }
-    return BASE_SYSTEMS;
-  }, [project?.system]);
+  const SYSTEMS =
+    project?.system && !BASE_SYSTEMS.includes(project.system) ?
+      [project.system, ...BASE_SYSTEMS]
+    : BASE_SYSTEMS;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
@@ -251,13 +249,16 @@ export default function EditProjectPage() {
       // Reset with loaded data so fields show current values and form is clean
       form.reset(formValues);
     }
-  }, [form, formValues, project?.id]);
+  }, [form, formValues, project]);
 
   // Store the original project data when first loaded
   useEffect(() => {
     if (project && !hasStoredOriginal.current) {
-      setOriginalProject(project);
+      const timeout = setTimeout(() => {
+        setOriginalProject(project);
+      }, 0);
       hasStoredOriginal.current = true;
+      return () => clearTimeout(timeout);
     }
   }, [project]);
 
@@ -314,8 +315,11 @@ export default function EditProjectPage() {
 
     const detectedConflicts = detectConflicts();
     if (detectedConflicts.length > 0 && !showConflictModal) {
-      setConflicts(detectedConflicts);
-      setShowConflictModal(true);
+      const timeout = setTimeout(() => {
+        setConflicts(detectedConflicts);
+        setShowConflictModal(true);
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [project, detectConflicts, originalProject, showConflictModal]);
 
@@ -441,7 +445,7 @@ export default function EditProjectPage() {
         return val.split(",").map((s) => s.trim()).filter(Boolean);
       };
 
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         name: values.name,
         system: values.system,
         status: values.status,
@@ -1292,7 +1296,7 @@ export default function EditProjectPage() {
                     No translators assigned yet
                   </p>
                   <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
-                    Click "Add" to assign translators to this project
+                    Click &quot;Add&quot; to assign translators to this project
                   </p>
                 </div>
               )}

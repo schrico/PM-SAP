@@ -101,7 +101,7 @@ export function useUpdateAssignment(projectId: number, userId: string) {
       );
 
       return result;
-    } catch (error) {
+    } catch {
       toast.error("Failed to update assignment. Please try again.");
       return { conflictDetected: false, error: true };
     }

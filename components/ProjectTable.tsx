@@ -6,7 +6,6 @@ import { pt } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
 import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
 import { useColorSettings } from "@/hooks/settings/useColorSettings";
-import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
 import type { ProjectWithTranslators } from "@/types/project";
 import { formatRoleDisplay } from "@/utils/formatters";
 

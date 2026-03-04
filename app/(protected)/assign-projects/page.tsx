@@ -78,7 +78,10 @@ function AssignProjectsContent() {
     if (defaultFiltersLoading) return;
     const defaultPT = getDefaultFilter("project_type");
     if (defaultPT?.included_values && defaultPT.included_values.length > 0) {
-      setProjectTypeFilter(defaultPT.included_values);
+      const timeout = setTimeout(() => {
+        setProjectTypeFilter(defaultPT.included_values ?? []);
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [defaultFiltersLoading, getDefaultFilter]);
 

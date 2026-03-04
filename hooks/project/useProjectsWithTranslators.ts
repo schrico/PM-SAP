@@ -5,6 +5,21 @@ import { useSupabase } from '@/hooks/core/useSupabase';
 import type { ProjectWithTranslators, ProjectTranslator } from '@/types/project';
 import { queryKeys } from "@/lib/queryKeys";
 
+interface AssignmentUserRow {
+  id: string;
+  name: string;
+  short_name: string | null;
+  role: string;
+  avatar: string | null;
+}
+
+interface ProjectAssignmentRow {
+  project_id: number;
+  assignment_status: ProjectTranslator["assignment_status"];
+  done_message: string | null;
+  users: AssignmentUserRow | null;
+}
+
 export function useProjectsWithTranslators(
   showPast: boolean = false,
   showAll: boolean = false,
@@ -51,14 +66,14 @@ export function useProjectsWithTranslators(
             role,
             avatar
           )
-        `) as any;
+        `);
 
       if (assignmentsError) {
         throw new Error(`Failed to fetch project assignments: ${assignmentsError.message}`);
       }
 
       // Group assignments by project_id
-      const assignmentsByProject = (assignments || []).reduce((acc: Record<number, ProjectTranslator[]>, assignment: any) => {
+      const assignmentsByProject = ((assignments ?? []) as ProjectAssignmentRow[]).reduce((acc: Record<number, ProjectTranslator[]>, assignment) => {
         const projectId = assignment.project_id;
         if (!acc[projectId]) {
           acc[projectId] = [];
@@ -78,7 +93,8 @@ export function useProjectsWithTranslators(
       }, {});
 
       // Combine projects with their translators
-      const projectsWithTranslators: ProjectWithTranslators[] = projects.map((project: any) => ({
+      const typedProjects = projects as Omit<ProjectWithTranslators, "translators">[];
+      const projectsWithTranslators: ProjectWithTranslators[] = typedProjects.map((project) => ({
         ...project,
         translators: assignmentsByProject[project.id] || []
       }));

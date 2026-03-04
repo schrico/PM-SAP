@@ -5,12 +5,23 @@ import { useSupabase } from '@/hooks/core/useSupabase';
 import { getBgClass, getTextClass, getColorPreview } from "@/utils/tailwindColors";
 import { queryKeys } from "@/lib/queryKeys";
 
+interface ColorSettingRow {
+  id: number;
+  setting_key: string;
+  category: "system" | "status" | "language";
+  color_value: string;
+  system_name: string | null;
+  status_key: string | null;
+  language_in: string | null;
+  language_out: string | null;
+}
+
 export function useColorSettings() {
   const supabase = useSupabase();
 
   const { data: settings = [], isLoading: loading, error } = useQuery({
     queryKey: queryKeys.colorSettings(),
-    queryFn: async () => {
+    queryFn: async (): Promise<ColorSettingRow[]> => {
       const { data, error } = await supabase
         .from("color_settings")
         .select("*")
@@ -27,17 +38,17 @@ export function useColorSettings() {
 
   // Get color value (tailwind class like "blue-500") for a system
   function getSystemColor(system: string): string {
-    return settings.find((s: any) => s.category === "system" && s.system_name === system)?.color_value || "";
+    return settings.find((s) => s.category === "system" && s.system_name === system)?.color_value || "";
   }
 
   // Get color value for a status
   function getStatusColor(status: string): string {
-    return settings.find((s: any) => s.category === "status" && s.status_key === status)?.color_value || "";
+    return settings.find((s) => s.category === "status" && s.status_key === status)?.color_value || "";
   }
 
   // Get color value for a language pair
   function getLanguageColor(langIn: string, langOut: string): string {
-    return settings.find((s: any) => s.category === "language" && s.language_in === langIn && s.language_out === langOut)?.color_value || "";
+    return settings.find((s) => s.category === "language" && s.language_in === langIn && s.language_out === langOut)?.color_value || "";
   }
 
   // Get Tailwind background class for a system

@@ -56,7 +56,7 @@ export function DoneDialog({
           <p className="text-sm text-gray-600 dark:text-gray-400">
             You are about to mark{" "}
             <span className="font-medium text-gray-900 dark:text-white">
-              "{projectName}"
+              &quot;{projectName}&quot;
             </span>{" "}
             as done.
           </p>

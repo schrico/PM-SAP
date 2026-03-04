@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -61,7 +60,7 @@ export function RefusalDialog({
         <div className="space-y-4 py-4">
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Please provide a reason for refusing "{projectName}" (minimum 10
+              Please provide a reason for refusing &quot;{projectName}&quot; (minimum 10
               characters):
             </p>
             <textarea

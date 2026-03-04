@@ -126,10 +126,6 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
   const importReportListenersRef = useRef<Set<() => void>>(new Set());
   const currentUserIdRef = useRef<string | null>(null);
 
-  // Stable refs so the effect handler never goes stale
-  const queryClientRef = useRef(queryClient);
-  queryClientRef.current = queryClient;
-
   // Cache current user ID
   useEffect(() => {
     supabase.auth.getUser().then(({ data }: { data: { user: { id: string } | null } }) => {
@@ -160,7 +156,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
       const eventType = (msg.event as string)?.toUpperCase() as BroadcastEvent;
       const record = payload.record ?? {};
       const oldRecord = payload.old_record ?? {};
-      const qc = queryClientRef.current;
+      const qc = queryClient;
 
       console.debug(`[Realtime] ${eventType} on ${payload.table}`, { record, oldRecord });
 
@@ -218,7 +214,7 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
         setIsConnected(false);
       }
     };
-  }, [supabase]); // Only depends on the stable supabase singleton
+  }, [supabase, queryClient]); // Only depends on stable clients
 
   return (
     <RealtimeContext.Provider value={{ isConnected, onImportReport }}>
