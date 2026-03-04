@@ -1347,8 +1347,46 @@ all Examples are from GET “https://lpxtpmsub-tpm.ingress.prod.lp.shoot.live.k8
 ## Example 9:
 
 ```json
-
+{
+    "subProjectId": "9079-25",
+    "subProjectName": "Upd_RESUB_Feb_A_NCE_ptPT",
+    "terminologyKey": [
+        "000381"
+    ],
+    "environment": [
+        {
+            "contentId": "000001",
+            "environmentName": "Smartling",
+            "toolType": "SMARTLING",
+            "toolTypeDescription": "Smartling",
+            "projectUrl": "https://dashboard.smartling.com/app/projects/a4770ff93/account-jobs/a4770ff93:v04oevhatix2/workflows",
+            "is_xtm": false,
+            "content_name": "Upd_RESUB_Feb_A_NCE_ptPT",
+            "external_project_id": "0000000000"
+        }
+    ],
+    "subProjectSteps": [
+        {
+            "contentId": "000001",
+            "serviceStep": "TRANSLATE",
+            "stepText": "Translate",
+            "slsLang": "ptPT",
+            "sourceLang": "enUS",
+            "tGroup": "TE",
+            "startDate": "2026-02-18T00:00:00.000Z",
+            "endDate": "2026-02-20T16:00:00.000Z",
+            "hasInstructions": true,
+            "stepStatusId": "400",
+            "stepStatusDescription": "Invoiced"
+        }
+    ]
+}
 ```
 
+## Relevant info:
+
+- if tooltype "SMARTLING":
+    - put system as "SMARTLING"
+    - projecturl save into url
 
 7018-1 (XTM todo maluco)
