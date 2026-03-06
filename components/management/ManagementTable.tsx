@@ -219,7 +219,7 @@ export function ManagementTable({
                                 type="number"
                                 value={editWords}
                                 onChange={(e) => onEditWordsChange(e.target.value)}
-                                className="w-20 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-24 px-3 py-2 text-sm text-right border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                 min="0"
                               />
                             : <button
@@ -230,10 +230,10 @@ export function ManagementTable({
                                     project.lines
                                   )
                                 }
-                                className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
+                                className="inline-flex min-h-9 min-w-[72px] items-center justify-end rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer transition-colors hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                                 type="button"
                               >
-                                {project.words ? formatNumber(project.words) : "-"}
+                                {project.words != null ? formatNumber(project.words) : "-"}
                               </button>
                             }
                           </div>
@@ -246,7 +246,7 @@ export function ManagementTable({
                                   type="number"
                                   value={editLines}
                                   onChange={(e) => onEditLinesChange(e.target.value)}
-                                  className="w-20 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                  className="w-24 px-3 py-2 text-sm text-right border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                   min="0"
                                 />
                                 <button
@@ -273,10 +273,10 @@ export function ManagementTable({
                                     project.lines
                                   )
                                 }
-                                className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
+                                className="inline-flex min-h-9 min-w-[72px] items-center justify-end rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer transition-colors hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                                 type="button"
                               >
-                                {project.lines ? formatNumber(project.lines) : "-"}
+                                {project.lines != null ? formatNumber(project.lines) : "-"}
                               </button>
                             }
                           </div>
