@@ -6,6 +6,7 @@ import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle } from "@/utils/projectTableHelpers";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
+import { ProjectColorLegendTooltip } from "@/components/shared/ProjectColorLegendTooltip";
 import type { ProjectAssignment } from "@/types/project-assignment";
 
 interface MyProjectsCardProps {
@@ -70,19 +71,27 @@ export function MyProjectsCard({
             onClick={(e) => handleCardClick(project.id, e)}
           >
             <div className="flex items-center mb-4">
-              <div className="flex flex-col items-center shrink-0 mr-2">
-                <div
-                  className="w-3 h-3 rounded"
-                  style={getSystemColorStyleLocal(project.system)}
-                />
-                <div
-                  className="w-3 h-0.5 mt-0.5"
-                  style={getLanguageColorStyleLocal(
-                    project.language_in || "",
-                    project.language_out || ""
-                  )}
-                />
-              </div>
+              <ProjectColorLegendTooltip
+                status={project.status}
+                system={project.system}
+                langIn={project.language_in}
+                langOut={project.language_out}
+                className="shrink-0 mr-2"
+              >
+                <div className="flex flex-col items-center">
+                  <div
+                    className="w-3 h-3 rounded"
+                    style={getSystemColorStyleLocal(project.system)}
+                  />
+                  <div
+                    className="w-3 h-1 mt-0.5"
+                    style={getLanguageColorStyleLocal(
+                      project.language_in || "",
+                      project.language_out || ""
+                    )}
+                  />
+                </div>
+              </ProjectColorLegendTooltip>
               <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs md:text-sm">
                 {project.system}
               </span>
@@ -150,3 +159,6 @@ export function MyProjectsCard({
     </div>
   );
 }
+
+
+

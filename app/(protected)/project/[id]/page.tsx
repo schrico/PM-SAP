@@ -506,6 +506,7 @@ export default function ProjectPage() {
 
   // Determine translator's assignment status for action buttons
   const assignmentStatus = translatorAssignment?.assignment_status;
+  const hasProjectNotes = !!project.project_notes?.trim();
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -621,18 +622,18 @@ export default function ProjectPage() {
               </div>
             </div>
           )}
-          <ProjectDetailsCard project={project} />
-          <ProjectInstructionsCard
-            instructions={project.instructions}
-            sapInstructions={project.sap_instructions}
-          />
-          {!canManageAssignments() && (
+          <ProjectDetailsCard project={project} showFinancial={canManageAssignments()} />
+          {!canManageAssignments() && hasProjectNotes && (
             <ProjectNotesCard
               projectId={project.id}
               notes={project.project_notes}
               canEdit={false}
             />
           )}
+          <ProjectInstructionsCard
+            instructions={project.instructions}
+            sapInstructions={canManageAssignments() ? project.sap_instructions : null}
+          />
         </div>
 
         {/* Right Column - Translators (PM/Admin only) */}

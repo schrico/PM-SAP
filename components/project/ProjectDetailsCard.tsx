@@ -1,12 +1,13 @@
 "use client";
 
-import { FileText, Calendar, FileDown, FileUp, Receipt, Link, Tag, Layers, List, Hash, FolderOpen, Timer, StickyNote } from "lucide-react";
+import { FileText, Calendar, FileDown, FileUp, Receipt, Link, Tag, Layers, List, Hash, FolderOpen, Timer } from "lucide-react";
 import { formatNumber } from "@/utils/formatters";
 import { format } from "date-fns";
 import type { ProjectWithTranslatorDetails } from "@/types/project";
 
 interface ProjectDetailsCardProps {
   project: ProjectWithTranslatorDetails;
+  showFinancial?: boolean;
 }
 
 function DetailItem({
@@ -47,11 +48,16 @@ function SectionDivider() {
   return <div className="border-t border-gray-100 dark:border-gray-700/50" />;
 }
 
-export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
+export function ProjectDetailsCard({
+  project,
+  showFinancial = true,
+}: ProjectDetailsCardProps) {
   // Section visibility checks
   const hasDeadlines = !!(project.initial_deadline || project.interim_deadline || project.final_deadline);
   const hasMetrics = !!(project.words != null || project.lines != null || (project.hours != null && project.hours > 0));
+  const hasLanguages = !!(project.language_in || project.language_out);
   const hasSapMetadata = !!(
+    project.sap_pm ||
     project.url ||
     (project.terminology_key && project.terminology_key.length > 0) ||
     (project.translation_area && project.translation_area.length > 0) ||
@@ -70,7 +76,7 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
       </h2>
 
       <div className="space-y-6">
-        {/* Overview — always visible (status always exists) */}
+        {/* Overview - always visible (status always exists) */}
         <div>
           <SectionHeader title="Overview" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -83,26 +89,31 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
                 {project.project_type}
               </DetailItem>
             )}
-
-            {project.sap_pm && (
-              <DetailItem icon={FileText} iconBg="bg-amber-100 dark:bg-amber-900/30" iconColor="text-amber-600 dark:text-amber-400" label="SAP PM">
-                {project.sap_pm}
-              </DetailItem>
-            )}
-
-            {project.language_in && (
-              <DetailItem icon={FileDown} iconBg="bg-pink-100 dark:bg-pink-900/30" iconColor="text-pink-600 dark:text-pink-400" label="Source Language">
-                {project.language_in}
-              </DetailItem>
-            )}
-
-            {project.language_out && (
-              <DetailItem icon={FileUp} iconBg="bg-teal-100 dark:bg-teal-900/30" iconColor="text-teal-600 dark:text-teal-400" label="Target Language">
-                {project.language_out}
-              </DetailItem>
-            )}
           </div>
         </div>
+
+        {/* Languages */}
+        {hasLanguages && (
+          <>
+            <SectionDivider />
+            <div>
+              <SectionHeader title="Languages" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {project.language_in && (
+                  <DetailItem icon={FileDown} iconBg="bg-pink-100 dark:bg-pink-900/30" iconColor="text-pink-600 dark:text-pink-400" label="Source Language">
+                    {project.language_in}
+                  </DetailItem>
+                )}
+
+                {project.language_out && (
+                  <DetailItem icon={FileUp} iconBg="bg-teal-100 dark:bg-teal-900/30" iconColor="text-teal-600 dark:text-teal-400" label="Target Language">
+                    {project.language_out}
+                  </DetailItem>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Deadlines */}
         {hasDeadlines && (
@@ -162,23 +173,6 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
           </>
         )}
 
-        {/* Financial */}
-        <>
-          <SectionDivider />
-          <div>
-            <SectionHeader title="Financial" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DetailItem icon={Receipt} iconBg="bg-green-100 dark:bg-green-900/30" iconColor="text-green-600 dark:text-green-400" label="Paid">
-                {project.paid ? "Yes" : "No"}
-              </DetailItem>
-
-              <DetailItem icon={Receipt} iconBg="bg-blue-100 dark:bg-blue-900/30" iconColor="text-blue-600 dark:text-blue-400" label="Invoiced">
-                {project.invoiced ? "Yes" : "No"}
-              </DetailItem>
-            </div>
-          </div>
-        </>
-
         {/* SAP Metadata */}
         {hasSapMetadata && (
           <>
@@ -236,20 +230,32 @@ export function ProjectDetailsCard({ project }: ProjectDetailsCardProps) {
                     {project.lxe_projects.join(", ")}
                   </DetailItem>
                 )}
+
+                {project.sap_pm && (
+                  <DetailItem icon={FileText} iconBg="bg-amber-100 dark:bg-amber-900/30" iconColor="text-amber-600 dark:text-amber-400" label="SAP PM">
+                    {project.sap_pm}
+                  </DetailItem>
+                )}
               </div>
             </div>
           </>
         )}
 
-        {/* Project Notes */}
-        {project.project_notes && (
+        {/* Financial */}
+        {showFinancial && (
           <>
             <SectionDivider />
             <div>
-              <SectionHeader title="Notes" />
-              <DetailItem icon={StickyNote} iconBg="bg-amber-100 dark:bg-amber-900/30" iconColor="text-amber-600 dark:text-amber-400" label="Project Notes">
-                <p className="whitespace-pre-wrap">{project.project_notes}</p>
-              </DetailItem>
+              <SectionHeader title="Financial" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DetailItem icon={Receipt} iconBg="bg-green-100 dark:bg-green-900/30" iconColor="text-green-600 dark:text-green-400" label="Paid">
+                  {project.paid ? "Yes" : "No"}
+                </DetailItem>
+
+                <DetailItem icon={Receipt} iconBg="bg-blue-100 dark:bg-blue-900/30" iconColor="text-blue-600 dark:text-blue-400" label="Invoiced">
+                  {project.invoiced ? "Yes" : "No"}
+                </DetailItem>
+              </div>
             </div>
           </>
         )}

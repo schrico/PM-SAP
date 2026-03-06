@@ -54,13 +54,25 @@ export function extractSystem(steps: SapStep[], environment?: SapEnvironment[]):
     return 'SMARTLING';
   }
 
+  // 5. TERM toolType
+  if (toolType === 'TERM') {
+    return 'STM';
+  }
+
+  // 6. Unknown environment toolType -> keep raw API value
+  if (envWithTool?.toolType?.trim()) {
+    return envWithTool.toolType.trim();
+  }
+
   // Fallback: try step-level toolType
   const stepWithTool = steps.find(s => s.toolType);
   if (stepWithTool?.toolType) {
     const stepToolType = stepWithTool.toolType.toUpperCase();
-    if (stepToolType === 'SAP') return 'Unknown';
+    if (stepToolType === 'SAP') return stepWithTool.toolType.trim();
     if (stepToolType === 'XTM_PM' || stepToolType === 'XTM') return 'XTM';
     if (stepToolType === 'SMARTLING') return 'SMARTLING';
+    if (stepToolType === 'TERM') return 'STM';
+    return stepWithTool.toolType.trim();
   }
 
   return 'Unknown';
@@ -177,3 +189,5 @@ export function extractSapPm(subProject: SapSubProject): string | null {
 export function extractProjectType(subProject: SapSubProject): string | null {
   return subProject.projectType || null;
 }
+
+

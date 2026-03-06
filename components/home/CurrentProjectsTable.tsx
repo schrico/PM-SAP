@@ -5,6 +5,7 @@ import { formatNumber } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle, getStatusIcon } from "@/utils/projectTableHelpers";
 import { ProjectTableBase } from "@/components/shared/ProjectTableBase";
+import { ProjectColorLegendTooltip } from "@/components/shared/ProjectColorLegendTooltip";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import {
@@ -58,19 +59,26 @@ export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
       header: "",
       className: "w-4",
       render: (project: ProjectWithTranslators) => (
-        <div className="flex flex-col items-center">
-          <div
-            className="w-3 h-3 rounded"
-            style={getSystemColorStyleLocal(project.system)}
-          />
-          <div
-            className="w-3 h-0.5 mt-0.5"
-            style={getLanguageColorStyleLocal(
-              project.language_in || "",
-              project.language_out || ""
-            )}
-          />
-        </div>
+        <ProjectColorLegendTooltip
+          status={project.status}
+          system={project.system}
+          langIn={project.language_in}
+          langOut={project.language_out}
+        >
+          <div className="flex flex-col items-center">
+            <div
+              className="w-3 h-3 rounded"
+              style={getSystemColorStyleLocal(project.system)}
+            />
+            <div
+              className="w-3 h-1 mt-0.5"
+              style={getLanguageColorStyleLocal(
+                project.language_in || "",
+                project.language_out || ""
+              )}
+            />
+          </div>
+        </ProjectColorLegendTooltip>
       ),
     },
     {
@@ -183,3 +191,6 @@ export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
     />
   );
 }
+
+
+

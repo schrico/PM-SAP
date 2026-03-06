@@ -9,6 +9,7 @@ import { getInstructionsPreview } from "@/utils/instructionsPreview";
 import type { ProjectWithTranslators } from "@/types/project";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
+import { ProjectColorLegendTooltip } from "@/components/shared/ProjectColorLegendTooltip";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { ProjectGroup } from "@/lib/projectGrouping";
 import {
@@ -129,10 +130,17 @@ export function InvoicingTable({
                           />
                         </td>
                         <td className="px-6 py-4">
-                          <div
-                            className="w-3 h-3 rounded"
-                            style={getSystemColorStyleLocal(project.system)}
-                          />
+                          <ProjectColorLegendTooltip
+                            status={project.status}
+                            system={project.system}
+                            langIn={project.language_in}
+                            langOut={project.language_out}
+                          >
+                            <div
+                              className="w-3 h-3 rounded"
+                              style={getSystemColorStyleLocal(project.system)}
+                            />
+                          </ProjectColorLegendTooltip>
                         </td>
                         <td className="px-6 py-4">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm">
@@ -215,3 +223,4 @@ export function InvoicingTable({
     </div>
   );
 }
+

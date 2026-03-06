@@ -9,6 +9,7 @@ import { getSystemColorStyle, getLanguageColorStyle, getStatusIcon } from "@/uti
 import { ProjectActionsMenu } from "./ProjectActionsMenu";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
+import { ProjectColorLegendTooltip } from "@/components/shared/ProjectColorLegendTooltip";
 import {
   Tooltip,
   TooltipContent,
@@ -180,19 +181,26 @@ export function ManagementTable({
                         onClick={(e) => handleRowClick(project, e)}
                       >
                         <td className="px-6 py-4">
-                          <div className="flex flex-col items-center">
-                            <div
-                              className="w-3 h-3 rounded"
-                              style={getSystemColorStyleLocal(project.system)}
-                            />
-                            <div
-                              className="w-3 h-0.5 mt-0.5"
-                              style={getLanguageColorStyleLocal(
-                                project.language_in || "",
-                                project.language_out || ""
-                              )}
-                            />
-                          </div>
+                          <ProjectColorLegendTooltip
+                            status={project.status}
+                            system={project.system}
+                            langIn={project.language_in}
+                            langOut={project.language_out}
+                          >
+                            <div className="flex flex-col items-center">
+                              <div
+                                className="w-3 h-3 rounded"
+                                style={getSystemColorStyleLocal(project.system)}
+                              />
+                              <div
+                                className="w-3 h-1 mt-0.5"
+                                style={getLanguageColorStyleLocal(
+                                  project.language_in || "",
+                                  project.language_out || ""
+                                )}
+                              />
+                            </div>
+                          </ProjectColorLegendTooltip>
                         </td>
                         <td className="px-6 py-4">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-gray-900 dark:text-blue-400 text-sm">
@@ -413,3 +421,8 @@ export function ManagementTable({
     </div>
   );
 }
+
+
+
+
+

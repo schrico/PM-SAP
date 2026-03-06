@@ -14,6 +14,7 @@ import { getSystemColorStyle, getLanguageColorStyle, getStatusIcon } from "@/uti
 import { ProjectActionsMenu } from "./ProjectActionsMenu";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
+import { ProjectColorLegendTooltip } from "@/components/shared/ProjectColorLegendTooltip";
 import {
   Tooltip,
   TooltipContent,
@@ -124,19 +125,27 @@ export function ManagementCard({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <div className="flex flex-col items-center mr-2">
-            <div
-              className="w-3 h-3 rounded"
-              style={getSystemColorStyleLocal(project.system)}
-            />
-            <div
-              className="w-3 h-0.5 mt-0.5"
-              style={getLanguageColorStyleLocal(
-                project.language_in || "",
-                project.language_out || ""
-              )}
-            />
-          </div>
+          <ProjectColorLegendTooltip
+            status={project.status}
+            system={project.system}
+            langIn={project.language_in}
+            langOut={project.language_out}
+            className="mr-2"
+          >
+            <div className="flex flex-col items-center">
+              <div
+                className="w-3 h-3 rounded"
+                style={getSystemColorStyleLocal(project.system)}
+              />
+              <div
+                className="w-3 h-1 mt-0.5"
+                style={getLanguageColorStyleLocal(
+                  project.language_in || "",
+                  project.language_out || ""
+                )}
+              />
+            </div>
+          </ProjectColorLegendTooltip>
           <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs md:text-sm">
             {project.system}
           </span>
@@ -354,3 +363,6 @@ export function ManagementCard({
     </div>
   );
 }
+
+
+

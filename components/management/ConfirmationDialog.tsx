@@ -46,6 +46,8 @@ export function ConfirmationDialog({
     onOpenChange(false);
   };
 
+  const isStringDescription = typeof description === "string";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -54,7 +56,13 @@ export function ConfirmationDialog({
             <AlertTriangle className="w-6 h-6 text-orange-500" />
             <DialogTitle>{title}</DialogTitle>
           </div>
-          <DialogDescription className="pt-2">{description}</DialogDescription>
+          {isStringDescription ? (
+            <DialogDescription className="pt-2">{description}</DialogDescription>
+          ) : (
+            <DialogDescription asChild className="pt-2">
+              <div>{description}</div>
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         <DialogFooter>
@@ -66,9 +74,9 @@ export function ConfirmationDialog({
             disabled={isLoading}
             variant={variant === "destructive" ? "destructive" : "default"}
             className={
-              variant === "success" ?
-                "bg-green-500 hover:bg-green-600 text-white"
-              : undefined
+              variant === "success"
+                ? "bg-green-500 hover:bg-green-600 text-white"
+                : undefined
             }
           >
             {isLoading ? "Processing..." : confirmText}

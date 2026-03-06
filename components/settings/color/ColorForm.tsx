@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { createBrowserClient } from "@supabase/ssr";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormField,
@@ -141,9 +140,27 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
       .replace(/^_+|_+$/g, "");
   }
 
+  function buildDescription(values: Partial<ColorFormValues>): string | null {
+    if (values.category === "system" && values.system_name?.trim()) {
+      return `System: ${values.system_name.trim()}`;
+    }
+    if (values.category === "status" && values.status_key?.trim()) {
+      return `Status: ${values.status_key.trim()}`;
+    }
+    if (
+      values.category === "language" &&
+      values.language_in?.trim() &&
+      values.language_out?.trim()
+    ) {
+      return `Lang: ${values.language_in.trim()} -> ${values.language_out.trim()}`;
+    }
+    return null;
+  }
+
   const onSubmit = async (values: ColorFormValues) => {
     const payload: Record<string, unknown> = {
       ...values,
+      description: buildDescription(values),
       updated_at: new Date().toISOString(),
     };
 
@@ -360,23 +377,6 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description (optional)</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <Button type="submit" className="w-full">
           {isEdit ? "Update Color" : "Add Color"}
@@ -385,3 +385,6 @@ export function ColorForm({ editing, onDone, closeDialog }: Props) {
     </Form>
   );
 }
+
+
+

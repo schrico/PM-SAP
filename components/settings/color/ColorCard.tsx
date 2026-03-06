@@ -31,6 +31,12 @@ export function ColorCard({ setting, onEdit, onDelete }: Props) {
   };
 
   const textColorClass = isLightColor() ? "text-gray-800" : "text-white";
+  const generatedDescription =
+    setting.category === "system"
+      ? `System: ${setting.system_name ?? ""}`
+      : setting.category === "status"
+        ? `Status: ${setting.status_key ?? ""}`
+        : `Lang: ${setting.language_in ?? ""} -> ${setting.language_out ?? ""}`;
 
   return (
     <div className="border rounded-lg p-4 space-y-2 bg-card">
@@ -58,15 +64,7 @@ export function ColorCard({ setting, onEdit, onDelete }: Props) {
       </div>
 
       <div className="flex items-center justify-between pt-2">
-        <div className="text-xs">
-          {setting.category === "system" && <div>System: {setting.system_name}</div>}
-          {setting.category === "status" && <div>Status: {setting.status_key}</div>}
-          {setting.category === "language" && (
-            <div>
-              Lang: {setting.language_in} → {setting.language_out}
-            </div>
-          )}
-        </div>
+        <div className="text-xs">{setting.description || generatedDescription}</div>
 
         <div className="flex gap-2">
           <Button variant="outline" size="icon" onClick={() => onEdit(setting)}>
@@ -80,3 +78,5 @@ export function ColorCard({ setting, onEdit, onDelete }: Props) {
     </div>
   );
 }
+
+
