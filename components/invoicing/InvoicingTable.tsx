@@ -63,7 +63,7 @@ export function InvoicingTable({
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Project Name</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300 text-center">Invoiced</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300 text-center">Paid</th>
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Translator(s)</th>
+              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Collaborator(s)</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Due Date</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Instructions</th>
             </tr>

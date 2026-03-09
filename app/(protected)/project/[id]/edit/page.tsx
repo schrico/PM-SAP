@@ -98,7 +98,7 @@ const FIELD_LABELS: Record<string, string> = {
   graph_id: "Graph ID",
   lxe_project: "LXE Project",
   lxe_projects: "LXE Projects",
-  translators: "Assigned Translators",
+  translators: "Assigned Collaborators",
 };
 
 /** Fields to monitor for conflicts */
@@ -138,7 +138,7 @@ export default function EditProjectPage() {
   const { data: project, isLoading, error } = useProject(projectId);
   const collapsed = useLayoutStore((state) => state.collapsed);
 
-  // State for translator management
+  // State for collaborator management
   const [addTranslatorModal, setAddTranslatorModal] = useState<{
     open: boolean;
     projectId: number;
@@ -515,7 +515,7 @@ export default function EditProjectPage() {
         .from("projects_assignment")
         .insert(assignments);
 
-      if (error) throw new Error(`Failed to add translators: ${error.message}`);
+      if (error) throw new Error(`Failed to add collaborators: ${error.message}`);
     },
     onSuccess: (_, { userIds }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
@@ -524,7 +524,7 @@ export default function EditProjectPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(uid) });
         queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(uid) });
       });
-      toast.success("Translators added successfully");
+      toast.success("Collaborators added successfully");
       setAddTranslatorModal({
         open: false,
         projectId: 0,
@@ -557,7 +557,7 @@ export default function EditProjectPage() {
         .eq("user_id", userId);
 
       if (error) {
-        throw new Error(`Failed to remove translator: ${error.message}`);
+        throw new Error(`Failed to remove collaborator: ${error.message}`);
       }
     },
     onSuccess: (_, { userId }) => {
@@ -565,7 +565,7 @@ export default function EditProjectPage() {
       queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
-      toast.success("Translator removed successfully");
+      toast.success("Collaborator removed successfully");
       setTranslatorToRemove(null);
       // Update original project to reflect removal (avoid conflict modal for our own changes)
       if (project) {
@@ -1280,7 +1280,7 @@ export default function EditProjectPage() {
                           })
                         }
                         className="p-2 cursor-pointer text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Remove translator"
+                        title="Remove collaborator"
                       >
                         <X className="w-4 h-4" />
                       </button>

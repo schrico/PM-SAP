@@ -114,7 +114,7 @@ export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
       ),
     },
     {
-      header: "Translator(s)",
+      header: "Collaborator(s)",
       render: (project: ProjectWithTranslators) =>
         project.translators && project.translators.length > 0 ?
           <TooltipProvider>

@@ -75,15 +75,6 @@ export default function HomePage() {
   const allHomeCards: HomeCardConfig[] = useMemo(
     () => [
       {
-        title: "My Projects",
-        icon: ClipboardList,
-        path: "/my-projects",
-        color: "bg-blue-500",
-        description: "View and manage your assignments",
-        count: myProjectsCount,
-        allowedRoles: ["employee", "pm", "admin"],
-      },
-      {
         title: "Manage Projects",
         icon: FolderKanban,
         path: "/management",
@@ -93,11 +84,20 @@ export default function HomePage() {
         allowedRoles: ["pm", "admin"],
       },
       {
+        title: "My Projects",
+        icon: ClipboardList,
+        path: "/my-projects",
+        color: "bg-blue-500",
+        description: "View and manage your assignments",
+        count: myProjectsCount,
+        allowedRoles: ["employee", "pm", "admin"],
+      },
+      {
         title: "Assign Projects",
         icon: UserPlus,
         path: "/assign-projects",
         color: "bg-purple-500",
-        description: "Distribute work to translators",
+        description: "Distribute work to collaborators",
         allowedRoles: ["pm", "admin"],
       },
     ],
@@ -229,3 +229,4 @@ export default function HomePage() {
     </div>
   );
 }
+

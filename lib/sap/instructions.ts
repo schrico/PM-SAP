@@ -2,10 +2,14 @@
 // SAP instruction composition and processing
 
 import type { SapInstruction, SapInstructionEntry } from '@/types/sap';
+import {
+  normalizeInstructionText,
+  normalizeInstructionTextForMatch,
+} from './instruction-normalization';
 
 /**
  * Build composed instructions string from extracted fields.
- * Order: TA, lxe/DITA (if DNW), Graph ID, Hours & Terms (if exist/≠0), TK, WL
+ * Order: TA, lxe/DITA (if DNW), Graph ID, Hours & Terms (if exist/=0), TK, WL
  */
 export function buildInstructions(params: {
   translationAreas: string[];
@@ -54,9 +58,9 @@ export function buildInstructions(params: {
 /**
  * Build sap_instructions JSONB array from SAP instruction entries.
  * - Stores both instructionShort and instructionLong
- * - Strips HTML from both fields
- * - Deduplicates by stripped instructionLong text only
- * - Compares exclusions against stripped text (what users see on screen)
+ * - Normalizes text for consistent display + matching
+ * - Deduplicates by normalized long/short text
+ * - Compares exclusions against the same normalized representation
  */
 export function buildSapInstructions(
   instructions: SapInstruction[],
@@ -64,27 +68,24 @@ export function buildSapInstructions(
 ): SapInstructionEntry[] | null {
   const seen = new Set<string>();
   const entries: SapInstructionEntry[] = [];
-  const exclusionSet = new Set(exclusions.map(e => e.toLowerCase().trim()));
+  const exclusionSet = new Set(
+    exclusions
+      .map((e) => normalizeInstructionTextForMatch(e))
+      .filter((e) => e.length > 0)
+  );
 
   for (const instr of instructions) {
-    const rawShort = (instr.instructionShort || '').trim();
-    const rawLong = (instr.instructionLong || '').trim();
-    if (!rawLong && !rawShort) continue;
-
-    // Strip HTML from both fields
-    const strippedShort = stripHtmlTags(rawShort);
-    const strippedLong = stripHtmlTags(rawLong);
+    const strippedShort = normalizeInstructionText(instr.instructionShort || '');
+    const strippedLong = normalizeInstructionText(instr.instructionLong || '');
 
     const textForDedup = strippedLong || strippedShort;
-    if (!textForDedup) continue;
+    const normalizedForMatch = normalizeInstructionTextForMatch(textForDedup);
+    if (!normalizedForMatch) continue;
 
-    // Skip if matches exclusion list (compare against stripped text)
-    if (exclusionSet.has(textForDedup.toLowerCase())) continue;
-    if (strippedShort && exclusionSet.has(strippedShort.toLowerCase())) continue;
+    if (exclusionSet.has(normalizedForMatch)) continue;
 
-    // Deduplicate by stripped long text only
-    if (seen.has(textForDedup.toLowerCase())) continue;
-    seen.add(textForDedup.toLowerCase());
+    if (seen.has(normalizedForMatch)) continue;
+    seen.add(normalizedForMatch);
 
     entries.push({
       instructionShort: strippedShort,
@@ -97,10 +98,10 @@ export function buildSapInstructions(
   return entries.length > 0 ? entries : null;
 }
 
-/** Strip HTML tags from a string */
+/**
+ * Legacy helper kept for compatibility with existing imports.
+ * Prefer normalizeInstructionText for new code.
+ */
 export function stripHtmlTags(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return normalizeInstructionText(html);
 }

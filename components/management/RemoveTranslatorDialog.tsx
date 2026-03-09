@@ -90,9 +90,9 @@ export function RemoveTranslatorDialog({
     <Dialog open={open && !showConfirmation} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Remove Translator</DialogTitle>
+          <DialogTitle>Remove Collaborator</DialogTitle>
           <DialogDescription>
-            Select a translator to remove from{" "}
+            Select a collaborator to remove from{" "}
             <span className="font-medium">{projectName}</span>
           </DialogDescription>
         </DialogHeader>
@@ -114,7 +114,7 @@ export function RemoveTranslatorDialog({
               </button>
             ))
           : <p className="text-gray-500 dark:text-gray-400 text-sm italic text-center py-4">
-              No translators assigned to this project.
+              No collaborators assigned to this project.
             </p>
           }
         </div>

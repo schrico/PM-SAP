@@ -141,9 +141,15 @@ export function createErrorResponse(
   defaultMessage = 'An unexpected error occurred'
 ): Response {
   if (error instanceof RateLimitError) {
-    return Response.json(
-      { error: 'rate_limited', waitMinutes: error.waitMinutes },
-      { status: 429 }
+    return new Response(
+      JSON.stringify({ error: 'rate_limited', waitMinutes: error.waitMinutes }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(error.waitMinutes * 60),
+        },
+      }
     );
   }
 
@@ -173,3 +179,4 @@ export function createErrorResponse(
   console.error('Unknown error:', error);
   return Response.json({ error: defaultMessage }, { status: 500 });
 }
+

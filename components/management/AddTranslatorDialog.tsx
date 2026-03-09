@@ -134,9 +134,9 @@ export function AddTranslatorDialog({
           </div>
         : <>
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
-            <DialogTitle>Add Translator</DialogTitle>
+            <DialogTitle>Add Collaborator</DialogTitle>
             <DialogDescription>
-              Select translators to add to{" "}
+              Select collaborators to add to{" "}
               <span className="font-medium">{projectName}</span>
             </DialogDescription>
           </DialogHeader>
@@ -150,7 +150,7 @@ export function AddTranslatorDialog({
               </div>
             : availableUsers.length === 0 ?
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                All available translators are already assigned to this project.
+                All available collaborators are already assigned to this project.
               </div>
             : <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
             {availableUsers.map((user: User) => {
@@ -330,7 +330,7 @@ export function AddTranslatorDialog({
                 >
                   {isAdding ?
                     "Adding..."
-                  : `Assign ${selectedTranslators.size} translator${selectedTranslators.size !== 1 ? "s" : ""}`
+                  : `Assign ${selectedTranslators.size} collaborator${selectedTranslators.size !== 1 ? "s" : ""}`
                   }
                 </Button>
               </div>

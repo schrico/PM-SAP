@@ -148,7 +148,7 @@ export default function ProjectPage() {
         .from("projects_assignment")
         .insert(assignments);
 
-      if (error) throw new Error(`Failed to add translators: ${error.message}`);
+      if (error) throw new Error(`Failed to add collaborators: ${error.message}`);
     },
     onSuccess: (_, { userIds }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
@@ -157,7 +157,7 @@ export default function ProjectPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(uid) });
         queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(uid) });
       });
-      toast.success("Translators added successfully");
+      toast.success("Collaborators added successfully");
       setAddTranslatorModal({
         open: false,
         projectId: 0,
@@ -166,7 +166,7 @@ export default function ProjectPage() {
       });
     },
     onError: (error: Error) => {
-      toast.error(getUserFriendlyError(error, "translator management"));
+      toast.error(getUserFriendlyError(error, "collaborator management"));
     },
   });
 
@@ -186,7 +186,7 @@ export default function ProjectPage() {
         .eq("user_id", userId);
 
       if (error) {
-        throw new Error(`Failed to remove translator: ${error.message}`);
+        throw new Error(`Failed to remove collaborator: ${error.message}`);
       }
     },
     onSuccess: (_, { userId }) => {
@@ -194,10 +194,10 @@ export default function ProjectPage() {
       queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
-      toast.success("Translator removed successfully");
+      toast.success("Collaborator removed successfully");
     },
     onError: (error: Error) => {
-      toast.error(getUserFriendlyError(error, "translator management"));
+      toast.error(getUserFriendlyError(error, "collaborator management"));
     },
   });
 
@@ -229,7 +229,7 @@ export default function ProjectPage() {
       setShowPMNoteModal({ open: false, userId: "", userName: "", currentMessage: null });
     },
     onError: (error: Error) => {
-      toast.error(getUserFriendlyError(error, "translator management"));
+      toast.error(getUserFriendlyError(error, "collaborator management"));
     },
   });
 
@@ -268,7 +268,7 @@ export default function ProjectPage() {
       setShowReassignModal({ open: false, userId: "", userName: "" });
     },
     onError: (error: Error) => {
-      toast.error(getUserFriendlyError(error, "translator management"));
+      toast.error(getUserFriendlyError(error, "collaborator management"));
     },
   });
 

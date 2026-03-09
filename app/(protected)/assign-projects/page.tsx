@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { SearchBar } from "@/components/general/SearchBar";
 import { FilterDropdown } from "@/components/general/FilterDropdown";
@@ -30,6 +31,19 @@ import {
   groupProjectsByExactName,
 } from "@/lib/projectGrouping";
 import { useProjectGroupExpansion } from "@/hooks/project/useProjectGroupExpansion";
+
+const ASSIGN_SELECTION_STORAGE_KEY = "assign-projects:selected-project-ids";
+
+const isTypingTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName.toLowerCase();
+  return (
+    tag === "input" ||
+    tag === "textarea" ||
+    tag === "select" ||
+    target.isContentEditable
+  );
+};
 export default function AssignProjectsPage() {
   return (
     <RoleGuard routeId={RouteId.ASSIGN_PROJECTS}>
@@ -45,9 +59,27 @@ function AssignProjectsContent() {
   const { user } = useUser();
   const collapsed = useLayoutStore((state) => state.collapsed);
 
-  const [selectedProjects, setSelectedProjects] = useState<Set<number>>(
-    new Set()
-  );
+  const [selectedProjects, setSelectedProjects] = useState<Set<number>>(() => {
+    if (typeof window === "undefined") return new Set();
+
+    try {
+      const rawStoredSelection = window.localStorage.getItem(
+        ASSIGN_SELECTION_STORAGE_KEY
+      );
+      if (!rawStoredSelection) return new Set();
+
+      const parsedSelection = JSON.parse(rawStoredSelection);
+      if (!Array.isArray(parsedSelection)) return new Set();
+
+      const validSelection = parsedSelection
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id));
+      return new Set(validSelection);
+    } catch {
+      window.localStorage.removeItem(ASSIGN_SELECTION_STORAGE_KEY);
+      return new Set();
+    }
+  });
   const [showUserSelection, setShowUserSelection] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
 
@@ -55,7 +87,31 @@ function AssignProjectsContent() {
   const [assignmentFilter, setAssignmentFilter] = useState<string | null>(
     "Unassigned"
   );
-  const [projectTypeFilter, setProjectTypeFilter] = useState<string[]>([]);
+  // Project type filter — override is tagged with pathname so it auto-expires on navigation
+  const pathname = usePathname();
+  const { getFilter: getDefaultFilter, isFetched: defaultFiltersFetched } =
+    useDefaultFilters(user?.id ?? null);
+
+  const [projectTypeOverride, setProjectTypeOverride] = useState<{
+    values: string[];
+    path: string;
+  } | null>(null);
+
+  const setProjectTypeFilter = useCallback(
+    (values: string[]) => setProjectTypeOverride({ values, path: pathname }),
+    [pathname]
+  );
+
+  const resolvedProjectTypeFilter: string[] = useMemo(() => {
+    if (projectTypeOverride && projectTypeOverride.path === pathname) {
+      return projectTypeOverride.values;
+    }
+    if (defaultFiltersFetched) {
+      const pt = getDefaultFilter("project_type");
+      return pt?.included_values?.length ? pt.included_values : [];
+    }
+    return [];
+  }, [projectTypeOverride, pathname, defaultFiltersFetched, getDefaultFilter]);
 
   // Shared filter state + logic
   const {
@@ -75,21 +131,6 @@ function AssignProjectsContent() {
     applyBaseFilters,
   } = useProjectFilters(allProjects);
 
-  // Load default project type filter from user settings
-  const { getFilter: getDefaultFilter, isLoading: defaultFiltersLoading } =
-    useDefaultFilters(user?.id ?? null);
-
-  useEffect(() => {
-    if (defaultFiltersLoading) return;
-    const defaultPT = getDefaultFilter("project_type");
-    if (defaultPT?.included_values && defaultPT.included_values.length > 0) {
-      const timeout = setTimeout(() => {
-        setProjectTypeFilter(defaultPT.included_values ?? []);
-      }, 0);
-      return () => clearTimeout(timeout);
-    }
-  }, [defaultFiltersLoading, getDefaultFilter]);
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
@@ -102,14 +143,27 @@ function AssignProjectsContent() {
   const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   const loading = projectsLoading;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
+    const selectionArray = Array.from(selectedProjects);
+    if (selectionArray.length === 0) {
+      window.localStorage.removeItem(ASSIGN_SELECTION_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(
+      ASSIGN_SELECTION_STORAGE_KEY,
+      JSON.stringify(selectionArray)
+    );
+  }, [selectedProjects]);
   const clearAllFilters = () => {
     baseClearFilters();
     setAssignmentFilter(null);
     setProjectTypeFilter([]);
   };
 
-  const hasActiveFilters = baseHasActiveFilters || !!assignmentFilter || projectTypeFilter.length > 0;
+  const hasActiveFilters = baseHasActiveFilters || !!assignmentFilter || resolvedProjectTypeFilter.length > 0;
 
   // Filtering logic: shared base filters + page-specific filters
   const filteredProjects = useMemo(() => {
@@ -124,14 +178,14 @@ function AssignProjectsContent() {
     }
 
     // Page-specific: project type filter
-    if (projectTypeFilter.length > 0) {
+    if (resolvedProjectTypeFilter.length > 0) {
       projects = projects.filter(
-        (p) => p.project_type && projectTypeFilter.includes(p.project_type)
+        (p) => p.project_type && resolvedProjectTypeFilter.includes(p.project_type)
       );
     }
 
     return projects;
-  }, [allProjects, applyBaseFilters, assignmentFilter, projectTypeFilter]);
+  }, [allProjects, applyBaseFilters, assignmentFilter, resolvedProjectTypeFilter]);
 
   const groupedProjects = useMemo(
     () => groupProjectsByExactName(filteredProjects),
@@ -173,11 +227,41 @@ function AssignProjectsContent() {
     setSelectedProjects(nextSelection);
   };
 
-  const handleConfirmSelection = () => {
+  const handleConfirmSelection = useCallback(() => {
     if (selectedProjects.size > 0) {
       setShowUserSelection(true);
     }
-  };
+  }, [selectedProjects.size]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedProjects(new Set());
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (showUserSelection || selectedProjects.size === 0) return;
+      if (event.isComposing || isTypingTarget(event.target)) return;
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleConfirmSelection();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        handleClearSelection();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    showUserSelection,
+    selectedProjects.size,
+    handleConfirmSelection,
+    handleClearSelection,
+  ]);
 
   // Assignment mutation - handles per-project translator assignments
   const assignMutation = useMutation({
@@ -242,7 +326,7 @@ function AssignProjectsContent() {
     assignMutation.mutate({ assignments });
   };
 
-  const selectedProjectsList = filteredProjects.filter((p) =>
+  const selectedProjectsList = allProjects.filter((p) =>
     selectedProjects.has(p.id)
   );
 
@@ -349,7 +433,7 @@ function AssignProjectsContent() {
               <MultiSelectFilterDropdown
                 label="Project Type"
                 options={uniqueProjectTypes}
-                selected={projectTypeFilter}
+                selected={resolvedProjectTypeFilter}
                 onSelect={setProjectTypeFilter}
               />
             )}
@@ -419,7 +503,7 @@ function AssignProjectsContent() {
                 project{selectedProjects.size !== 1 ? "s" : ""} selected
               </div>
               <button
-                onClick={() => setSelectedProjects(new Set())}
+                onClick={handleClearSelection}
                 className="px-4 py-2 cursor-pointer bg-gray-100 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors border border-gray-200 dark:border-gray-600 hover:border-red-300 dark:hover:border-red-800"
                 type="button"
               >
@@ -443,3 +527,11 @@ function AssignProjectsContent() {
     </div>
   );
 }
+
+
+
+
+
+
+
+

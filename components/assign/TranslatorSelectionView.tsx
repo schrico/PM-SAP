@@ -206,7 +206,7 @@ export function TranslatorSelectionView({
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-gray-900 dark:text-white mb-2">
-            Assign to Translator
+            Assign to Collaborator
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
             Project {currentProjectIndex + 1} of {selectedProjects.length}
@@ -272,7 +272,7 @@ export function TranslatorSelectionView({
           </div>
           <div className="text-right">
             <span className="text-blue-600 dark:text-blue-400 font-medium">
-              {currentAssignment.translatorIds.size} translator{currentAssignment.translatorIds.size !== 1 ? "s" : ""} selected
+              {currentAssignment.translatorIds.size} collaborator{currentAssignment.translatorIds.size !== 1 ? "s" : ""} selected
             </span>
           </div>
         </div>
@@ -474,7 +474,7 @@ export function TranslatorSelectionView({
 
               {/* Center: Summary info */}
               <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
-                {projectsWithAssignments} of {selectedProjects.length} projects have translators assigned
+                {projectsWithAssignments} of {selectedProjects.length} projects have collaborators assigned
               </div>
 
               {/* Right: Next or Assign button */}
@@ -487,7 +487,7 @@ export function TranslatorSelectionView({
                     type="button"
                   >
                     <CheckCircle2 className="w-5 h-5" />
-                    Assign {totalUniqueTranslators} translator{totalUniqueTranslators !== 1 ? "s" : ""} ({totalAssignments} assignment{totalAssignments !== 1 ? "s" : ""})
+                    Assign {totalUniqueTranslators} collaborator{totalUniqueTranslators !== 1 ? "s" : ""} ({totalAssignments} assignment{totalAssignments !== 1 ? "s" : ""})
                   </button>
                 ) : (
                   <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Save, Loader2, SlidersHorizontal, Pencil, X, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/hooks/user/useUser";
@@ -12,6 +12,7 @@ import { Loader2 as LoaderIcon } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -80,7 +81,7 @@ export function ProfilePageContent() {
       role:
         user.role === "admin" ? "Administrator"
         : user.role === "pm" ? "Project Manager"
-        : "Translator",
+        : "Collaborator",
     };
   }, [user, form]);
 
@@ -111,7 +112,40 @@ export function ProfilePageContent() {
     setIsEditing(false);
   };
 
+  const handleFormKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
+    if (!isEditing || updateProfile.isPending) return;
+    if ("isComposing" in event.nativeEvent && event.nativeEvent.isComposing) return;
+
+    if (event.key === "Enter") {
+      const target = event.target as HTMLElement;
+      if (target instanceof HTMLTextAreaElement) return;
+
+      event.preventDefault();
+      void form.handleSubmit(onSubmit)();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      handleCancel();
+    }
+  };
+
   const formValues = useWatch({ control: form.control });
+  const handleCopyUsername = async (label: "Full Name" | "Email Address" | "C Username" | "TE Username", value?: string) => {
+    const text = (value ?? "").trim();
+    if (!text) {
+      toast.error(`No ${label} to copy`);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied to clipboard`);
+    } catch {
+      toast.error(`Failed to copy ${label}`);
+    }
+  };
 
   if (userLoading) {
     return (
@@ -168,7 +202,7 @@ export function ProfilePageContent() {
 
         {/* Form Section */}
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} onKeyDown={handleFormKeyDown}>
             <div className="p-8 space-y-8">
               {/* Personal info */}
               <section className="space-y-4">
@@ -192,11 +226,16 @@ export function ProfilePageContent() {
                         <FormControl>
                           <Input
                             {...field}
-                            disabled={!isEditing}
+                            readOnly={!isEditing}
+                            onClick={() => {
+                              if (!isEditing) {
+                                void handleCopyUsername("Full Name", field.value);
+                              }
+                            }}
                             className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                               isEditing
                                 ? "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
-                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer"
                             }`}
                           />
                         </FormControl>
@@ -240,11 +279,16 @@ export function ProfilePageContent() {
                           <Input
                             {...field}
                             type="email"
-                            disabled={!isEditing}
+                            readOnly={!isEditing}
+                            onClick={() => {
+                              if (!isEditing) {
+                                void handleCopyUsername("Email Address", field.value);
+                              }
+                            }}
                             className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 ${
                               isEditing
                                 ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-gray-900 dark:text-white focus:ring-amber-500"
-                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer"
                             }`}
                           />
                         </FormControl>
@@ -304,11 +348,16 @@ export function ProfilePageContent() {
                         <FormControl>
                           <Input
                             {...field}
-                            disabled={!isEditing}
+                            readOnly={!isEditing}
+                            onClick={() => {
+                              if (!isEditing) {
+                                void handleCopyUsername("Full Name", field.value);
+                              }
+                            }}
                             className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                               isEditing
                                 ? "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
-                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer"
                             }`}
                           />
                         </FormControl>
@@ -327,11 +376,16 @@ export function ProfilePageContent() {
                         <FormControl>
                           <Input
                             {...field}
-                            disabled={!isEditing}
+                            readOnly={!isEditing}
+                            onClick={() => {
+                              if (!isEditing) {
+                                void handleCopyUsername("TE Username", field.value);
+                              }
+                            }}
                             className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                               isEditing
                                 ? "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
-                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer"
                             }`}
                           />
                         </FormControl>
@@ -390,12 +444,12 @@ export function ProfilePageContent() {
         </Form>
       </div>
 
-      {/* Link to Settings for notifications */}
+      {/* Link to Settings */}
       <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-300" />
           <p className="text-gray-700 dark:text-gray-200 text-sm">
-            Notification rules are managed in{" "}
+            You can manage app preferences and account options in{" "}
             <span className="font-medium">Settings</span>.
           </p>
         </div>
@@ -407,7 +461,7 @@ export function ProfilePageContent() {
         </Link>
       </div>
 
-      {/* Additional Info Card - Only for employees */}
+      {/* Additional Info Card - Only for collaborators */}
       {user.role === "employee" && (
         <div className="mt-6 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
           <p className="text-blue-900 dark:text-blue-200 text-sm">
@@ -427,3 +481,14 @@ export function ProfilePageContent() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

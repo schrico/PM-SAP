@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Check, XCircle, MessageSquare, ChevronRight, ChevronDown } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { formatNumber, formatProjectName } from "@/utils/formatters";
 import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle, getLanguageColorStyle, getStatusIcon } from "@/utils/projectTableHelpers";
@@ -50,6 +50,53 @@ interface ProjectWithTranslators {
   language_out: string;
 }
 
+interface DoneMessagePopoverProps {
+  translatorName: string;
+  doneMessage: string;
+}
+
+function DoneMessagePopover({ translatorName, doneMessage }: DoneMessagePopoverProps) {
+  const [isPinned, setIsPinned] = useState(false);
+  const [isHoveringTrigger, setIsHoveringTrigger] = useState(false);
+
+  const isOpen = isPinned || isHoveringTrigger;
+
+  return (
+    <Popover
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) setIsPinned(false);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsPinned((prev) => !prev);
+          }}
+          onMouseEnter={() => setIsHoveringTrigger(true)}
+          onMouseLeave={() => setIsHoveringTrigger(false)}
+          className="cursor-pointer shrink-0"
+          aria-label="View collaborator note"
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-green-500 hover:text-green-600 transition-colors" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="max-w-xs text-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 mb-1">
+          {translatorName} wrote:
+        </p>
+        <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+          {doneMessage}
+        </p>
+      </PopoverContent>
+    </Popover>
+  );
+}
 interface ManagementTableProps {
   groups: ProjectGroup<ProjectWithTranslators>[];
   expandedGroups: Set<string>;
@@ -62,6 +109,7 @@ interface ManagementTableProps {
   onEditDetails: (projectId: number) => void;
   onCompleteProject: (projectId: number) => void;
   editingProjectId: number | null;
+  editFocusField: "words" | "lines";
   editWords: string;
   editLines: string;
   onEditWordsChange: (value: string) => void;
@@ -69,7 +117,8 @@ interface ManagementTableProps {
   onStartWordsLinesEdit: (
     projectId: number,
     words: number | null,
-    lines: number | null
+    lines: number | null,
+    focusField?: "words" | "lines"
   ) => void;
   onSaveWordsLines: (projectId: number) => void;
   onCancelWordsLinesEdit: () => void;
@@ -89,6 +138,7 @@ export function ManagementTable({
   onEditDetails,
   onCompleteProject,
   editingProjectId,
+  editFocusField,
   editWords,
   editLines,
   onEditWordsChange,
@@ -115,6 +165,36 @@ export function ManagementTable({
   };
 
   const getStatusIconLocal = getStatusIcon;
+  const wordsInputRef = useRef<HTMLInputElement | null>(null);
+  const linesInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editingProjectId == null) return;
+
+    const targetInput =
+      editFocusField === "lines" ? linesInputRef.current : wordsInputRef.current;
+    if (!targetInput) return;
+
+    targetInput.focus();
+    targetInput.select();
+  }, [editingProjectId, editFocusField]);
+  const handleWordsLinesKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    projectId: number
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      onSaveWordsLines(projectId);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onCancelWordsLinesEdit();
+    }
+  };
 
   if (groups.length === 0) {
     return (
@@ -137,7 +217,7 @@ export function ManagementTable({
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Project Name</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300 text-right">Words</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300 text-right">Lines</th>
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Translator(s)</th>
+              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Collaborator(s)</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Due Date</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Instructions</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Actions</th>
@@ -177,10 +257,19 @@ export function ManagementTable({
                     group.projects.map((project) => (
                       <tr
                         key={project.id}
-                        className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer"
+                        className={`border-b border-gray-200 dark:border-gray-700 transition-colors cursor-pointer ${
+                          isGrouped ? "bg-blue-50/30 dark:bg-blue-900/5 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                          : "hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                        }`}
                         onClick={(e) => handleRowClick(project, e)}
                       >
-                        <td className="px-6 py-4">
+                        <td className={`px-6 py-4 relative ${isGrouped ? "pl-10" : ""}`}>
+                          {isGrouped && (
+                            <>
+                              <div className="absolute left-3 top-0 bottom-0 w-px bg-blue-200/70 dark:bg-blue-800/50" />
+                              <div className="absolute left-3 top-1/2 h-px w-3 bg-blue-200/70 dark:bg-blue-800/50" />
+                            </>
+                          )}
                           <ProjectColorLegendTooltip
                             status={project.status}
                             system={project.system}
@@ -219,6 +308,8 @@ export function ManagementTable({
                                 type="number"
                                 value={editWords}
                                 onChange={(e) => onEditWordsChange(e.target.value)}
+                                onKeyDown={(e) => handleWordsLinesKeyDown(e, project.id)}
+                                ref={wordsInputRef}
                                 className="w-24 px-3 py-2 text-sm text-right border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                 min="0"
                               />
@@ -227,7 +318,8 @@ export function ManagementTable({
                                   onStartWordsLinesEdit(
                                     project.id,
                                     project.words,
-                                    project.lines
+                                    project.lines,
+                                    "words"
                                   )
                                 }
                                 className="inline-flex min-h-9 min-w-[72px] items-center justify-end rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer transition-colors hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -246,6 +338,8 @@ export function ManagementTable({
                                   type="number"
                                   value={editLines}
                                   onChange={(e) => onEditLinesChange(e.target.value)}
+                                  onKeyDown={(e) => handleWordsLinesKeyDown(e, project.id)}
+                                  ref={linesInputRef}
                                   className="w-24 px-3 py-2 text-sm text-right border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                   min="0"
                                 />
@@ -270,7 +364,8 @@ export function ManagementTable({
                                   onStartWordsLinesEdit(
                                     project.id,
                                     project.words,
-                                    project.lines
+                                    project.lines,
+                                    "lines"
                                   )
                                 }
                                 className="inline-flex min-h-9 min-w-[72px] items-center justify-end rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer transition-colors hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -316,29 +411,10 @@ export function ManagementTable({
                                       </span>
                                       {translator.done_message &&
                                         translator.assignment_status === "done" && (
-                                          <Popover>
-                                            <PopoverTrigger asChild>
-                                              <button
-                                                type="button"
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="cursor-pointer shrink-0"
-                                                aria-label="View translator note"
-                                              >
-                                                <MessageSquare className="w-3.5 h-3.5 text-green-500 hover:text-green-600 transition-colors" />
-                                              </button>
-                                            </PopoverTrigger>
-                                            <PopoverContent
-                                              className="max-w-xs text-sm"
-                                              onClick={(e) => e.stopPropagation()}
-                                            >
-                                              <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                                {translator.name} wrote:
-                                              </p>
-                                              <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                                                {translator.done_message}
-                                              </p>
-                                            </PopoverContent>
-                                          </Popover>
+                                          <DoneMessagePopover
+                                            translatorName={translator.name}
+                                            doneMessage={translator.done_message}
+                                          />
                                         )}
                                     </div>
                                   );
@@ -421,6 +497,21 @@ export function ManagementTable({
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

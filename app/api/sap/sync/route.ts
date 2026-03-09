@@ -11,6 +11,7 @@ import { getSapClient } from '@/lib/sap/client';
 import { runManualImport } from '@/lib/sap/importer';
 import { getAuthenticatedSupabase } from '@/lib/api/withAuth';
 import { sapSyncRequestSchema } from '@/types/sap';
+import { normalizeInstructionText } from '@/lib/sap/instruction-normalization';
 
 export async function POST(request: NextRequest) {
   let supabase: ReturnType<typeof createServerClient> | null = null;
@@ -92,7 +93,10 @@ export async function POST(request: NextRequest) {
       .from('instruction_exclusions')
       .select('instruction_text')
       .eq('user_id', user.id);
-    const exclusions = exclusionRows?.map((r: { instruction_text: string }) => r.instruction_text) || [];
+    const normalizedExclusions: string[] = (exclusionRows || [])
+      .map((r: { instruction_text: string }) => normalizeInstructionText(r.instruction_text))
+      .filter((text: string) => text.length > 0);
+    const exclusions: string[] = Array.from(new Set<string>(normalizedExclusions));
 
     // Run the import
     const result = await runManualImport({
@@ -136,3 +140,6 @@ export async function POST(request: NextRequest) {
     return createErrorResponse(error, 'Failed to sync SAP projects');
   }
 }
+
+
+

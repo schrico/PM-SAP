@@ -148,7 +148,7 @@ export function ProjectTable({ showPast = false }: ProjectTableProps) {
       },
     },
     {
-      header: "Translators",
+      header: "Collaborators",
       render: (project: ProjectWithTranslators) =>
         project.translators && project.translators.length > 0 ?
           <div

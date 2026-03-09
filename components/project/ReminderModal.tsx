@@ -72,7 +72,7 @@ export function ReminderModal({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Write a note for the translator... (leave empty to clear)"
+            placeholder="Write a note for the collaborator... (leave empty to clear)"
             className="min-h-32"
             disabled={isSending}
           />

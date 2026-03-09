@@ -20,11 +20,20 @@ const SAP_API_BASE_URL = 'https://lpxtpmsub-tpm.ingress.prod.lp.shoot.live.k8s-h
 
 // Retry configuration
 const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000;
+const RETRY_BASE_DELAY_MS = 1000;
+const RETRY_MAX_DELAY_MS = 8000;
+const RETRY_JITTER_MS = 500;
 const REQUEST_TIMEOUT_MS = 30000;
+const TOKEN_TIMEOUT_MS = 15000;
 
 // Debug logging (server-side only, visible in terminal)
 const DEBUG = process.env.NODE_ENV === 'development';
+
+function getRetryDelay(attempt: number): number {
+  const exponentialDelay = Math.min(RETRY_BASE_DELAY_MS * 2 ** attempt, RETRY_MAX_DELAY_MS);
+  const jitter = Math.floor(Math.random() * (RETRY_JITTER_MS + 1));
+  return exponentialDelay + jitter;
+}
 
 function debugLog(stage: string, data: Record<string, unknown>) {
   if (!DEBUG) return;
@@ -107,18 +116,31 @@ export class SapTpmApiClient {
         Authorization: `Basic ${basicAuth.substring(0, 20)}...`,
       },
       body: `grant_type=password&username=${this.username}&password=***`,
-      // Show raw credentials format (redacted) to verify no encoding issues
       basicAuthInput: `${this.jwtClientId.substring(0, 8)}...:${this.jwtClientSecret.substring(0, 4)}...`,
     });
 
-    const response = await fetch(SAP_TOKEN_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${basicAuth}`,
-      },
-      body: bodyParams,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TOKEN_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(SAP_TOKEN_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${basicAuth}`,
+        },
+        body: bodyParams,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+        throw new SapTokenError('Token request timed out');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     debugLog('TOKEN_RESPONSE', {
       status: response.status,
@@ -143,7 +165,6 @@ export class SapTpmApiClient {
       expiresIn: data.expires_in,
       scope: data.scope,
       hasRefreshToken: !!data.refresh_token,
-      // Show first/last chars of token to verify it looks right
       tokenPreview: data.access_token
         ? `${data.access_token.substring(0, 20)}...${data.access_token.substring(data.access_token.length - 10)}`
         : 'MISSING',
@@ -154,7 +175,6 @@ export class SapTpmApiClient {
     }
 
     this.accessToken = data.access_token;
-    // Refresh 60 seconds before actual expiry to avoid edge cases
     this.tokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
 
     return this.accessToken;
@@ -201,14 +221,12 @@ export class SapTpmApiClient {
       });
 
       if (!response.ok) {
-        // Read raw body for debugging before parsing
         const rawBody = await response.text();
         debugLog('API_ERROR_BODY', {
           status: response.status,
           body: rawBody.substring(0, 2000),
         });
 
-        // Re-parse the error from the raw body
         let error: SapApiError;
         try {
           const data = JSON.parse(rawBody);
@@ -228,7 +246,6 @@ export class SapTpmApiClient {
           );
         }
 
-        // If auth error, invalidate token and retry once
         if (error.isAuthError && retries > 0) {
           debugLog('AUTH_RETRY', {
             status: error.status,
@@ -247,19 +264,23 @@ export class SapTpmApiClient {
     } catch (error) {
       clearTimeout(timeoutId);
 
-      // Handle abort/timeout
-      if (error instanceof DOMException && error.name === 'AbortError') {
+      if (typeof error === 'object' && error !== null && 'name' in error && (error as { name?: string }).name === 'AbortError') {
         debugLog('TIMEOUT', { url: requestUrl });
         throw new SapApiError('Request timeout', 408);
       }
 
-      // Retry transient errors
       if (isRetryableError(error) && retries > 0) {
+        const attempt = MAX_RETRIES - retries;
+        const delayMs = getRetryDelay(attempt);
+
         debugLog('TRANSIENT_RETRY', {
           error: error instanceof Error ? error.message : String(error),
           retriesLeft: retries - 1,
+          delayMs,
+          attempt,
         });
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+
+        await new Promise(resolve => setTimeout(resolve, delayMs));
         return this.request<T>(endpoint, retries - 1);
       }
 
@@ -322,3 +343,4 @@ export function getSapClient(): SapTpmApiClient {
 export function resetSapClient(): void {
   clientInstance = null;
 }
+

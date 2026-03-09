@@ -14,6 +14,7 @@ import { Clock, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSapImportStatus } from "@/hooks/sap/useSapImportStatus";
 import { useSapProjects } from "@/hooks/sap/useSapProjects";
+import type { SapProjectsResponse } from "@/hooks/sap/useSapProjects";
 import { useSyncSapProjects } from "@/hooks/sap/useSyncSapProjects";
 
 interface SapImportDialogProps {
@@ -21,7 +22,7 @@ interface SapImportDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function flattenSubProjects(data: Awaited<ReturnType<ReturnType<typeof useSapProjects>["refetch"]>>["data"]) {
+function flattenSubProjects(data: SapProjectsResponse | undefined) {
   if (!data?.projects) return [];
 
   return data.projects.flatMap((project) =>
@@ -104,7 +105,7 @@ export function SapImportDialog({
         throw fetchResult.error;
       }
 
-      const allSubProjects = flattenSubProjects(fetchResult.data);
+      const allSubProjects = flattenSubProjects(fetchResult.data as SapProjectsResponse | undefined);
       if (allSubProjects.length === 0) {
         toast.info("No SAP subprojects are available to import.");
         closeProcessingNotice();
@@ -229,3 +230,5 @@ export function SapImportDialog({
     </>
   );
 }
+
+

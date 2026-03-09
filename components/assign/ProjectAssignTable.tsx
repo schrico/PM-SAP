@@ -72,7 +72,7 @@ export function ProjectAssignTable({
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Project Name</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300 text-right">Words</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300 text-right">Lines</th>
-              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Translator(s)</th>
+              <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Collaborator(s)</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Due Date</th>
               <th className="px-6 py-4 text-left text-gray-700 dark:text-gray-300">Instructions</th>
             </tr>
@@ -126,7 +126,10 @@ export function ProjectAssignTable({
                     group.projects.map((project) => (
                       <tr
                         key={project.id}
-                        className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer"
+                        className={`border-b border-gray-200 dark:border-gray-700 transition-colors cursor-pointer ${
+                          isGrouped ? "bg-blue-50/30 dark:bg-blue-900/5 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                          : "hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                        }`}
                         onClick={(e) => {
                           const target = e.target as HTMLElement;
                           if (
@@ -140,7 +143,13 @@ export function ProjectAssignTable({
                           if (onRowClick) onRowClick(project.id);
                         }}
                       >
-                        <td className="px-6 py-4">
+                        <td className={`px-6 py-4 relative ${isGrouped ? "pl-10" : ""}`}>
+                          {isGrouped && (
+                            <>
+                              <div className="absolute left-3 top-0 bottom-0 w-px bg-blue-200/70 dark:bg-blue-800/50" />
+                              <div className="absolute left-3 top-1/2 h-px w-3 bg-blue-200/70 dark:bg-blue-800/50" />
+                            </>
+                          )}
                           <input
                             type="checkbox"
                             checked={selectedProjects.has(project.id)}

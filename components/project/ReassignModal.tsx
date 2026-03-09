@@ -67,7 +67,7 @@ export function ReassignModal({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Optional note for the translator..."
+            placeholder="Optional note for the collaborator..."
             className="min-h-28"
             disabled={isReassigning}
           />

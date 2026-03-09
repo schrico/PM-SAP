@@ -200,7 +200,7 @@ export function TranslatorsList({
                       className="text-red-600 dark:text-red-400"
                     >
                       <UserMinus className="w-4 h-4 mr-2" />
-                      Remove Translator
+                      Remove Collaborator
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -303,7 +303,7 @@ export function TranslatorsList({
             <Users className="w-8 h-8 text-gray-400" />
           </div>
           <p className="text-gray-500 dark:text-gray-400">
-            No translators assigned yet
+            No collaborators assigned yet
           </p>
         </div>
       }

@@ -11,6 +11,7 @@ import { SearchBar } from "@/components/general/SearchBar";
 import { StatusTabs } from "@/components/general/StatusTabs";
 import { InvoicingTable } from "@/components/invoicing/InvoicingTable";
 import { InvoicingCard } from "@/components/invoicing/InvoicingCard";
+import { ConfirmationDialog } from "@/components/management/ConfirmationDialog";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RouteId } from "@/lib/roleAccess";
 import { queryKeys } from "@/lib/queryKeys";
@@ -28,6 +29,7 @@ import { useProjectGroupExpansion } from "@/hooks/project/useProjectGroupExpansi
 
 type TabType = "all" | "toBeInvoiced" | "toBePaid";
 type ViewMode = "table" | "card";
+type ConfirmActionType = "invoiced" | "paid" | "paidAndInvoiced" | null;
 
 export default function InvoicingPage() {
   return (
@@ -59,6 +61,8 @@ function InvoicingContent() {
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(
     new Set()
   );
+  const [confirmAction, setConfirmAction] = useState<ConfirmActionType>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   // Page-specific filter states
   const [hideFullyProcessed, setHideFullyProcessed] = useState<boolean>(true);
@@ -207,6 +211,26 @@ function InvoicingContent() {
     [filteredProjects]
   );
 
+  const selectedProjectRecords = useMemo(
+    () => allProjectsRaw.filter((project) => selectedProjects.has(project.id)),
+    [allProjectsRaw, selectedProjects]
+  );
+
+  const hasSelectedUninvoiced = selectedProjectRecords.some(
+    (project) => !project.invoiced
+  );
+  const hasSelectedUnpaid = selectedProjectRecords.some(
+    (project) => !project.paid
+  );
+
+  const showConfirmInvoicedAction =
+    activeTab === "toBeInvoiced" ||
+    (activeTab === "all" && hasSelectedUninvoiced);
+  const showConfirmPaidAndInvoicedAction =
+    activeTab === "all" && hasSelectedUninvoiced;
+  const showConfirmPaidAction =
+    activeTab === "toBePaid" || (activeTab === "all" && hasSelectedUnpaid);
+
   const { expandedGroups, toggleGroup, expandGroup, expandAll, collapseAll } =
     useProjectGroupExpansion({
       groups: groupedProjects,
@@ -325,20 +349,62 @@ function InvoicingContent() {
     setSelectedProjects(nextSelection);
   };
 
-  const handleConfirmInvoiced = () => {
+  const openConfirmDialog = (action: Exclude<ConfirmActionType, null>) => {
     if (selectedProjects.size === 0) return;
-    markInvoicedMutation.mutate(Array.from(selectedProjects));
+    setConfirmAction(action);
+    setConfirmDialogOpen(true);
   };
 
-  const handleConfirmPaid = () => {
-    if (selectedProjects.size === 0) return;
-    markPaidMutation.mutate(Array.from(selectedProjects));
+  const handleDialogConfirm = () => {
+    if (selectedProjects.size === 0 || !confirmAction) return;
+
+    const projectIds = Array.from(selectedProjects);
+    if (confirmAction === "invoiced") {
+      markInvoicedMutation.mutate(projectIds);
+      return;
+    }
+
+    if (confirmAction === "paid") {
+      markPaidMutation.mutate(projectIds);
+      return;
+    }
+
+    markPaidAndInvoicedMutation.mutate(projectIds);
   };
 
-  const handleConfirmPaidAndInvoiced = () => {
-    if (selectedProjects.size === 0) return;
-    markPaidAndInvoicedMutation.mutate(Array.from(selectedProjects));
+  const handleDialogCancel = () => {
+    setConfirmDialogOpen(false);
+    setConfirmAction(null);
   };
+
+  const confirmDialogTitle =
+    confirmAction === "invoiced" ? "Confirm Invoiced"
+    : confirmAction === "paid" ? "Confirm Paid"
+    : "Confirm Paid & Invoiced";
+
+  const confirmDialogDescription =
+    confirmAction === "invoiced" ?
+      `Are you sure you want to mark ${selectedProjects.size} selected project${
+        selectedProjects.size !== 1 ? "s" : ""
+      } as invoiced?`
+    : confirmAction === "paid" ?
+      `Are you sure you want to mark ${selectedProjects.size} selected project${
+        selectedProjects.size !== 1 ? "s" : ""
+      } as paid?`
+    : `Are you sure you want to mark ${selectedProjects.size} selected project${
+        selectedProjects.size !== 1 ? "s" : ""
+      } as paid and invoiced?`;
+
+  const confirmDialogConfirmText =
+    confirmAction === "invoiced" ? "Confirm Invoiced"
+    : confirmAction === "paid" ? "Confirm Paid"
+    : "Confirm Paid & Invoiced";
+
+  const confirmDialogLoading =
+    (confirmAction === "invoiced" && markInvoicedMutation.isPending) ||
+    (confirmAction === "paid" && markPaidMutation.isPending) ||
+    (confirmAction === "paidAndInvoiced" &&
+      markPaidAndInvoicedMutation.isPending);
 
   const clearAllFilters = () => {
     baseClearFilters();
@@ -584,9 +650,9 @@ function InvoicingContent() {
               </button>
             </div>
             <div className="flex gap-3">
-              {(activeTab === "all" || activeTab === "toBeInvoiced") && (
+              {showConfirmInvoicedAction && (
                 <button
-                  onClick={handleConfirmInvoiced}
+                  onClick={() => openConfirmDialog("invoiced")}
                   disabled={markInvoicedMutation.isPending}
                   className="px-6 py-3 cursor-pointer bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   type="button"
@@ -596,9 +662,9 @@ function InvoicingContent() {
                   : "Confirm Invoiced"}
                 </button>
               )}
-              {activeTab === "all" && (
+              {showConfirmPaidAndInvoicedAction && (
                 <button
-                  onClick={handleConfirmPaidAndInvoiced}
+                  onClick={() => openConfirmDialog("paidAndInvoiced")}
                   disabled={markPaidAndInvoicedMutation.isPending}
                   className="px-6 py-3 cursor-pointer bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   type="button"
@@ -608,9 +674,9 @@ function InvoicingContent() {
                   : "Confirm Paid & Invoiced"}
                 </button>
               )}
-              {(activeTab === "all" || activeTab === "toBePaid") && (
+              {showConfirmPaidAction && (
                 <button
-                  onClick={handleConfirmPaid}
+                  onClick={() => openConfirmDialog("paid")}
                   disabled={markPaidMutation.isPending}
                   className="px-6 py-3 cursor-pointer bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   type="button"
@@ -624,6 +690,21 @@ function InvoicingContent() {
           </div>
         </div>
       )}
+
+      <ConfirmationDialog
+        open={confirmDialogOpen}
+        onOpenChange={(open) => {
+          setConfirmDialogOpen(open);
+          if (!open) setConfirmAction(null);
+        }}
+        title={confirmDialogTitle}
+        description={confirmDialogDescription}
+        confirmText={confirmDialogConfirmText}
+        onConfirm={handleDialogConfirm}
+        onCancel={handleDialogCancel}
+        isLoading={confirmDialogLoading}
+        variant="success"
+      />
     </div>
   );
 }

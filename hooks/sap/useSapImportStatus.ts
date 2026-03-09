@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
+import { fetchApi } from "@/lib/api/fetchApi";
 
 export interface SapImportStatusResponse {
   status: "idle" | "running" | "failed";
@@ -20,18 +21,7 @@ export function useSapImportStatus(options: UseSapImportStatusOptions = {}) {
 
   return useQuery({
     queryKey: queryKeys.sapImportStatus(),
-    queryFn: async (): Promise<SapImportStatusResponse> => {
-      const response = await fetch("/api/sap/import-status");
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        const message =
-          data?.error || data?.message || "Failed to fetch SAP import status";
-        throw new Error(message);
-      }
-
-      return data;
-    },
+    queryFn: () => fetchApi<SapImportStatusResponse>("/api/sap/import-status"),
     enabled,
     refetchInterval,
   });

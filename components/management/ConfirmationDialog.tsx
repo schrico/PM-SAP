@@ -36,12 +36,25 @@ export function ConfirmationDialog({
   isLoading = false,
   variant = "default",
 }: ConfirmationDialogProps) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      if (!isLoading) {
+        onCancel();
+      }
+      onOpenChange(false);
+      return;
+    }
+    onOpenChange(true);
+  };
+
   const handleConfirm = () => {
+    if (isLoading) return;
     onConfirm();
     onOpenChange(false);
   };
 
   const handleCancel = () => {
+    if (isLoading) return;
     onCancel();
     onOpenChange(false);
   };
@@ -49,8 +62,16 @@ export function ConfirmationDialog({
   const isStringDescription = typeof description === "string";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="sm:max-w-md"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleConfirm();
+          }
+        }}
+      >
         <DialogHeader>
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-6 h-6 text-orange-500" />
@@ -72,6 +93,7 @@ export function ConfirmationDialog({
           <Button
             onClick={handleConfirm}
             disabled={isLoading}
+            autoFocus
             variant={variant === "destructive" ? "destructive" : "default"}
             className={
               variant === "success"

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { X, Loader2, AlertCircle, Download } from "lucide-react";
 import { useUser } from "@/hooks/user/useUser";
 import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
@@ -100,24 +100,35 @@ function ProjectManagementContent() {
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
   const [editWords, setEditWords] = useState<string>("");
   const [editLines, setEditLines] = useState<string>("");
+  const [editFocusField, setEditFocusField] = useState<"words" | "lines">("words");
 
   // Project type filter (page-specific, on top of shared filters)
-  const [projectTypeFilter, setProjectTypeFilter] = useState<string[]>([]);
-
-  // Load default project type filter from user settings
-  const { getFilter: getDefaultFilter, isLoading: defaultFiltersLoading } =
+  // Override is tagged with pathname so it auto-expires on navigation
+  const pathname = usePathname();
+  const { getFilter: getDefaultFilter, isFetched: defaultFiltersFetched } =
     useDefaultFilters(user?.id ?? null);
 
-  useEffect(() => {
-    if (defaultFiltersLoading) return;
-    const defaultPT = getDefaultFilter("project_type");
-    if (defaultPT?.included_values && defaultPT.included_values.length > 0) {
-      const timeout = setTimeout(() => {
-        setProjectTypeFilter(defaultPT.included_values ?? []);
-      }, 0);
-      return () => clearTimeout(timeout);
+  const [projectTypeOverride, setProjectTypeOverride] = useState<{
+    values: string[];
+    path: string;
+  } | null>(null);
+
+  const setProjectTypeFilter = useCallback(
+    (values: string[]) => setProjectTypeOverride({ values, path: pathname }),
+    [pathname]
+  );
+
+  // Resolve: use override only if it was set on THIS page visit, otherwise use defaults
+  const resolvedProjectTypeFilter: string[] = useMemo(() => {
+    if (projectTypeOverride && projectTypeOverride.path === pathname) {
+      return projectTypeOverride.values;
     }
-  }, [defaultFiltersLoading, getDefaultFilter]);
+    if (defaultFiltersFetched) {
+      const pt = getDefaultFilter("project_type");
+      return pt?.included_values?.length ? pt.included_values : [];
+    }
+    return [];
+  }, [projectTypeOverride, pathname, defaultFiltersFetched, getDefaultFilter]);
 
   // Instructions drawer state
   const [instructionsDrawer, setInstructionsDrawer] = useState<{
@@ -234,14 +245,14 @@ function ProjectManagementContent() {
     projects = applyBaseFilters(projects);
 
     // Page-specific: project type filter
-    if (projectTypeFilter.length > 0) {
+    if (resolvedProjectTypeFilter.length > 0) {
       projects = projects.filter(
-        (p) => p.project_type && projectTypeFilter.includes(p.project_type)
+        (p) => p.project_type && resolvedProjectTypeFilter.includes(p.project_type)
       );
     }
 
     return projects;
-  }, [allProjects, activeTab, categorizedProjects, applyBaseFilters, projectTypeFilter]);
+  }, [allProjects, activeTab, categorizedProjects, applyBaseFilters, resolvedProjectTypeFilter]);
 
   const groupedProjects = useMemo(
     () => groupProjectsByExactName(filteredProjects),
@@ -296,7 +307,7 @@ function ProjectManagementContent() {
       const { error } = await supabase
         .from("projects_assignment")
         .insert(assignments);
-      if (error) throw new Error(`Failed to add translators: ${error.message}`);
+      if (error) throw new Error(`Failed to add collaborators: ${error.message}`);
     },
     onSuccess: (_, { projectId, userIds }) => {
       queryClient.invalidateQueries({ queryKey: ["projects-with-translators"] });
@@ -305,7 +316,7 @@ function ProjectManagementContent() {
         queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(uid) });
         queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(uid) });
       });
-      toast.success("Translators added successfully");
+      toast.success("Collaborators added successfully");
       setAddTranslatorModal({
         open: false,
         projectId: 0,
@@ -344,7 +355,7 @@ function ProjectManagementContent() {
 
       if (checkError || !existingAssignment) {
         throw new Error(
-          `Translator assignment not found. No row exists with project_id=${projectId} and user_id=${userId}`
+          `Collaborator assignment not found. No row exists with project_id=${projectId} and user_id=${userId}`
         );
       }
 
@@ -396,7 +407,7 @@ function ProjectManagementContent() {
         });
 
         throw new Error(
-          `Failed to remove translator: ${error.message}${errorContext}${roleContext}. Project ID: ${projectId}, User ID: ${userId}`
+          `Failed to remove collaborator: ${error.message}${errorContext}${roleContext}. Project ID: ${projectId}, User ID: ${userId}`
         );
       }
 
@@ -426,7 +437,7 @@ function ProjectManagementContent() {
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.myProjects(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.homeMyProjectsCount(userId) });
-      toast.success("Translator removed successfully");
+      toast.success("Collaborator removed successfully");
       setRemoveTranslatorModal({
         open: false,
         projectId: 0,
@@ -465,6 +476,7 @@ function ProjectManagementContent() {
       });
       toast.success("Words/Lines updated successfully");
       setEditingProjectId(null);
+      setEditFocusField("words");
     },
     onError: (error: Error) =>
       toast.error(getUserFriendlyError(error, "project management")),
@@ -474,11 +486,13 @@ function ProjectManagementContent() {
   const handleStartWordsLinesEdit = (
     projectId: number,
     words: number | null,
-    lines: number | null
+    lines: number | null,
+    focusField: "words" | "lines" = "words"
   ) => {
     setEditingProjectId(projectId);
     setEditWords(words?.toString() || "");
     setEditLines(lines?.toString() || "");
+    setEditFocusField(focusField);
   };
 
   const handleSaveWordsLines = (projectId: number) => {
@@ -491,6 +505,7 @@ function ProjectManagementContent() {
     setEditingProjectId(null);
     setEditWords("");
     setEditLines("");
+    setEditFocusField("words");
   };
 
   // Handlers
@@ -547,7 +562,7 @@ function ProjectManagementContent() {
     setProjectTypeFilter([]);
   };
 
-  const hasActiveFilters = baseHasActiveFilters || projectTypeFilter.length > 0;
+  const hasActiveFilters = baseHasActiveFilters || resolvedProjectTypeFilter.length > 0;
 
   // Loading state
   if (userLoading || projectsLoading) {
@@ -684,7 +699,7 @@ function ProjectManagementContent() {
                 <MultiSelectFilterDropdown
                   label="Project Type"
                   options={uniqueProjectTypes}
-                  selected={projectTypeFilter}
+                  selected={resolvedProjectTypeFilter}
                   onSelect={setProjectTypeFilter}
                 />
               )}
@@ -734,6 +749,7 @@ function ProjectManagementContent() {
           onEditDetails={handleEditDetails}
           onCompleteProject={handleCompleteProject}
           editingProjectId={editingProjectId}
+          editFocusField={editFocusField}
           editWords={editWords}
           editLines={editLines}
           onEditWordsChange={setEditWords}
@@ -758,6 +774,7 @@ function ProjectManagementContent() {
           onEditDetails={handleEditDetails}
           onCompleteProject={handleCompleteProject}
           editingProjectId={editingProjectId}
+          editFocusField={editFocusField}
           editWords={editWords}
           editLines={editLines}
           onEditWordsChange={setEditWords}
@@ -863,3 +880,16 @@ function ProjectManagementContent() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

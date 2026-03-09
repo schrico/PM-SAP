@@ -9,8 +9,8 @@ import { queryKeys } from "@/lib/queryKeys";
 interface UpdateProfileData {
   name?: string;
   short_name?: string | null;
-  C_user?: string;
-  TE_user?: string;
+  C_user?: string | null;
+  TE_user?: string | null;
   email?: string;
   avatar?: string | null;
 }
@@ -37,8 +37,13 @@ export function useUpdateProfile() {
       if (data.short_name !== undefined) {
         updates.short_name = data.short_name === null ? null : data.short_name.trim() || null;
       }
-      if (data.C_user !== undefined) updates.C_user = data.C_user;
-      if (data.TE_user !== undefined) updates.TE_user = data.TE_user;
+      // Convert empty string to null for C_user/TE_user (nullable unique fields)
+      if (data.C_user !== undefined) {
+        updates.C_user = data.C_user === null ? null : data.C_user.trim() || null;
+      }
+      if (data.TE_user !== undefined) {
+        updates.TE_user = data.TE_user === null ? null : data.TE_user.trim() || null;
+      }
 
       // Update users table
       if (Object.keys(updates).length > 0) {
@@ -90,4 +95,3 @@ export function useUpdateProfile() {
     },
   });
 }
-

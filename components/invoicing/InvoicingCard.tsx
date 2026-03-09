@@ -132,7 +132,7 @@ export function InvoicingCard({
 
         <div className="mb-3">
           <span className="text-gray-500 dark:text-gray-400 text-sm block mb-1">
-            Translator(s)
+            Collaborator(s)
           </span>
           {project.translators.length > 0 ?
             <div className="text-gray-700 dark:text-gray-300 text-sm">

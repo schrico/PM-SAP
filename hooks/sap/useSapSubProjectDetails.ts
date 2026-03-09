@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
+import { fetchApi } from "@/lib/api/fetchApi";
 
 /**
  * SAP Step information from the subproject details
@@ -44,9 +45,12 @@ export interface SapSubProjectDetails {
   terminologyKey: string[];
   environment: SapEnvironment[];
   subProjectSteps: SapStep[];
-  // Instructions from the separate instructions endpoint
   instructions?: string | null;
   dmName?: string | null;
+}
+
+interface SapSubProjectDetailsResponse {
+  details: SapSubProjectDetails;
 }
 
 /**
@@ -69,20 +73,13 @@ export function useSapSubProjectDetails(
         throw new Error("Project ID and SubProject ID are required");
       }
 
-      const response = await fetch(
+      const data = await fetchApi<SapSubProjectDetailsResponse>(
         `/api/sap/subprojects/${projectId}/${subProjectId}`
       );
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(
-          error.message || "Failed to fetch SAP subproject details"
-        );
-      }
-
-      return response.json();
+      return data.details;
     },
     enabled: !!projectId && !!subProjectId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
 }

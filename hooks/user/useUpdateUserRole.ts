@@ -121,7 +121,7 @@ export function useUpdateUserRole() {
       queryClient.refetchQueries({ queryKey: queryKeys.users() });
 
       toast.success(
-        `${result.userName || "User"}'s role updated to ${result.newRole} successfully!`
+        `${result.userName || "User"}'s role updated to ${result.newRole === "employee" ? "Collaborator" : result.newRole} successfully!`
       );
     },
     onError: (error: Error) => {

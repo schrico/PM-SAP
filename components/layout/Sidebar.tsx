@@ -76,7 +76,8 @@ export function Sidebar() {
   const roleLabel =
     role === "admin" ? "Administrator"
     : role === "pm" ? "Project Manager"
-    : role ? "Translator"
+    : role === "employee" ? "Collaborator"
+    : role ? "Account"
     : "Account";
 
   // Filter nav items based on user role

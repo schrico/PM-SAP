@@ -13,15 +13,49 @@ export function getUserFriendlyError(error: Error | unknown, context?: string): 
   const errorMessage = error.message.toLowerCase();
   const originalMessage = error.message;
 
+  const extractDuplicateField = (message: string): string | null => {
+    // Postgres duplicate format often includes: Key (field_name)=(value) already exists
+    const keyMatch = message.match(/key\s*\(([^)]+)\)\s*=\s*\([^)]+\)\s*already exists/i);
+    if (keyMatch?.[1]) return keyMatch[1].trim();
+
+    // Fallback: parse constraint/index name, e.g. "users_TE-user_key"
+    const constraintMatch = message.match(/constraint\s+"([^"]+)"/i);
+    if (constraintMatch?.[1]) {
+      const normalizedConstraint = constraintMatch[1]
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_");
+      if (normalizedConstraint.includes("c_user")) return "c_user";
+      if (normalizedConstraint.includes("te_user")) return "te_user";
+      if (normalizedConstraint.includes("avatar")) return "avatar";
+      if (normalizedConstraint.includes("color")) return "color setting";
+    }
+
+    // Final fallback: raw message may include field names with mixed separators
+    const lower = message.toLowerCase();
+    if (lower.includes("c_user") || lower.includes("c-user")) return "c_user";
+    if (lower.includes("te_user") || lower.includes("te-user")) return "te_user";
+    if (lower.includes("avatar")) return "avatar";
+    if (lower.includes("color")) return "color setting";
+
+    return null;
+  };
+
+  const formatFieldLabel = (field: string): string => {
+    if (field === "c_user") return "C_user";
+    if (field === "te_user") return "TE_user";
+    if (field === "avatar") return "Avatar";
+    if (field === "color setting") return "Color setting";
+    return field.replace(/_/g, " ");
+  };
+
   // Database constraint errors
   if (errorMessage.includes("unique constraint") || errorMessage.includes("duplicate key")) {
-    if (errorMessage.includes("avatar")) {
-      return "This avatar is already taken. Please choose a different one.";
+    const duplicateField = extractDuplicateField(originalMessage);
+    if (duplicateField) {
+      const label = formatFieldLabel(duplicateField);
+      return `${label} is already in use. Please choose a different value.`;
     }
-    if (errorMessage.includes("color")) {
-      return "This color setting already exists.";
-    }
-    return "This item already exists. Please check and try again.";
+    return "A value you entered is already in use. Please choose a different one.";
   }
 
   // Foreign key constraint errors

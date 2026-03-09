@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   Check,
   XCircle,
@@ -55,6 +56,53 @@ interface ProjectWithTranslators {
   language_out: string;
 }
 
+interface DoneMessagePopoverProps {
+  translatorName: string;
+  doneMessage: string;
+}
+
+function DoneMessagePopover({ translatorName, doneMessage }: DoneMessagePopoverProps) {
+  const [isPinned, setIsPinned] = useState(false);
+  const [isHoveringTrigger, setIsHoveringTrigger] = useState(false);
+
+  const isOpen = isPinned || isHoveringTrigger;
+
+  return (
+    <Popover
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) setIsPinned(false);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsPinned((prev) => !prev);
+          }}
+          onMouseEnter={() => setIsHoveringTrigger(true)}
+          onMouseLeave={() => setIsHoveringTrigger(false)}
+          className="cursor-pointer shrink-0"
+          aria-label="View collaborator note"
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-green-500 hover:text-green-600 transition-colors" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="max-w-xs text-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 mb-1">
+          {translatorName} wrote:
+        </p>
+        <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+          {doneMessage}
+        </p>
+      </PopoverContent>
+    </Popover>
+  );
+}
 interface ManagementCardProps {
   groups: ProjectGroup<ProjectWithTranslators>[];
   expandedGroups: Set<string>;
@@ -67,11 +115,12 @@ interface ManagementCardProps {
   onEditDetails: (projectId: number) => void;
   onCompleteProject: (projectId: number) => void;
   editingProjectId: number | null;
+  editFocusField: "words" | "lines";
   editWords: string;
   editLines: string;
   onEditWordsChange: (value: string) => void;
   onEditLinesChange: (value: string) => void;
-  onStartWordsLinesEdit: (projectId: number, words: number | null, lines: number | null) => void;
+  onStartWordsLinesEdit: (projectId: number, words: number | null, lines: number | null, focusField?: "words" | "lines") => void;
   onSaveWordsLines: (projectId: number) => void;
   onCancelWordsLinesEdit: () => void;
   isUpdatingWordsLines: boolean;
@@ -90,6 +139,7 @@ export function ManagementCard({
   onEditDetails,
   onCompleteProject,
   editingProjectId,
+  editFocusField,
   editWords,
   editLines,
   onEditWordsChange,
@@ -116,6 +166,36 @@ export function ManagementCard({
   };
 
   const getStatusIconLocal = getStatusIcon;
+  const wordsInputRef = useRef<HTMLInputElement | null>(null);
+  const linesInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editingProjectId == null) return;
+
+    const targetInput =
+      editFocusField === "lines" ? linesInputRef.current : wordsInputRef.current;
+    if (!targetInput) return;
+
+    targetInput.focus();
+    targetInput.select();
+  }, [editingProjectId, editFocusField]);
+  const handleWordsLinesKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    projectId: number
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      onSaveWordsLines(projectId);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onCancelWordsLinesEdit();
+    }
+  };
 
   const renderProjectCard = (project: ProjectWithTranslators) => (
     <div
@@ -178,6 +258,8 @@ export function ManagementCard({
               type="number"
               value={editWords}
               onChange={(e) => onEditWordsChange(e.target.value)}
+              onKeyDown={(e) => handleWordsLinesKeyDown(e, project.id)}
+              ref={wordsInputRef}
               className="w-16 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               min="0"
             />
@@ -186,6 +268,8 @@ export function ManagementCard({
               type="number"
               value={editLines}
               onChange={(e) => onEditLinesChange(e.target.value)}
+              onKeyDown={(e) => handleWordsLinesKeyDown(e, project.id)}
+              ref={linesInputRef}
               className="w-16 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               min="0"
             />
@@ -206,14 +290,23 @@ export function ManagementCard({
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => onStartWordsLinesEdit(project.id, project.words, project.lines)}
-            className="hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
-            type="button"
-          >
-            Words: {project.words ? formatNumber(project.words) : "-"}, Lines:{" "}
-            {project.lines ? formatNumber(project.lines) : "-"}
-          </button>
+          <div className="inline-flex items-center gap-2">
+            <button
+              onClick={() => onStartWordsLinesEdit(project.id, project.words, project.lines, "words")}
+              className="hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
+              type="button"
+            >
+              Words: {project.words ? formatNumber(project.words) : "-"}
+            </button>
+            <span>,</span>
+            <button
+              onClick={() => onStartWordsLinesEdit(project.id, project.words, project.lines, "lines")}
+              className="hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
+              type="button"
+            >
+              Lines: {project.lines ? formatNumber(project.lines) : "-"}
+            </button>
+          </div>
         )}
       </div>
 
@@ -245,29 +338,10 @@ export function ManagementCard({
                     />
                     <span>{translator.short_name || translator.name}</span>
                     {translator.done_message && translator.assignment_status === "done" && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={(e) => e.stopPropagation()}
-                            className="cursor-pointer shrink-0"
-                            aria-label="View translator note"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5 text-green-500 hover:text-green-600 transition-colors" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="max-w-xs text-sm"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 mb-1">
-                            {translator.name} wrote:
-                          </p>
-                          <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                            {translator.done_message}
-                          </p>
-                        </PopoverContent>
-                      </Popover>
+                      <DoneMessagePopover
+                        translatorName={translator.name}
+                        doneMessage={translator.done_message}
+                      />
                     )}
                   </div>
                 );
@@ -363,6 +437,20 @@ export function ManagementCard({
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

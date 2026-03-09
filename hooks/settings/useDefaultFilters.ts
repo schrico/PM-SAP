@@ -5,12 +5,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSupabase } from '@/hooks/core/useSupabase';
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
+import { getUserFriendlyError } from "@/utils/toastHelpers";
 
 interface DefaultFilter {
   id: number;
   filter_key: string;
-  included_values: string[] | null;
-  excluded_values: string[] | null;
+  included_values: string[];
+  excluded_values: string[];
   updated_at: string;
 }
 
@@ -20,7 +21,7 @@ export function useDefaultFilters(userId: string | null) {
 
   const queryKey = queryKeys.defaultFilters(userId);
 
-  const { data: filters = [], isLoading } = useQuery({
+  const { data: filters = [], isLoading, isFetched } = useQuery({
     queryKey,
     queryFn: async (): Promise<DefaultFilter[]> => {
       if (!userId) return [];
@@ -31,7 +32,7 @@ export function useDefaultFilters(userId: string | null) {
         .eq("user_id", userId);
 
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []) as DefaultFilter[];
     },
     enabled: !!userId,
   });
@@ -48,27 +49,29 @@ export function useDefaultFilters(userId: string | null) {
     }) => {
       if (!userId) throw new Error("User ID required");
 
+      const payload = {
+        filter_key: filterKey,
+        user_id: userId,
+        included_values: includedValues ?? [],
+        excluded_values: excludedValues ?? [],
+        updated_at: new Date().toISOString(),
+      };
+
+      // Current DB schema has UNIQUE(user_id), so upsert must conflict on user_id.
       const { error } = await supabase
         .from("default_filters")
-        .upsert(
-          {
-            filter_key: filterKey,
-            user_id: userId,
-            included_values: includedValues,
-            excluded_values: excludedValues,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "filter_key,user_id" }
-        );
+        .upsert(payload, { onConflict: "user_id" });
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        throw new Error(`Failed to save default filter: ${error.message}`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       toast.success("Default filter saved");
     },
-    onError: () => {
-      toast.error("Failed to save default filter");
+    onError: (error) => {
+      toast.error(getUserFriendlyError(error, "default filter save"));
     },
   });
 
@@ -82,8 +85,11 @@ export function useDefaultFilters(userId: string | null) {
   return {
     filters,
     isLoading,
+    isFetched,
     getFilter,
     upsertFilter: upsertMutation.mutate,
     isUpdating: upsertMutation.isPending,
   };
 }
+
+
