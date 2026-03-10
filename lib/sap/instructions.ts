@@ -2,10 +2,7 @@
 // SAP instruction composition and processing
 
 import type { SapInstruction, SapInstructionEntry } from '@/types/sap';
-import {
-  normalizeInstructionText,
-  normalizeInstructionTextForMatch,
-} from './instruction-normalization';
+import { normalizeInstructionText, normalizeInstructionTextForMatch } from './instruction-normalization';
 
 /**
  * Build composed instructions string from extracted fields.
@@ -58,21 +55,14 @@ export function buildInstructions(params: {
 /**
  * Build sap_instructions JSONB array from SAP instruction entries.
  * - Stores both instructionShort and instructionLong
- * - Normalizes text for consistent display + matching
+ * - Normalizes text for consistent display + dedupe
  * - Deduplicates by normalized long/short text
- * - Compares exclusions against the same normalized representation
  */
 export function buildSapInstructions(
-  instructions: SapInstruction[],
-  exclusions: string[] = []
+  instructions: SapInstruction[]
 ): SapInstructionEntry[] | null {
   const seen = new Set<string>();
   const entries: SapInstructionEntry[] = [];
-  const exclusionSet = new Set(
-    exclusions
-      .map((e) => normalizeInstructionTextForMatch(e))
-      .filter((e) => e.length > 0)
-  );
 
   for (const instr of instructions) {
     const strippedShort = normalizeInstructionText(instr.instructionShort || '');
@@ -81,8 +71,6 @@ export function buildSapInstructions(
     const textForDedup = strippedLong || strippedShort;
     const normalizedForMatch = normalizeInstructionTextForMatch(textForDedup);
     if (!normalizedForMatch) continue;
-
-    if (exclusionSet.has(normalizedForMatch)) continue;
 
     if (seen.has(normalizedForMatch)) continue;
     seen.add(normalizedForMatch);

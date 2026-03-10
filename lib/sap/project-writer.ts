@@ -6,9 +6,18 @@ import type { SapProjectForImport } from '@/types/sap';
 import { TRACKED_FIELDS } from './constants';
 import { collectTrackedChanges, type ReportChanges } from './sync-utils';
 
-/** The set of SAP-owned fields written on every insert/update */
-export function buildSapUpdatePayload(data: SapProjectForImport) {
-  return {
+interface BuildPayloadOptions {
+  includeVolumes?: boolean;
+}
+
+/** The set of SAP-owned fields written on insert/update */
+export function buildSapUpdatePayload(
+  data: SapProjectForImport,
+  options: BuildPayloadOptions = {}
+) {
+  const { includeVolumes = true } = options;
+
+  const payload = {
     sap_import_key: data.sap_import_key,
     name: data.name,
     language_in: data.language_in,
@@ -28,9 +37,17 @@ export function buildSapUpdatePayload(data: SapProjectForImport) {
     lxe_projects: data.lxe_projects,
     url: data.url,
     hours: data.hours,
+    last_synced_at: data.last_synced_at,
+  };
+
+  if (!includeVolumes) {
+    return payload;
+  }
+
+  return {
+    ...payload,
     words: data.words,
     lines: data.lines,
-    last_synced_at: data.last_synced_at,
   };
 }
 
@@ -103,13 +120,17 @@ export async function updateProjectFromSap(
     .eq('id', existingId)
     .single();
 
+  const trackedFields = TRACKED_FIELDS.filter(
+    (field) => field !== 'words' && field !== 'lines'
+  );
+
   const changes = currentProject
-    ? collectTrackedChanges(currentProject, data, TRACKED_FIELDS)
+    ? collectTrackedChanges(currentProject, data, trackedFields)
     : {};
 
   const { error: updateError } = await supabase
     .from('projects')
-    .update(buildSapUpdatePayload(data))
+    .update(buildSapUpdatePayload(data, { includeVolumes: false }))
     .eq('id', existingId);
 
   if (updateError) {
@@ -141,3 +162,4 @@ export async function insertProjectFromSap(
 
   return { id: inserted.id, error: null };
 }
+

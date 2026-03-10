@@ -8,6 +8,8 @@ export interface ModifiedReportEntry {
   changes: ReportChanges;
 }
 
+const ORDER_INSENSITIVE_FIELDS = new Set<string>(['graph_id']);
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -57,6 +59,29 @@ function normalizeForComparison(value: unknown): unknown {
   return value;
 }
 
+function normalizeAsStringSet(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const normalized = value
+    .map((item) => (typeof item === 'string' ? item.trim() : String(item)))
+    .filter((item) => item.length > 0);
+
+  return Array.from(new Set(normalized)).sort((a, b) => a.localeCompare(b));
+}
+
+function valuesAreMeaningfullyEqualForField(field: string, a: unknown, b: unknown): boolean {
+  if (ORDER_INSENSITIVE_FIELDS.has(field)) {
+    const normalizedA = normalizeAsStringSet(a);
+    const normalizedB = normalizeAsStringSet(b);
+
+    if (normalizedA && normalizedB) {
+      return JSON.stringify(normalizedA) === JSON.stringify(normalizedB);
+    }
+  }
+
+  return valuesAreMeaningfullyEqual(a, b);
+}
+
 export function valuesAreMeaningfullyEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(normalizeForComparison(a)) === JSON.stringify(normalizeForComparison(b));
 }
@@ -76,7 +101,7 @@ export function collectTrackedChanges<
     const oldVal = (current as Record<PropertyKey, unknown>)[field];
     const newVal = (incoming as Record<PropertyKey, unknown>)[field];
 
-    if (!valuesAreMeaningfullyEqual(oldVal, newVal)) {
+    if (!valuesAreMeaningfullyEqualForField(String(field), oldVal, newVal)) {
       changes[String(field)] = { old: oldVal, new: newVal };
     }
   }

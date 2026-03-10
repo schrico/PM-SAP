@@ -23,7 +23,6 @@ export interface SyncSapProjectsResponse {
   updated: number;
   failed: number;
   errors?: string[];
-  failureLogPath?: string;
   reportCreated?: boolean;
   reportCreationError?: string | null;
 }
@@ -122,11 +121,6 @@ export function useSyncSapProjects() {
           `Imported ${data.imported} new, updated ${data.updated}, but ${data.failed} failed.`
         );
 
-        if (data.failureLogPath) {
-          toast.info(`Failure details were saved to ${data.failureLogPath}.`, {
-            duration: 8000,
-          });
-        }
       }
 
       if (data.reportCreated === false) {
@@ -134,12 +128,6 @@ export function useSyncSapProjects() {
           `The import finished, but the report could not be created, so the report modal will not appear. Reason: ${data.reportCreationError || "Unknown error"}`,
           { duration: 8000 }
         );
-
-        if (data.failureLogPath && data.failed === 0) {
-          toast.info(`Additional details were saved to ${data.failureLogPath}.`, {
-            duration: 8000,
-          });
-        }
       }
     },
     onError: (error) => {

@@ -1,8 +1,10 @@
 import type { SapInstructionEntry } from "@/types/project";
+import { filterSapInstructions } from "@/lib/sap/instruction-exclusions";
 
 interface InstructionsPreviewInput {
   instructions?: string | null;
   sapInstructions?: SapInstructionEntry[] | null;
+  exclusionSet?: Set<string>;
 }
 
 interface InstructionsPreviewResult {
@@ -13,9 +15,10 @@ interface InstructionsPreviewResult {
 export function getInstructionsPreview({
   instructions,
   sapInstructions,
+  exclusionSet = new Set<string>(),
 }: InstructionsPreviewInput): InstructionsPreviewResult {
   const hasManualInstructions = !!instructions && instructions.trim() !== "";
-  const hasSapInstructions = !!sapInstructions && sapInstructions.length > 0;
+  const visibleSapInstructions = filterSapInstructions(sapInstructions, exclusionSet);
 
   if (hasManualInstructions) {
     return {
@@ -24,7 +27,7 @@ export function getInstructionsPreview({
     };
   }
 
-  if (hasSapInstructions) {
+  if (visibleSapInstructions.length > 0) {
     return {
       displayText: "SAP instructions",
       hasAnyInstructions: true,

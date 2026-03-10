@@ -2,42 +2,23 @@
 
 import { useState } from "react";
 import { FileText, ClipboardList, ChevronDown, ChevronRight } from "lucide-react";
-import { stripHtml } from "@/utils/formatters";
 import type { SapInstructionEntry } from "@/types/project";
+import { useInstructionExclusions } from "@/hooks/settings/useInstructionExclusions";
+import { filterSapInstructions } from "@/lib/sap/instruction-exclusions";
 
 interface ProjectInstructionsCardProps {
   instructions: string | null | undefined;
   sapInstructions?: SapInstructionEntry[] | null;
 }
 
-/** Deduplicate and clean SAP instructions at render time (handles legacy DB data with HTML) */
-function cleanSapInstructions(entries: SapInstructionEntry[]): { short: string; long: string; slsLang?: string }[] {
-  const seen = new Set<string>();
-  const cleaned: { short: string; long: string; slsLang?: string }[] = [];
-
-  for (const entry of entries) {
-    const rawShort = entry.instructionShort || "";
-    const rawLong = entry.instructionLong || entry.text || "";
-
-    const short = stripHtml(rawShort);
-    const long = stripHtml(rawLong);
-
-    const dedupKey = (long || short).toLowerCase();
-    if (!dedupKey || seen.has(dedupKey)) continue;
-    seen.add(dedupKey);
-
-    cleaned.push({ short, long, slsLang: entry.slsLang });
-  }
-
-  return cleaned;
-}
-
 export function ProjectInstructionsCard({
   instructions,
   sapInstructions,
 }: ProjectInstructionsCardProps) {
+  const { exclusionSet } = useInstructionExclusions(null);
+  const visibleSapInstructions = filterSapInstructions(sapInstructions, exclusionSet);
   const hasInstructions = instructions && instructions.trim() !== "";
-  const hasSapInstructions = sapInstructions && sapInstructions.length > 0;
+  const hasSapInstructions = visibleSapInstructions.length > 0;
 
   if (!hasInstructions && !hasSapInstructions) {
     return (
@@ -46,7 +27,7 @@ export function ProjectInstructionsCard({
           Instructions
         </h2>
         <p className="text-gray-500 dark:text-gray-400 italic">
-          Sem descrição fornecida
+          No instructions available
         </p>
       </div>
     );
@@ -54,12 +35,10 @@ export function ProjectInstructionsCard({
 
   return (
     <div className="space-y-6">
-      {/* SAP Instructions first */}
       {hasSapInstructions && (
-        <SapInstructionsSection entries={sapInstructions!} />
+        <SapInstructionsSection entries={visibleSapInstructions} />
       )}
 
-      {/* Custom Instructions below */}
       {hasInstructions && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -79,10 +58,8 @@ export function ProjectInstructionsCard({
   );
 }
 
-function SapInstructionsSection({ entries }: { entries: SapInstructionEntry[] }) {
-  const cleaned = cleanSapInstructions(entries);
-
-  if (cleaned.length === 0) return null;
+function SapInstructionsSection({ entries }: { entries: Array<{ short: string; long: string; slsLang?: string }> }) {
+  if (entries.length === 0) return null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
@@ -100,7 +77,7 @@ function SapInstructionsSection({ entries }: { entries: SapInstructionEntry[] })
         </div>
       </div>
       <div className="space-y-2">
-        {cleaned.map((entry, i) => (
+        {entries.map((entry, i) => (
           <CollapsibleInstruction key={i} short={entry.short} long={entry.long} slsLang={entry.slsLang} />
         ))}
       </div>
@@ -113,7 +90,6 @@ function CollapsibleInstruction({ short, long }: { short: string; long: string; 
   const fullText = long || short;
   const isLong = fullText.length > 80;
 
-  // Short text: show directly, no dropdown
   if (!isLong) {
     return (
       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700 p-4">
@@ -124,7 +100,6 @@ function CollapsibleInstruction({ short, long }: { short: string; long: string; 
     );
   }
 
-  // Long text: show short as title, dropdown reveals long
   return (
     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-700">
       <button

@@ -35,6 +35,6 @@ export const queryKeys = {
   importReports: (userId: string | null) => ['import-reports', userId] as const,
 
   // User settings
-  instructionExclusions: (userId: string | null) => ['instruction-exclusions', userId] as const,
+  instructionExclusions: () => ['instruction-exclusions-v2'] as const,
   defaultFilters: (userId: string | null) => ['default-filters', userId] as const,
 } as const;

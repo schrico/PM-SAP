@@ -8,8 +8,9 @@ import {
 } from "@/components/ui/sheet";
 import { FileText, ClipboardList, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { stripHtml } from "@/utils/formatters";
 import type { SapInstructionEntry } from "@/types/project";
+import { useInstructionExclusions } from "@/hooks/settings/useInstructionExclusions";
+import { filterSapInstructions } from "@/lib/sap/instruction-exclusions";
 
 interface InstructionsDrawerProject {
   name: string;
@@ -23,41 +24,18 @@ interface InstructionsDrawerProps {
   project: InstructionsDrawerProject | null;
 }
 
-/** Deduplicate and clean SAP instructions at render time (handles legacy DB data with HTML) */
-function cleanSapInstructions(entries: SapInstructionEntry[]): { short: string; long: string; slsLang?: string }[] {
-  const seen = new Set<string>();
-  const cleaned: { short: string; long: string; slsLang?: string }[] = [];
-
-  for (const entry of entries) {
-    const rawShort = entry.instructionShort || "";
-    const rawLong = entry.instructionLong || entry.text || "";
-
-    const short = stripHtml(rawShort);
-    const long = stripHtml(rawLong);
-
-    const dedupKey = (long || short).toLowerCase();
-    if (!dedupKey || seen.has(dedupKey)) continue;
-    seen.add(dedupKey);
-
-    cleaned.push({ short, long, slsLang: entry.slsLang });
-  }
-
-  return cleaned;
-}
-
 export function InstructionsDrawer({
   open,
   onOpenChange,
   project,
 }: InstructionsDrawerProps) {
   const [sapExpanded, setSapExpanded] = useState(false);
+  const { exclusionSet } = useInstructionExclusions(null);
 
   if (!project) return null;
 
   const hasInstructions = project.instructions && project.instructions.trim() !== "";
-  const sapInstructions = project.sap_instructions as SapInstructionEntry[] | null;
-  const hasSapInstructions = sapInstructions && sapInstructions.length > 0;
-  const cleaned = hasSapInstructions ? cleanSapInstructions(sapInstructions!) : [];
+  const visibleSapInstructions = filterSapInstructions(project.sap_instructions, exclusionSet);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -67,8 +45,7 @@ export function InstructionsDrawer({
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
-          {/* SAP Instructions first */}
-          {cleaned.length > 0 && (
+          {visibleSapInstructions.length > 0 && (
             <div>
               <button
                 onClick={() => setSapExpanded(!sapExpanded)}
@@ -82,13 +59,13 @@ export function InstructionsDrawer({
                 )}
                 <FileText className="w-4 h-4 text-amber-500" />
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  SAP Instructions ({cleaned.length})
+                  SAP Instructions ({visibleSapInstructions.length})
                 </h3>
               </button>
 
               {sapExpanded && (
                 <div className="space-y-2">
-                  {cleaned.map((entry, i) => (
+                  {visibleSapInstructions.map((entry, i) => (
                     <CollapsibleSapInstruction key={i} short={entry.short} long={entry.long} slsLang={entry.slsLang} />
                   ))}
                 </div>
@@ -96,7 +73,6 @@ export function InstructionsDrawer({
             </div>
           )}
 
-          {/* Composed Instructions below */}
           {hasInstructions && (
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -113,8 +89,7 @@ export function InstructionsDrawer({
             </div>
           )}
 
-          {/* No instructions at all */}
-          {!hasInstructions && cleaned.length === 0 && (
+          {!hasInstructions && visibleSapInstructions.length === 0 && (
             <p className="text-sm text-gray-400 dark:text-gray-500 italic">
               No instructions available
             </p>

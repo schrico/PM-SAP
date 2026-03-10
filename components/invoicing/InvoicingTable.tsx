@@ -6,6 +6,7 @@ import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle } from "@/utils/projectTableHelpers";
 import { formatProjectName } from "@/utils/formatters";
 import { getInstructionsPreview } from "@/utils/instructionsPreview";
+import { useInstructionExclusions } from "@/hooks/settings/useInstructionExclusions";
 import type { ProjectWithTranslators } from "@/types/project";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
@@ -37,6 +38,7 @@ export function InvoicingTable({
   onGroupSelection,
 }: InvoicingTableProps) {
   const { getSystemColorPreview } = useColorSettings();
+  const { exclusionSet } = useInstructionExclusions(null);
 
   const getSystemColorStyleLocal = (system: string) =>
     getSystemColorStyle(system, getSystemColorPreview);
@@ -210,6 +212,7 @@ export function InvoicingTable({
                           {getInstructionsPreview({
                             instructions: project.instructions,
                             sapInstructions: project.sap_instructions,
+                            exclusionSet,
                           }).displayText}
                         </td>
                       </tr>

@@ -6,7 +6,7 @@ import type { SapTpmApiClient } from './client';
 import type { SapSyncResponse } from '@/types/sap';
 import { mapSapSubProjectToProjects, sanitizeImportData } from './mappers';
 import { dedupeImportProjects, mergeModifiedProjects } from './sync-utils';
-import { createFailureRecorder, writeFailureLogFile } from './failure-log';
+import { createFailureRecorder } from './failure-log';
 import { findExistingProject, updateProjectFromSap, insertProjectFromSap } from './project-writer';
 import { createImportReport, type NewProjectReport } from './report-writer';
 import type { ModifiedReportEntry } from './sync-utils';
@@ -21,7 +21,6 @@ export interface ManualImportParams {
   sapClient: SapTpmApiClient;
   projects: Array<{ projectId: number; subProjectId: string }>;
   userId: string;
-  exclusions: string[];
 }
 
 export interface ManualImportResult extends SapSyncResponse {
@@ -29,7 +28,7 @@ export interface ManualImportResult extends SapSyncResponse {
 }
 
 export async function runManualImport(params: ManualImportParams): Promise<ManualImportResult> {
-  const { supabase, sapClient, projects, userId, exclusions } = params;
+  const { supabase, sapClient, projects, userId } = params;
 
   // Fetch all SAP projects to resolve parent info
   const sapProjectsData = await sapClient.getProjects();
@@ -83,8 +82,7 @@ export async function runManualImport(params: ManualImportParams): Promise<Manua
         subProject,
         parent,
         details,
-        instructionsData.instructions,
-        exclusions
+        instructionsData.instructions
       ));
 
       for (const importData of importProjects) {
@@ -144,33 +142,11 @@ export async function runManualImport(params: ManualImportParams): Promise<Manua
     modifiedProjects: mergedModifiedProjects,
   });
 
-  // Write failure log if needed
-  let failureLogPath: string | undefined;
-  if (failures.items.length > 0 || !reportCreated) {
-    try {
-      failureLogPath = await writeFailureLogFile({
-        userId,
-        imported,
-        updated: mergedModifiedProjects.length,
-        failed: failures.failedCount,
-        failures: failures.items,
-        reportCreated,
-        reportCreationError,
-      });
-    } catch (error) {
-      const message = error instanceof Error
-        ? `Failed to write SAP import failure log: ${error.message}`
-        : 'Failed to write SAP import failure log';
-      console.error(message, error);
-    }
-  }
-
   const result: ManualImportResult = {
     imported,
     updated: mergedModifiedProjects.length,
     failed: failures.failedCount,
     hadSuccessfulSync,
-    failureLogPath,
     reportCreated,
     reportCreationError,
   };

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { X, Loader2, AlertCircle, Download } from "lucide-react";
+import { X, Loader2, AlertCircle, Download, FileDown } from "lucide-react";
 import { useUser } from "@/hooks/user/useUser";
 import { useProjectsWithTranslators } from "@/hooks/project/useProjectsWithTranslators";
 import { useSapImportStatus } from "@/hooks/sap/useSapImportStatus";
@@ -19,6 +19,7 @@ import { RemoveTranslatorDialog } from "@/components/management/RemoveTranslator
 import { ConfirmationDialog } from "@/components/management/ConfirmationDialog";
 import { SapImportDialog } from "@/components/sap/SapImportDialog";
 import { InstructionsDrawer } from "@/components/management/InstructionsDrawer";
+import { ExportProjectsDialog } from "@/components/management/ExportProjectsDialog";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { RouteId } from "@/lib/roleAccess";
@@ -95,6 +96,9 @@ function ProjectManagementContent() {
 
   // SAP Import dialog state
   const [sapImportDialogOpen, setSapImportDialogOpen] = useState(false);
+
+  // Export CSV dialog state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // State for editing project words/lines
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
@@ -610,14 +614,23 @@ function ProjectManagementContent() {
             Complete oversight of all translation projects and their status
           </p>
         </div>
-        <Button
-          onClick={() => setSapImportDialogOpen(true)}
-          disabled={isSapImportRunning}
-          className="bg-blue-500 hover:bg-blue-600 text-white"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          {isSapImportRunning ? "SAP Import Running..." : "Import from SAP"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setExportDialogOpen(true)}
+          >
+            <FileDown className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button
+            onClick={() => setSapImportDialogOpen(true)}
+            disabled={isSapImportRunning}
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {isSapImportRunning ? "SAP Import Running..." : "Import from SAP"}
+          </Button>
+        </div>
       </div>
 
       {/* Tabs + View Toggle + Search + Filters - Sticky Header */}
@@ -864,6 +877,12 @@ function ProjectManagementContent() {
       <SapImportDialog
         open={sapImportDialogOpen}
         onOpenChange={setSapImportDialogOpen}
+      />
+
+      {/* Export CSV Dialog */}
+      <ExportProjectsDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
       />
 
       {/* Instructions Drawer */}

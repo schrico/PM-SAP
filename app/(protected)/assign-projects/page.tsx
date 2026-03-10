@@ -360,7 +360,7 @@ function AssignProjectsContent() {
       <div className="mb-8">
         <h1 className="text-gray-900 dark:text-white mb-2">Assign Projects</h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Select one or more projects and assign them to a translator
+          Select one or more projects and assign them to a collaborator
         </p>
       </div>
 

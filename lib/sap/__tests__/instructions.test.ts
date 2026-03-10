@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSapInstructions } from '@/lib/sap/instructions';
+import { filterSapInstructions } from '@/lib/sap/instruction-exclusions';
 import {
   normalizeInstructionText,
   normalizeInstructionTextForMatch,
@@ -12,7 +13,7 @@ describe('instruction normalization', () => {
     expect(normalizeInstructionTextForMatch(raw)).toBe('hello world line 2');
   });
 
-  it('filters SAP instructions when exclusion matches formatted text', () => {
+  it('buildSapInstructions deduplicates normalized SAP instructions', () => {
     const instructions = [
       {
         subProjectId: 'SP1',
@@ -31,18 +32,30 @@ describe('instruction normalization', () => {
         serviceStep: 'TRANSLREGU',
         slsLang: 'en',
         lastChangedAt: '2026-01-01T00:00:00.000Z',
-        instructionShort: 'Keep me',
-        instructionLong: 'A different instruction',
+        instructionShort: 'Do this',
+        instructionLong: 'Hello   World',
         isTemplate: false,
         deleted: false,
       },
     ];
 
-    const exclusions = ['  Hello   World  '];
-    const result = buildSapInstructions(instructions, exclusions);
+    const result = buildSapInstructions(instructions);
 
     expect(result).not.toBeNull();
     expect(result).toHaveLength(1);
-    expect(result?.[0].instructionLong).toBe('A different instruction');
+    expect(result?.[0].instructionLong).toBe('Hello World');
+  });
+
+  it('filterSapInstructions hides normalized exact matches', () => {
+    const visible = filterSapInstructions(
+      [
+        { instructionShort: 'A', instructionLong: '<p>Hello&nbsp;World</p>' },
+        { instructionShort: 'B', instructionLong: 'Keep this' },
+      ],
+      new Set(['hello world'])
+    );
+
+    expect(visible).toHaveLength(1);
+    expect(visible[0].long).toBe('Keep this');
   });
 });

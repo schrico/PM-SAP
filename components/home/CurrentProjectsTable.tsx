@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useRoleAccess } from "@/hooks/user/useRoleAccess";
 import { getInstructionsPreview } from "@/utils/instructionsPreview";
+import { useInstructionExclusions } from "@/hooks/settings/useInstructionExclusions";
 import { toast } from "sonner";
 import type { ProjectWithTranslators } from "@/types/project";
 
@@ -26,6 +27,7 @@ interface CurrentProjectsTableProps {
 export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
   const router = useRouter();
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
+  const { exclusionSet } = useInstructionExclusions(null);
   const { role, user } = useRoleAccess();
 
   // Use shared utility functions for color styles
@@ -172,6 +174,7 @@ export function CurrentProjectsTable({ projects }: CurrentProjectsTableProps) {
         const { displayText } = getInstructionsPreview({
           instructions: project.instructions,
           sapInstructions: project.sap_instructions,
+          exclusionSet,
         });
         return displayText;
       },

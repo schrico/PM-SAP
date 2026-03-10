@@ -11,7 +11,6 @@ import { getSapClient } from '@/lib/sap/client';
 import { runManualImport } from '@/lib/sap/importer';
 import { getAuthenticatedSupabase } from '@/lib/api/withAuth';
 import { sapSyncRequestSchema } from '@/types/sap';
-import { normalizeInstructionText } from '@/lib/sap/instruction-normalization';
 
 export async function POST(request: NextRequest) {
   let supabase: ReturnType<typeof createServerClient> | null = null;
@@ -34,13 +33,11 @@ export async function POST(request: NextRequest) {
     supabase = auth.supabase;
     const { user } = auth;
 
-    // Ensure status row exists
     const { error: ensureStatusError } = await ensureSapImportStatusRow(supabase);
     if (ensureStatusError) {
       return NextResponse.json({ error: 'Failed to initialize SAP import status' }, { status: 500 });
     }
 
-    // Check if already running
     const { data: importStatus, error: importStatusError } = await getSapImportStatus(supabase);
     if (importStatusError) {
       return NextResponse.json({ error: 'Failed to fetch SAP import status' }, { status: 500 });
@@ -52,7 +49,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check rate limit
     const { data: rateLimit } = await supabase
       .from('sap_api_rate_limits')
       .select('last_fetch_at')
@@ -74,7 +70,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Acquire import lock
     const { data: lockRow, error: lockError } = await acquireSapImportLock(supabase, user.id);
     if (lockError) {
       return NextResponse.json({ error: 'Failed to acquire SAP import lock' }, { status: 500 });
@@ -88,40 +83,25 @@ export async function POST(request: NextRequest) {
     }
     lockAcquired = true;
 
-    // Fetch user's instruction exclusions
-    const { data: exclusionRows } = await supabase
-      .from('instruction_exclusions')
-      .select('instruction_text')
-      .eq('user_id', user.id);
-    const normalizedExclusions: string[] = (exclusionRows || [])
-      .map((r: { instruction_text: string }) => normalizeInstructionText(r.instruction_text))
-      .filter((text: string) => text.length > 0);
-    const exclusions: string[] = Array.from(new Set<string>(normalizedExclusions));
-
-    // Run the import
     const result = await runManualImport({
       supabase,
       sapClient: getSapClient(),
       projects: body.projects,
       userId: user.id,
-      exclusions,
     });
 
-    // Update rate limit on success
     if (result.hadSuccessfulSync) {
       await supabase
         .from('sap_api_rate_limits')
         .upsert({ user_id: user.id, last_fetch_at: new Date().toISOString() });
     }
 
-    // Release lock
     const { error: finalizeError } = await finalizeSapImportStatus(supabase, 'idle');
     if (finalizeError) {
       console.error('Failed to finalize SAP import status:', finalizeError.message);
     }
     lockAcquired = false;
 
-    // Strip internal field before responding
     const { hadSuccessfulSync, ...response } = result;
     void hadSuccessfulSync;
     return NextResponse.json(response);
@@ -140,6 +120,3 @@ export async function POST(request: NextRequest) {
     return createErrorResponse(error, 'Failed to sync SAP projects');
   }
 }
-
-
-

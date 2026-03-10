@@ -1,8 +1,5 @@
 // /lib/sap/failure-log.ts
-// Failure tracking and log file writing for SAP imports
-
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
+// Failure tracking for SAP imports
 
 export type FailureStage = 'lookup' | 'details' | 'match' | 'update' | 'insert' | 'process';
 
@@ -14,8 +11,6 @@ export interface FailedImportItem {
   explanation: string;
   timestamp: string;
 }
-
-const FAILURE_LOG_DIR = join(process.cwd(), 'logs', 'sap-import-failures');
 
 function explainFailure(stage: FailureStage): string {
   switch (stage) {
@@ -33,48 +28,6 @@ function explainFailure(stage: FailureStage): string {
     default:
       return 'An unexpected error occurred while processing this SAP subproject during the import run.';
   }
-}
-
-function formatLogTimestamp(date = new Date()): string {
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
-}
-
-export async function writeFailureLogFile(params: {
-  userId: string;
-  imported: number;
-  updated: number;
-  failed: number;
-  failures: FailedImportItem[];
-  reportCreated: boolean;
-  reportCreationError: string | null;
-}) {
-  const filename = `sap-import-failures-${formatLogTimestamp()}.json`;
-  const filePath = join(FAILURE_LOG_DIR, filename);
-
-  await mkdir(FAILURE_LOG_DIR, { recursive: true });
-  await writeFile(
-    filePath,
-    JSON.stringify(
-      {
-        createdAt: new Date().toISOString(),
-        triggeredBy: params.userId,
-        summary: {
-          imported: params.imported,
-          updated: params.updated,
-          failed: params.failed,
-        },
-        failures: params.failures,
-        reportCreated: params.reportCreated,
-        reportCreationError: params.reportCreationError,
-      },
-      null,
-      2
-    ),
-    'utf8'
-  );
-
-  return `logs/sap-import-failures/${filename}`;
 }
 
 /** Creates a failure recorder that accumulates failures during an import run */

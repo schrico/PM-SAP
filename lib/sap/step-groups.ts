@@ -174,7 +174,7 @@ export function mapSapSubProjectToProjects(
   const sapPm = extractSapPm(subProject);
   const projectType = extractProjectType(subProject);
 
-  const sapInstructions = buildSapInstructions(instructions, exclusions);
+  const sapInstructions = buildSapInstructions(instructions);
 
   const now = new Date().toISOString();
   const today = new Date();

@@ -15,10 +15,10 @@ import type {
 /**
  * Extract system from steps and environment.
  * Priority:
- * 1. stepText === "Test, correct and report result" → LAT
- * 2. toolType === "SAP" → extract from environmentName
- * 3. toolType === "XTM_PM" or "XTM" → XTM
- * 4. Otherwise → Unknown
+ * 1. stepText === "Test, correct and report result" -> LAT
+ * 2. toolType === "SAP" -> extract from environmentName
+ * 3. toolType === "XTM_PM" or "XTM" -> XTM
+ * 4. Otherwise -> Unknown
  */
 export function extractSystem(steps: SapStep[], environment?: SapEnvironment[]): string {
   // 1. Check for LAT test step
@@ -30,7 +30,7 @@ export function extractSystem(steps: SapStep[], environment?: SapEnvironment[]):
   const envWithTool = environment?.find(e => e.toolType);
   const toolType = envWithTool?.toolType?.toUpperCase();
 
-  // 2. SAP toolType → extract system from environmentName
+  // 2. SAP toolType -> extract system from environmentName
   if (toolType === 'SAP') {
     const envName = envWithTool?.environmentName || '';
     // Extract: chars after "SAP Translation System - " before next " "
@@ -129,18 +129,21 @@ export function extractWorkLists(env: SapEnvironment[]): string[] {
   return [...new Set(lists)];
 }
 
-/** Extract first number from each graphId */
+/** Extract first number from each graphId (normalized: trim, dedupe, sorted). */
 export function extractGraphIds(env: SapEnvironment[]): string[] {
   const ids: string[] = [];
   for (const e of env) {
     if (e.graphId?.length > 0) {
       for (const gid of e.graphId) {
-        const num = gid.split(/\s+/)[0];
+        const num = gid.split(/\s+/)[0]?.trim();
         if (num) ids.push(num);
       }
     }
   }
-  return [...new Set(ids)];
+
+  return Array.from(new Set(ids)).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true })
+  );
 }
 
 /** Extract URL from subProjectFiles of first step that has one.
@@ -189,5 +192,3 @@ export function extractSapPm(subProject: SapSubProject): string | null {
 export function extractProjectType(subProject: SapSubProject): string | null {
   return subProject.projectType || null;
 }
-
-

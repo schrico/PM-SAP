@@ -206,7 +206,6 @@ export interface SapSyncResponse {
   updated: number;   // Existing projects updated
   failed: number;    // Projects that failed to import
   errors?: string[]; // Error messages for failed imports
-  failureLogPath?: string;
   reportCreated?: boolean;
   reportCreationError?: string | null;
 }

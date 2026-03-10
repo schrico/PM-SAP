@@ -5,6 +5,7 @@ import { useColorSettings } from "@/hooks/settings/useColorSettings";
 import { getSystemColorStyle } from "@/utils/projectTableHelpers";
 import { formatProjectName } from "@/utils/formatters";
 import { getInstructionsPreview } from "@/utils/instructionsPreview";
+import { useInstructionExclusions } from "@/hooks/settings/useInstructionExclusions";
 import type { ProjectWithTranslators } from "@/types/project";
 import { DeadlineDisplay } from "@/components/general/DeadlineDisplay";
 import { ProjectColorLegendTooltip } from "@/components/shared/ProjectColorLegendTooltip";
@@ -33,6 +34,7 @@ export function InvoicingCard({
   onGroupSelection,
 }: InvoicingCardProps) {
   const { getSystemColorPreview } = useColorSettings();
+  const { exclusionSet } = useInstructionExclusions(null);
 
   const getSystemColorStyleLocal = (system: string) =>
     getSystemColorStyle(system, getSystemColorPreview);
@@ -149,6 +151,7 @@ export function InvoicingCard({
             {getInstructionsPreview({
               instructions: project.instructions,
               sapInstructions: project.sap_instructions,
+              exclusionSet,
             }).displayText}
           </p>
         </div>

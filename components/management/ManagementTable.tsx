@@ -22,6 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { getInstructionsPreview } from "@/utils/instructionsPreview";
+import { useInstructionExclusions } from "@/hooks/settings/useInstructionExclusions";
 import type { ProjectGroup } from "@/lib/projectGrouping";
 import { getGroupDisplayName } from "@/lib/projectGrouping";
 
@@ -151,6 +152,7 @@ export function ManagementTable({
 }: ManagementTableProps) {
   const router = useRouter();
   const { getSystemColorPreview, getLanguageColorPreview } = useColorSettings();
+  const { exclusionSet } = useInstructionExclusions(null);
 
   const getSystemColorStyleLocal = (system: string) =>
     getSystemColorStyle(system, getSystemColorPreview);
@@ -439,6 +441,7 @@ export function ManagementTable({
                               getInstructionsPreview({
                                 instructions: project.instructions,
                                 sapInstructions: project.sap_instructions,
+                                exclusionSet,
                               });
                             const canOpenInstructions =
                               !!onInstructionsClick && hasAnyInstructions;
